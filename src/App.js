@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import "./App.css"
-const socket = io("major-yak-omarelbarbeir-c17604b8.koyeb.app", {
-  transports: ["websocket"]
-});function App() {
+
+const socket = io(window.location.origin, {
+  transports: ['websocket']
+});
+
+function App() {
   const [roomId, setRoomId] = useState('');
   const [showRoomId, setShowRoomId] = useState(false);
   const [player, setPlayer] = useState('');
