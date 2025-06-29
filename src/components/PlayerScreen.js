@@ -184,20 +184,20 @@ const PlayerScreen = ({
                   
                   <div className="mt-4 space-y-3">
                     <div className="flex justify-center gap-3">
-                      <button
+                      {/* <button
                         onClick={() => setShowQuestionText(!showQuestionText)}
                         className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg flex items-center gap-1"
                       >
                         {showQuestionText ? <FaEyeSlash /> : <FaEye />}
                         {showQuestionText ? ' Hide Question' : ' Show Question'}
-                      </button>
-                      <button
+                      </button> */}
+                      {/* <button
                         onClick={() => setShowAnswer(!showAnswer)}
                         className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg flex items-center gap-1"
                       >
                         {showAnswer ? <FaEyeSlash /> : <FaEye />}
                         {showAnswer ? ' Hide Answer' : ' Show Answer'}
-                      </button>
+                      </button> */}
                     </div>
                     
                     {showQuestionText && (

@@ -28,14 +28,14 @@ const questions = {
   cinema: [
     {
       id: 1,
-      text: "Who directed the movie 'Inception'?",
-      answer: "Christopher Nolan",
+      text: "من أي فيلم هذا الإيفيه : على أساس إنك مطقّم؟!",
+      answer: "أبو علي",
       audio: "/audio/cinema1.mp3"
     },
     {
       id: 2,
-      text: "Which actor played the role of Iron Man?",
-      answer: "Robert Downey Jr.",
+      text: "من قال: طب وربنا وربنا كمان مره لنيمك من المغرب يا صين",
+      answer: "محمد هنيدي في فول الصين العظيم",
       audio: "/audio/cinema2.mp3"
     },
     {
