@@ -1,6 +1,6 @@
 {
-  "homepage": "https://omarbarbeir.github.io/tic_online",
-  "name": "project",
+  "homepage": ".",
+  "name": "quiz-game-frontend",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

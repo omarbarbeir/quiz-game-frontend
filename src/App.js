@@ -16,6 +16,15 @@ const socket = io('https://ancient-prawn-omarelbarbeir-9282bb8f.koyeb.app', {
 });
 
 function App() {
+
+    // Fix for GitHub Pages routing
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.endsWith('/index.html')) {
+      window.location.replace(path.replace('/index.html', ''));
+    }
+  }, []);
+  
   const [roomCode, setRoomCode] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [playerId, setPlayerId] = useState('');
@@ -29,6 +38,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
+    
     // Add connection status logging
     socket.on('connect', () => {
       console.log('Connected to backend server');
