@@ -1,149 +1,270 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import "./App.css"
+import AdminPanel from './components/AdminPanel';
+import PlayerScreen from './components/PlayerScreen';
+import RoomJoin from './components/RoomJoin';
+import categories from './data/categories';
+import questions from './data/questions';
 
-const socket = io(window.location.origin, {
-  transports: ['websocket']
+// Updated socket connection to Koyeb backend
+const socket = io('https://ancient-prawn-omarelbarbeir-9282bb8f.koyeb.app', {
+  transports: ['websocket'], // Force WebSocket transport
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  secure: true, // Required for HTTPS
 });
 
 function App() {
-  const [roomId, setRoomId] = useState('');
-  const [showRoomId, setShowRoomId] = useState(false);
-  const [player, setPlayer] = useState('');
-  const [board, setBoard] = useState(Array(9).fill(null));
-  const [currentPlayer, setCurrentPlayer] = useState('X');
-  const [gameStatus, setGameStatus] = useState('waiting');
-  const [winner, setWinner] = useState(null);
-  const [scores, setScores] = useState({ X: 0, O: 0 });
+  const [roomCode, setRoomCode] = useState('');
+  const [playerName, setPlayerName] = useState('');
+  const [playerId, setPlayerId] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [players, setPlayers] = useState([]);
+  const [activePlayer, setActivePlayer] = useState(null);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [gameStatus, setGameStatus] = useState('lobby');
+  const [buzzerLocked, setBuzzerLocked] = useState(false);
+  const [showJoinScreen, setShowJoinScreen] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
-    socket.on('roomCreated', (id, player) => {
-      setRoomId(id);
-      setPlayer(player);
-      setShowRoomId(true);
+    // Add connection status logging
+    socket.on('connect', () => {
+      console.log('Connected to backend server');
     });
 
-    socket.on('joinedRoom', (id, player) => {
-      setRoomId(id);
-      setPlayer(player);
+    socket.on('disconnect', () => {
+      console.log('Disconnected from backend server');
     });
 
-    socket.on('gameUpdate', (data) => {
-      setBoard(data.board);
-      setCurrentPlayer(data.currentPlayer);
-      setGameStatus(data.status);
-      setWinner(data.winner);
-      setScores(data.scores || { X: 0, O: 0 }); // Add fallback
+    socket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
     });
+
+    const handleRoomCreated = (code) => {
+      setRoomCode(code);
+      setIsAdmin(true);
+      setGameStatus('lobby');
+      setShowJoinScreen(false);
+      
+      // Add admin as a player
+      const adminPlayer = {
+        id: `admin_${Date.now()}`,
+        name: "Quiz Master",
+        score: 0,
+        isAdmin: true
+      };
+      setPlayers([adminPlayer]);
+    };
     
+    const handlePlayerJoined = (newPlayer) => {
+      setPlayers(prev => [...prev, newPlayer]);
+    };
+    
+    const handlePlayerLeft = (leftPlayerId) => {
+      setPlayers(prev => prev.filter(p => p.id !== leftPlayerId));
+      if (activePlayer === leftPlayerId) {
+        setActivePlayer(null);
+        setBuzzerLocked(false);
+      }
+    };
+    
+    const handlePlayerBuzzed = (playerId) => {
+      setActivePlayer(playerId);
+      setBuzzerLocked(true);
+      socket.emit('pause_audio', roomCode);
+    };
+    
+    const handleUpdateScore = (updatedPlayer) => {
+      setPlayers(prev => 
+        prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p)
+      );
+    };
+    
+    const handleResetBuzzer = () => {
+      setActivePlayer(null);
+      setBuzzerLocked(false);
+    };
+    
+    const handleQuestionChanged = (question) => {
+      setCurrentQuestion(question);
+      setActivePlayer(null);
+      setBuzzerLocked(false);
+      setGameStatus('playing');
+    };
+    
+    const handleGameEnded = () => {
+      setGameStatus('ended');
+    };
+    
+    const handleRoomClosed = () => {
+      alert('The room has been closed by the admin.');
+      resetGame();
+    };
 
-    socket.on('joinError', (message) => {
-      alert(message);
-    });
+    socket.on('room_created', handleRoomCreated);
+    socket.on('player_joined', handlePlayerJoined);
+    socket.on('player_left', handlePlayerLeft);
+    socket.on('player_buzzed', handlePlayerBuzzed);
+    socket.on('update_score', handleUpdateScore);
+    socket.on('reset_buzzer', handleResetBuzzer);
+    socket.on('question_changed', handleQuestionChanged);
+    socket.on('game_ended', handleGameEnded);
+    socket.on('room_closed', handleRoomClosed);
 
     return () => {
-      socket.off('roomCreated');
-      socket.off('joinedRoom');
-      socket.off('gameUpdate');
-      socket.off('joinError');
+      // Cleanup all listeners
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
+      socket.off('room_created', handleRoomCreated);
+      socket.off('player_joined', handlePlayerJoined);
+      socket.off('player_left', handlePlayerLeft);
+      socket.off('player_buzzed', handlePlayerBuzzed);
+      socket.off('update_score', handleUpdateScore);
+      socket.off('reset_buzzer', handleResetBuzzer);
+      socket.off('question_changed', handleQuestionChanged);
+      socket.off('game_ended', handleGameEnded);
+      socket.off('room_closed', handleRoomClosed);
     };
-  }, []);
+  }, [activePlayer, roomCode]);
 
   const createRoom = () => {
-    socket.emit('createRoom');
+    socket.emit('create_room');
   };
 
-  const joinRoom = () => {
-    if(roomId) socket.emit('joinRoom', roomId);
-  };
-
-  const handleCellClick = (index) => {
-    if(
-      !board[index] && 
-      player === currentPlayer && 
-      gameStatus === 'playing'
-    ) {
-      socket.emit('move', roomId, index, player);
+  const joinRoom = (code, name) => {
+    if (code && name) {
+      setRoomCode(code);
+      setPlayerName(name);
+      const id = `player_${Date.now()}`;
+      setPlayerId(id);
+      socket.emit('join_room', { roomCode: code, player: { id, name, score: 0 } });
+      setShowJoinScreen(false);
     }
   };
 
-  const resetGame = () => {
-    socket.emit('reset', roomId);
+  const handleBuzzer = () => {
+    if (!buzzerLocked && currentQuestion) {
+      socket.emit('buzz', { roomCode, playerId });
+    }
   };
 
+  const handleAdminBuzzer = () => {
+    if (!buzzerLocked && currentQuestion) {
+      const adminPlayer = players.find(p => p.isAdmin);
+      if (adminPlayer) {
+        socket.emit('buzz', { roomCode, playerId: adminPlayer.id });
+      }
+    }
+  };
 
-  return(
-
-    <div className="game-container bg-blue-200 h-screen">
-    <h1 className='font-bold text-2xl'>Tic Tac Toe</h1>
-
-
-    {showRoomId && (
-        <div className="w-[350px] flex justify-center items-center flex-col p-4 gap-y-4 bg-white/60 rounded-lg shadow-md">
-          <p className='font-bold'>Room ID: {roomId}</p>
-          <button className='bg-red-600 hover:bg-red-800 text-white' onClick={() => navigator.clipboard.writeText(roomId)}>
-            Copy Room ID
-          </button>
-        </div>
-    )}
+  // FIXED: Score change function
+  const handleScoreChange = (playerId, change) => {
+    // Optimistic UI update
+    setPlayers(prev => 
+      prev.map(p => 
+        p.id === playerId ? {...p, score: p.score + change} : p
+      )
+    );
     
-    {!player && (
-      <div className="p-3 flex flex-col gap-y-5 m-3">
+    // Emit to server
+    socket.emit('update_score', { roomCode, playerId, change });
+    
+    setActivePlayer(null);
+    setBuzzerLocked(false);
+    socket.emit('reset_buzzer', roomCode);
+  };
 
-        <button className='bg-red-600 text-white hover:bg-red-800' onClick={createRoom}>Create New Game</button>
-        <div className="join-section">
-          <input
-          className='border-none'
-            type="text"
-            placeholder="Enter Room ID"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-          />
-          <button className='bg-yellow-600 hover:bg-yellow-700 font-bold text-white' onClick={joinRoom}>Join Game</button>
-        </div>
-      </div>
-    )}
+  const playQuestion = (question) => {
+    socket.emit('change_question', { roomCode, question });
+    setActivePlayer(null);
+    setBuzzerLocked(false);
+  };
 
-    {player && (
-      <div className="game-status">
-        {gameStatus === 'waiting' && <p>Waiting for opponent...</p>}
-        {gameStatus === 'playing' && (
-          <p>{currentPlayer === player ? 'Your turn' : "Opponent's turn"}</p>        )}
-        {gameStatus === 'ended' && (
-          <p>{winner === 'draw' ? "It's a draw!" : `${winner} wins!`}</p>
-        )}
-      </div>
-    )}
+  const playRandomQuestion = () => {
+    if (selectedCategory && questions[selectedCategory]?.length > 0) {
+      const randomIndex = Math.floor(Math.random() * questions[selectedCategory].length);
+      const randomQuestion = questions[selectedCategory][randomIndex];
+      playQuestion(randomQuestion);
+    }
+  };
 
-    <div className="board">
-      {board.map((cell, index) => (
-        <button
-          key={index}
-          className={`cell ${cell || 'empty'}`}
-          onClick={() => handleCellClick(index)}
-          disabled={!player || gameStatus !== 'playing' || cell}
-        >
-          {cell}
-        </button>
-      ))}
+  const resetBuzzer = () => {
+    setActivePlayer(null);
+    setBuzzerLocked(false);
+    socket.emit('reset_buzzer', roomCode);
+  };
+
+  const endGame = () => {
+    socket.emit('end_game', roomCode);
+  };
+
+  const leaveRoom = () => {
+    socket.emit('leave_room', { roomCode, playerId });
+    resetGame();
+  };
+
+  const resetGame = () => {
+    setRoomCode('');
+    setPlayerName('');
+    setPlayerId('');
+    setIsAdmin(false);
+    setPlayers([]);
+    setActivePlayer(null);
+    setCurrentQuestion(null);
+    setGameStatus('lobby');
+    setBuzzerLocked(false);
+    setShowJoinScreen(true);
+    setSelectedCategory(null);
+  };
+
+  const handleCategorySelect = (categoryId) => {
+    setSelectedCategory(categoryId);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-800 text-white p-4">
+      {showJoinScreen ? (
+        <RoomJoin onCreateRoom={createRoom} onJoinRoom={joinRoom} />
+      ) : isAdmin ? (
+        <AdminPanel 
+          roomCode={roomCode}
+          players={players}
+          activePlayer={activePlayer}
+          currentQuestion={currentQuestion}
+          onScoreChange={handleScoreChange}
+          onPlayQuestion={playQuestion}
+          onPlayRandomQuestion={playRandomQuestion}
+          onResetBuzzer={resetBuzzer}
+          onEndGame={endGame}
+          onLeaveRoom={leaveRoom}
+          onAdminBuzzer={handleAdminBuzzer}
+          gameStatus={gameStatus}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={handleCategorySelect}
+          socket={socket}
+          questions={questions}
+          buzzerLocked={buzzerLocked}
+        />
+      ) : (
+        <PlayerScreen 
+          playerId={playerId}
+          playerName={playerName}
+          roomCode={roomCode}
+          players={players}
+          activePlayer={activePlayer}
+          currentQuestion={currentQuestion}
+          onBuzzerPress={handleBuzzer}
+          buzzerLocked={buzzerLocked}
+          onLeaveRoom={leaveRoom}
+          gameStatus={gameStatus}
+          socket={socket}
+        />
+      )}
     </div>
-
-    <div className="w-[200px] h-[100px] flex flex-col justify-center items-center font-bold text-xl bg-white/80 shadow-md rounded-md">
-      <div className="score-item">
-        <span className="score-label">Player X : </span>
-        <span className="score-value">{scores?.X ?? 0}</span>
-      </div>
-      <div className="score-item">
-        <span className="score-label">Player O : </span>
-        <span className="score-value">{scores?.O ?? 0}</span>
-      </div>
-    </div>
-
-    {gameStatus === 'ended' && (
-      <button className='bg-red-600 mt-3 shadow-md' onClick={resetGame}>Play Again</button>
-    )}
-  </div>
-
   );
 }
 
