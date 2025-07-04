@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo } from 'react-icons/fa';
 
 const PlayerScreen = ({ 
   playerId,
@@ -17,14 +17,13 @@ const PlayerScreen = ({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [showQuestionText, setShowQuestionText] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showReloadWarning, setShowReloadWarning] = useState(false);
   const audioRef = useRef(null);
   const isActivePlayer = activePlayer === playerId;
   const [pausedTime, setPausedTime] = useState(0);
 
-  // Sort players by score (descending)
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
   
-  // Handle socket events for audio control
   useEffect(() => {
     const handlePlayAudio = () => {
       if (audioRef.current && !activePlayer) {
@@ -62,7 +61,6 @@ const PlayerScreen = ({
     };
   }, [socket, activePlayer]);
   
-  // Set up audio element when question changes
   useEffect(() => {
     if (currentQuestion && audioRef.current) {
       const audioUrl = `${process.env.PUBLIC_URL}${currentQuestion.audio}`;
@@ -75,6 +73,35 @@ const PlayerScreen = ({
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* Reload Warning Modal */}
+      {showReloadWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4 text-center">Warning!</h2>
+            <p className="text-lg mb-6 text-center">
+              If you reload this page you will quit and lose your score
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setShowReloadWarning(false);
+                  window.location.reload();
+                }}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold"
+              >
+                Quit Anyway
+              </button>
+              <button
+                onClick={() => setShowReloadWarning(false)}
+                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-bold"
+              >
+                Stay in Game
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">Quiz Player</h1>
@@ -147,12 +174,12 @@ const PlayerScreen = ({
                 </div>
               )}
 
-                    {showAnswer && currentQuestion && (
-                      <div className="bg-indigo-700 p-3 rounded-lg mt-4 animate-fadeIn">
-                        <p className="font-semibold">Answer:</p>
-                        <p className="text-lg font-medium">{currentQuestion.answer}</p>
-                      </div>
-                    )}
+              {showAnswer && currentQuestion && (
+                <div className="bg-indigo-700 p-3 rounded-lg mt-4 animate-fadeIn">
+                  <p className="font-semibold">Answer:</p>
+                  <p className="text-lg font-medium">{currentQuestion.answer}</p>
+                </div>
+              )}
               
               <button
                 onClick={onLeaveRoom}
@@ -182,63 +209,32 @@ const PlayerScreen = ({
                     </p>
                   </div>
                   
-                  <div className="mt-4 space-y-3">
-                    <div className="flex justify-center gap-3">
-                      {/* <button
-                        onClick={() => setShowQuestionText(!showQuestionText)}
-                        className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg flex items-center gap-1"
+                  <div className="mt-4">
+                    {activePlayer && (
+                      <button
+                        onClick={() => {
+                          if (audioRef.current) {
+                            audioRef.current.play()
+                              .then(() => setAudioPlaying(true))
+                              .catch(error => console.error("Audio play failed:", error));
+                          }
+                        }}
+                        className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 mx-auto"
                       >
-                        {showQuestionText ? <FaEyeSlash /> : <FaEye />}
-                        {showQuestionText ? ' Hide Question' : ' Show Question'}
-                      </button> */}
-                      {/* <button
-                        onClick={() => setShowAnswer(!showAnswer)}
-                        className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg flex items-center gap-1"
-                      >
-                        {showAnswer ? <FaEyeSlash /> : <FaEye />}
-                        {showAnswer ? ' Hide Answer' : ' Show Answer'}
-                      </button> */}
-                    </div>
-                    
-                    {showQuestionText && (
-                      <div className="bg-indigo-700 p-3 rounded-lg">
-                        <p className="font-semibold">Question:</p>
-                        <p>{currentQuestion.text}</p>
-                      </div>
+                        <FaVolumeUp /> Play Question Again
+                      </button>
                     )}
                     
-                    {showAnswer && (
-                      <div className="bg-indigo-700 p-3 rounded-lg">
-                        <p className="font-semibold">Answer:</p>
-                        <p>{currentQuestion.answer}</p>
-                      </div>
-                    )}
+                    {/* Audio element for player */}
+                    <audio 
+                      ref={audioRef}
+                      className="w-full mt-4"
+                      onPlay={() => setAudioPlaying(true)}
+                      onPause={() => setAudioPlaying(false)}
+                      onEnded={() => setAudioPlaying(false)}
+                      onError={(e) => console.error("Audio error:", e)}
+                    />
                   </div>
-                  
-                  {activePlayer && (
-                    <button
-                      onClick={() => {
-                        if (audioRef.current) {
-                          audioRef.current.play()
-                            .then(() => setAudioPlaying(true))
-                            .catch(error => console.error("Audio play failed:", error));
-                        }
-                      }}
-                      className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 mx-auto mt-4"
-                    >
-                      <FaVolumeUp /> Play Question Again
-                    </button>
-                  )}
-                  
-                  {/* Audio element for player */}
-                  <audio 
-                    ref={audioRef}
-                    className="w-full mt-4"
-                    onPlay={() => setAudioPlaying(true)}
-                    onPause={() => setAudioPlaying(false)}
-                    onEnded={() => setAudioPlaying(false)}
-                    onError={(e) => console.error("Audio error:", e)}
-                  />
                 </div>
               ) : (
                 <div className="bg-indigo-800 rounded-xl p-8 shadow-lg text-center">
@@ -254,11 +250,11 @@ const PlayerScreen = ({
                   disabled={buzzerLocked || !currentQuestion || gameStatus !== 'playing' || activePlayer}
                   className={`w-full py-8 rounded-xl text-3xl font-bold flex flex-col items-center justify-center transform transition-all ${
                     isActivePlayer
-                      ? 'bg-green-500' // Current player who buzzed
+                      ? 'bg-green-500'
                       : activePlayer
-                        ? 'bg-gray-700 cursor-not-allowed' // Someone else buzzed
+                        ? 'bg-gray-700 cursor-not-allowed'
                         : buzzerLocked || !currentQuestion || gameStatus !== 'playing'
-                          ? 'bg-gray-700 cursor-not-allowed' // Other disabled states
+                          ? 'bg-gray-700 cursor-not-allowed'
                           : 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:scale-95'
                   }`}
                 >
@@ -294,6 +290,13 @@ const PlayerScreen = ({
               </div>
             </>
           )}
+          
+          <button
+            onClick={() => setShowReloadWarning(true)}
+            className="mt-4 bg-indigo-700 hover:bg-indigo-800 py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+          >
+            <FaRedo /> Reload Page
+          </button>
           
           <button
             onClick={onLeaveRoom}

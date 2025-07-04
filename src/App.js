@@ -6,18 +6,15 @@ import RoomJoin from './components/RoomJoin';
 import categories from './data/categories';
 import questions from './data/questions';
 
-// Updated socket connection to Koyeb backend
 const socket = io('https://ancient-prawn-omarelbarbeir-9282bb8f.koyeb.app', {
-  transports: ['websocket'], // Force WebSocket transport
+  transports: ['websocket'],
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
-  secure: true, // Required for HTTPS
+  secure: true,
 });
 
 function App() {
-
-    // Fix for GitHub Pages routing
   useEffect(() => {
     const path = window.location.pathname;
     if (path.endsWith('/index.html')) {
@@ -37,9 +34,52 @@ function App() {
   const [showJoinScreen, setShowJoinScreen] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
+  // Session storage for state persistence
   useEffect(() => {
-    
-    // Add connection status logging
+    const savedState = sessionStorage.getItem('quizGameState');
+    if (savedState) {
+      const state = JSON.parse(savedState);
+      setRoomCode(state.roomCode || '');
+      setPlayerName(state.playerName || '');
+      setPlayerId(state.playerId || '');
+      setIsAdmin(state.isAdmin || false);
+      setShowJoinScreen(state.showJoinScreen !== false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showJoinScreen) {
+      const state = {
+        roomCode,
+        playerName,
+        playerId,
+        isAdmin,
+        showJoinScreen
+      };
+      sessionStorage.setItem('quizGameState', JSON.stringify(state));
+    } else {
+      sessionStorage.removeItem('quizGameState');
+    }
+  }, [roomCode, playerName, playerId, isAdmin, showJoinScreen]);
+
+  // Page reload prevention
+  useEffect(() => {
+    if (!showJoinScreen) {
+      const handleBeforeUnload = (e) => {
+        e.preventDefault();
+        e.returnValue = 'If you reload this page, you will quit and lose your score';
+        return e.returnValue;
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [showJoinScreen]);
+
+  useEffect(() => {
     socket.on('connect', () => {
       console.log('Connected to backend server');
     });
@@ -112,6 +152,10 @@ function App() {
       alert('The room has been closed by the admin.');
       resetGame();
     };
+    
+    const handlePlayerDisconnected = (data) => {
+      alert(`${data.playerName} disconnected from the game`);
+    };
 
     socket.on('room_created', handleRoomCreated);
     socket.on('player_joined', handlePlayerJoined);
@@ -122,9 +166,9 @@ function App() {
     socket.on('question_changed', handleQuestionChanged);
     socket.on('game_ended', handleGameEnded);
     socket.on('room_closed', handleRoomClosed);
+    socket.on('player_disconnected', handlePlayerDisconnected);
 
     return () => {
-      // Cleanup all listeners
       socket.off('connect');
       socket.off('disconnect');
       socket.off('connect_error');
@@ -137,6 +181,7 @@ function App() {
       socket.off('question_changed', handleQuestionChanged);
       socket.off('game_ended', handleGameEnded);
       socket.off('room_closed', handleRoomClosed);
+      socket.off('player_disconnected', handlePlayerDisconnected);
     };
   }, [activePlayer, roomCode]);
 
@@ -170,7 +215,7 @@ function App() {
     }
   };
 
-  // FIXED: Score change function
+  // UPDATED: Score change function with buzzer reset logic
   const handleScoreChange = (playerId, change) => {
     // Optimistic UI update
     setPlayers(prev => 
@@ -182,9 +227,12 @@ function App() {
     // Emit to server
     socket.emit('update_score', { roomCode, playerId, change });
     
-    setActivePlayer(null);
-    setBuzzerLocked(false);
-    socket.emit('reset_buzzer', roomCode);
+    // Reset buzzer if scoring the active player
+    if (activePlayer === playerId) {
+      setActivePlayer(null);
+      setBuzzerLocked(false);
+      socket.emit('reset_buzzer', roomCode);
+    }
   };
 
   const playQuestion = (question) => {
@@ -228,6 +276,7 @@ function App() {
     setBuzzerLocked(false);
     setShowJoinScreen(true);
     setSelectedCategory(null);
+    sessionStorage.removeItem('quizGameState');
   };
 
   const handleCategorySelect = (categoryId) => {

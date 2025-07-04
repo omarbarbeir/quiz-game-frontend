@@ -25,15 +25,13 @@ const AdminPanel = ({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [showQuestionText, setShowQuestionText] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
+  const [showReloadWarning, setShowReloadWarning] = useState(false);
   const audioRef = useRef(null);
   const [pausedTime, setPausedTime] = useState(0);
 
   const activePlayerData = players.find(p => p.id === activePlayer);
-  const categoryQuestions = selectedCategory ? questions[selectedCategory] : [];
   const adminPlayer = players.find(p => p.isAdmin);
 
-  // Reset show states when question changes
   useEffect(() => {
     setShowQuestionText(false);
     setShowAnswer(false);
@@ -82,19 +80,6 @@ const AdminPanel = ({
     setTimeout(handlePlayAudio, 100);
   };
 
-  const toggleQuestionText = () => {
-    setShowQuestionText(!showQuestionText);
-  };
-
-  const toggleAnswer = () => {
-    setShowAnswer(!showAnswer);
-  };
-
-  const startGame = () => {
-    setGameStarted(true);
-    onPlayRandomQuestion();
-  };
-
   const handleNextQuestion = () => {
     onPlayRandomQuestion();
   };
@@ -138,6 +123,35 @@ const AdminPanel = ({
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* Reload Warning Modal */}
+      {showReloadWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4 text-center">Warning!</h2>
+            <p className="text-lg mb-6 text-center">
+              Reloading will end the game for all players
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setShowReloadWarning(false);
+                  window.location.reload();
+                }}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold"
+              >
+                Quit Anyway
+              </button>
+              <button
+                onClick={() => setShowReloadWarning(false)}
+                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-bold"
+              >
+                Continue Admin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           <FaCrown className="text-yellow-400 text-2xl" />
@@ -186,12 +200,7 @@ const AdminPanel = ({
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => onScoreChange(player.id, -1)}
-                      disabled={activePlayer !== player.id}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        activePlayer === player.id 
-                          ? 'bg-red-500 hover:bg-red-600' 
-                          : 'bg-indigo-500 cursor-not-allowed'
-                      }`}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600"
                     >
                       <FaTimes />
                     </button>
@@ -202,12 +211,7 @@ const AdminPanel = ({
                     
                     <button 
                       onClick={() => onScoreChange(player.id, 1)}
-                      disabled={activePlayer !== player.id}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        activePlayer === player.id 
-                          ? 'bg-green-500 hover:bg-green-600' 
-                          : 'bg-indigo-500 cursor-not-allowed'
-                      }`}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500 hover:bg-green-600"
                     >
                       ✓
                     </button>
@@ -277,20 +281,8 @@ const AdminPanel = ({
             selectedCategory={selectedCategory}
           />
           
-          {/* Start Game Button */}
-          {selectedCategory && !gameStarted && (
-            <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-              <button
-                onClick={startGame}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 py-3 rounded-lg font-bold flex items-center justify-center gap-2"
-              >
-                <FaPlay /> Start Game
-              </button>
-            </div>
-          )}
-          
-          {/* Questions in selected category */}
-          {selectedCategory && gameStarted && (
+          {/* Question Display */}
+          {selectedCategory && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">
@@ -304,134 +296,94 @@ const AdminPanel = ({
                 </button>
               </div>
               
-              <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                {categoryQuestions.map(question => (
-                  <button
-                    key={question.id}
-                    onClick={() => onPlayQuestion(question)}
-                    className={`w-full text-left p-3 rounded-lg flex items-center gap-3 ${
-                      currentQuestion?.id === question.id 
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600' 
-                        : 'bg-indigo-700 hover:bg-indigo-600'
-                    }`}
-                  >
-                    <div className="bg-indigo-600 w-8 h-8 rounded-full flex items-center justify-center">
-                      {question.id}
+              <div className="space-y-4">
+                {currentQuestion ? (
+                  <>
+                    <div className="bg-indigo-700 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-2">Question:</h3>
+                      <p className="text-lg">{currentQuestion.text}</p>
                     </div>
-                    <span className="truncate">Question {question.id}</span>
-                  </button>
-                ))}
+                    
+                    <div className="bg-green-700 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-2">Answer:</h3>
+                      <p className="text-lg font-bold">{currentQuestion.answer}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-indigo-700 p-4 rounded-lg text-center">
+                    <p>Click "Next Question" to start</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
           
           {/* Question Controls */}
-          {currentQuestion && gameStarted && (
-            <div className="space-y-4">
-              <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-xl font-semibold">Question Controls</h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={toggleQuestionText}
-                      className="bg-indigo-700 hover:bg-indigo-600 px-3 py-1 rounded flex items-center gap-1"
-                    >
-                      {showQuestionText ? <FaEyeSlash /> : <FaEye />}
-                      {showQuestionText ? ' Hide Q' : ' Show Q'}
-                    </button>
-                    <button
-                      onClick={toggleAnswer}
-                      className="bg-indigo-700 hover:bg-indigo-600 px-3 py-1 rounded flex items-center gap-1"
-                    >
-                      {showAnswer ? <FaEyeSlash /> : <FaEye />}
-                      {showAnswer ? ' Hide A' : ' Show A'}
-                    </button>
-                  </div>
-                </div>
+          {currentQuestion && (
+            <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+              <h2 className="text-xl font-semibold mb-3">Question Controls</h2>
+              
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handlePlayAudio}
+                  disabled={audioPlaying}
+                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                    audioPlaying 
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  <FaVolumeUp /> Play
+                </button>
                 
-                {showQuestionText && (
-                  <div className="bg-indigo-700 p-3 rounded-lg mb-4">
-                    <p className="font-semibold">Question:</p>
-                    <p>{currentQuestion.text}</p>
-                  </div>
-                )}
+                <button
+                  onClick={handleContinueAudio}
+                  disabled={audioPlaying || pausedTime === 0}
+                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                    audioPlaying || pausedTime === 0
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  <FaPlay /> Continue
+                </button>
                 
-                {/* {showAnswer && (
-                  <div className="bg-indigo-700 p-3 rounded-lg mb-4">
-                    <p className="font-semibold">Answer:</p>
-                    <p>{currentQuestion.answer}</p>
-                  </div>
-                )} */}
-
-                {showAnswer && currentQuestion && (
-                  <div className="bg-indigo-700 p-3 rounded-lg mb-4 animate-fadeIn">
-                    <p className="font-semibold">Answer:</p>
-                    <p className="text-lg font-medium">{currentQuestion.answer}</p>
-                  </div>
-                )}
+                <button
+                  onClick={handlePauseAudio}
+                  disabled={!audioPlaying}
+                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                    !audioPlaying 
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-yellow-600 hover:bg-yellow-700'
+                  }`}
+                >
+                  <FaVolumeUp /> Pause
+                </button>
                 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handlePlayAudio}
-                    disabled={audioPlaying}
-                    className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
-                      audioPlaying 
-                        ? 'bg-gray-600 cursor-not-allowed' 
-                        : 'bg-green-600 hover:bg-green-700'
-                    }`}
-                  >
-                    <FaVolumeUp /> Play
-                  </button>
-                  
-                  <button
-                    onClick={handleContinueAudio}
-                    disabled={audioPlaying || pausedTime === 0}
-                    className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
-                      audioPlaying || pausedTime === 0
-                        ? 'bg-gray-600 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    <FaPlay /> Continue
-                  </button>
-                  
-                  <button
-                    onClick={handlePauseAudio}
-                    disabled={!audioPlaying}
-                    className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
-                      !audioPlaying 
-                        ? 'bg-gray-600 cursor-not-allowed' 
-                        : 'bg-yellow-600 hover:bg-yellow-700'
-                    }`}
-                  >
-                    <FaVolumeUp /> Pause
-                  </button>
-                  
-                  <button
-                    onClick={handleStopAudio}
-                    className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 flex items-center justify-center gap-2"
-                  >
-                    <FaVolumeUp /> Stop
-                  </button>
-                  
-                  <button
-                    onClick={handleReplayAudio}
-                    className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex items-center justify-center gap-2"
-                  >
-                    <FaVolumeUp /> Replay
-                  </button>
-                </div>
+                <button
+                  onClick={handleStopAudio}
+                  className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 flex items-center justify-center gap-2"
+                >
+                  <FaVolumeUp /> Stop
+                </button>
                 
-                {/* Audio element for admin */}
-                <audio 
-                  ref={audioRef}
-                  className="w-full mt-4"
-                  onPlay={() => setAudioPlaying(true)}
-                  onPause={() => setAudioPlaying(false)}
-                  onEnded={() => setAudioPlaying(false)}
-                  onError={(e) => console.error("Audio error:", e)}
-                />
+                <button
+                  onClick={handleReplayAudio}
+                  className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex items-center justify-center gap-2"
+                >
+                  <FaVolumeUp /> Replay
+                </button>
               </div>
+              
+              {/* Audio element for admin */}
+              <audio 
+                ref={audioRef}
+                className="w-full mt-4"
+                onPlay={() => setAudioPlaying(true)}
+                onPause={() => setAudioPlaying(false)}
+                onEnded={() => setAudioPlaying(false)}
+                onError={(e) => console.error("Audio error:", e)}
+              />
             </div>
           )}
           
@@ -456,6 +408,13 @@ const AdminPanel = ({
                 End Game
               </button>
             </div>
+            
+            <button
+              onClick={() => setShowReloadWarning(true)}
+              className="w-full mt-4 bg-indigo-700 hover:bg-indigo-800 py-3 rounded-lg flex items-center justify-center gap-2"
+            >
+              <FaRedo /> Reload Page
+            </button>
             
             <button
               onClick={onLeaveRoom}
