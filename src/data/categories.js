@@ -41,6 +41,12 @@ const categories = [
     icon: "🎬",
     color: "from-purple-600 to-indigo-600"
   },
+  // {
+  //   id: "movies",
+  //   name: "Movies",
+  //   icon: "🎬",
+  //   color: "from-purple-600 to-indigo-600"
+  // },
   {
     id: "science",
     name: "Science",

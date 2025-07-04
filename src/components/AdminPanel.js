@@ -304,9 +304,14 @@ const AdminPanel = ({
                       <p className="text-lg">{currentQuestion.text}</p>
                     </div>
                     
-                    <div className="bg-green-700 p-4 rounded-lg">
+                    <div className="bg-green-600 p-4 rounded-lg">
                       <h3 className="font-semibold mb-2">Answer:</h3>
                       <p className="text-lg font-bold">{currentQuestion.answer}</p>
+                    </div>
+
+                    <div className="bg-red-700 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-2">تلميح زيادة:</h3>
+                      <p className="text-lg font-bold">{currentQuestion.bounc}</p>
                     </div>
                   </>
                 ) : (
