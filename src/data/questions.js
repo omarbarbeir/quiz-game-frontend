@@ -617,6 +617,174 @@ const questions = {
       bounc:"تلميح أكتر : إيمان / يسرا",
       audio: "/audio/history1.mp3"
     },
+    {
+      id: 37,
+      text: "يوسف داوود / أحمد بدير / عبدالله مشرف",
+      answer: "بطل من ورق",
+      bounc:"تلميح أكتر : صلاح قابيل / آثار الحكيم",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 38,
+      text: "عزت العلايلي / أنور إسماعيل / رجاء الجداوي / إيمان",
+      answer: "عاد لينتقم",
+      bounc:"تلميح أكتر : سيد الحسيني",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 39,
+      text: "وحيد سيف / يوسف شعبان / أسامة عباس / أحمد راتب",
+      answer: "ليلة القبض على بكيزة وزغلول",
+      bounc:"تلميح أكتر : إسعاد يونس / سهير البابلي",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 40,
+      text: "عبدالعزيز مخيون / هدى رمزي / دلال عبدالعزيز",
+      answer: "بئر الخيانة",
+      bounc:"تلميح أكتر : عزت العلايلي / نور الشريف",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 41,
+      text: "يسرا / تحية كاريوكا / عبلة كامل / فؤاد خليل",
+      answer: "التعويذة",
+      bounc:"تلميح أكتر : محمود ياسين",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 42,
+      text: "مصطفى متولي / محمد متولي / محمد الدفراوي / فكري صادق",
+      answer: "سلام يا صاحبي",
+      bounc:"تلميح أكتر : سعيد صالح / سوسن بدر / عادل إمام",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 43,
+      text: "مصطفى متولي / أحمد عقل / يوسف عيد / صبحي خليل",
+      answer: "النمر والأنثى",
+      bounc:"تلميح أكتر : أنور إسماعيل / آثار الحكيم / عادل إمام",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 44,
+      text: "صبري عبدالمنعم / سعاد نصر / جميل راتب",
+      answer: "البداية",
+      bounc:"تلميح أكتر : يسرا / صفية العمري",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 45,
+      text: "يوسف داوود / نعيمة الصغير / يسرا / أمل إبراهيم",
+      answer: "كراكون في الشارع",
+      bounc:"تلميح أكتر : عادل إمام",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 46,
+      text: "ليلى علوي / شعبان حسين / فريد شوقي / عبدالله مشرف",
+      answer: "إعدام ميت",
+      bounc:"تلميح أكتر : يحيى الفخراني / محمود عبدالعزيز",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 47,
+      text: "أمينة رزق / ممدوح وافي / السيد راضي",
+      answer: "الإنس والجن",
+      bounc:"تلميح أكتر : يسرا / عزت العلايلي",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 48,
+      text: "توفيق الدقن / عايدة عبدالعزيز / علي حسنين / شريف عرفة / إحسان شريف",
+      answer: "خرج ولم يعد",
+      bounc:"تلميح أكتر : ليلى علوي / فريد شوقي / يحيى الفخراني",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 49,
+      text: "عبدالله فرغلي / معالي زايد / نعيمة الصغير / جورج سيدهم",
+      answer: "الشقة من حق الزوجة",
+      bounc:"تلميح أكتر : محمود عبدالعزيز",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 50,
+      text: "سمية الألفي / محمد رضا / أحمد راتب / محمود القلعاوي / مجدي وهبة",
+      answer: "علي بيه مظهر و٤٠ حرامي",
+      bounc:"تلميح أكتر : جميل راتب / محمد صبحي",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 51,
+      text: "عهدي صادق / عبدالله مشرف / يوسف عيد / محيي الدين عبدالمحسن / فؤاد خليل",
+      answer: "الكيف",
+      bounc:"تلميح أكتر : جميل راتب / يحيى الفخراني / محمود عبدالعزيز",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 52,
+      text: "محمد التاجي / أحمد راتب / سناء يونس",
+      answer: "آخر الرجال المحترمين",
+      bounc:"تلميح أكتر : نور الشريف / بوسي",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 53,
+      text: "أسامة عباس / محمد فريد / لبلبة / عبدالله فرغلي",
+      answer: "احترس من الخِط",
+      bounc:"تلميح أكتر : سمير صبري / عادل إمام",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 54,
+      text: "إلهام شاهين / حمدي الوزير / حسين الشربيني / صلاح قابيل",
+      answer: "الهلفوت",
+      bounc:"تلميح أكتر : سعيد صالح / عادل إمام",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 55,
+      text: "محمود الزهيري / علي الشريف / زيزي مصطفى / أحمد راتب",
+      answer: "واحدة بواحدة",
+      bounc:"تلميح أكتر : ميرفت أمين / عادل إمام",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 56,
+      text: "حنان سليمان / دلال عبدالعزيز / سمير غانم / زكريا موافي",
+      answer: "يارب ولد",
+      bounc:"تلميح أكتر : أحمد راتب / فريد شوقي / كريمة مختار",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 57,
+      text: "أمينة رزق / إلهام شاهين / محيي الدين عبدالمحسن / نورا",
+      answer: "العار",
+      bounc:"تلميح أكتر : محمود عبدالعزيز / حسين فهمي / نور الشريف",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 58,
+      text: "أحمد بدير / توفيق الدقن / أحمد راتب / لوسي",
+      answer: "على باب الوزير",
+      bounc:"تلميح أكتر : يسرا / عادل إمام",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 59,
+      text: "كريمة مختار / سعيد طرابيك / سهير رمزي / روعة الكاتب",
+      answer: "رجل فقد عقله",
+      bounc:"تلميح أكتر : فريد شوقي",
+      audio: "/audio/history1.mp3"
+    },
+    {
+      id: 60,
+      text: "إيمان / أحمد ماهر / أحمد راتب / عماد حمدي",
+      answer: "شعبان تحت الصفر",
+      bounc:"تلميح أكتر : إسعاد يونس / جميل راتب / عادل إمام",
+      audio: "/audio/history1.mp3"
+    },
 
   ],
 
@@ -625,10 +793,249 @@ const questions = {
   music: [
     {
       id: 1,
-      text: "What is the title of this song?",
-      answer: "A Better Future",
-      audio: "/audio/Aventure - A Better Future (freetouse.com).mp3"
-    }
+      text: "عمرو دياب",
+      answer: "سنين",
+      audio: "/Songs/Reverse/Seneen R.mp3",
+      audio2: "/Songs/Normal/Seneen.mp3",
+    },
+    {
+      id: 2,
+      text: "فيها حاجة حلوة",
+      answer: "ريهام عبد الحكيم",
+      audio: "/Songs/Reverse/Black honey.mp3",
+      audio2: "/Songs/Normal/Black honey.mp3",
+    },
+    {
+      id: 3,
+      text: "علم قلبي",
+      answer: "عمرو دياب",
+      audio: "/Songs/Reverse/Allem Alby reverse.mp3",
+      audio2: "/Songs/Normal/Allem Alby.mp3",
+    },
+    {
+      id: 4,
+      text: "الوررد الأحمر",
+      answer: "ساموزين",
+      audio: "/Songs/Reverse/El Ward El Ahmar R.mp3",
+      audio2: "/Songs/Normal/El Ward El Ahmar.mp3",
+    },
+    {
+      id: 5,
+      text: "في عشق البنات",
+      answer: "محمد منير",
+      audio: "/Songs/Reverse/Fi Eshea El Banat R.mp3",
+      audio2: "/Songs/Normal/Fi Eshea El Banat.mp3",
+    },
+    {
+      id: 6,
+      text: "الطفلة البريئة",
+      answer: "جنات",
+      audio: "/Songs/Reverse/Al Teflah Al Bareah R.mp3",
+      audio2: "/Songs/Normal/Al Teflah Al Bareah.mp3",
+    },
+    {
+      id: 7,
+      text: "عيش بشوقك",
+      answer: "تامر حسني",
+      audio: "/Songs/Reverse/Eish Beshoak reverse.mp3",
+      audio2: "/Songs/Normal/Eish Beshoak.mp3",
+    },
+    {
+      id: 8,
+      text: "الليلادي",
+      answer: "عمرو دياب",
+      audio: "/Songs/Reverse/El Lilady reverse.mp3",
+      audio2: "/Songs/Normal/El Lilady.mp3",
+    },
+    {
+      id: 9,
+      text: "الكيف",
+      answer: "كاريوكي - طارق الشيخ",
+      audio: "/Songs/Reverse/Elkeef reverse.mp3",
+      audio2: "/Songs/Normal/Elkeef.mp3",
+    },
+    {
+      id: 10,
+      text: "سته الصبح",
+      answer: "حسين الجاسمي",
+      audio: "/Songs/Reverse/Seta El Sobah reverse.mp3",
+      audio2: "/Songs/Normal/Seta El Sobah.mp3",
+    },
+    {
+      id: 11,
+      text: "صوتك",
+      answer: "محمد منير",
+      audio: "/Songs/Reverse/Soutik reverse.mp3",
+      audio2: "/Songs/Normal/Soutik.mp3",
+    },
+    {
+      id: 12,
+      text: "يونس",
+      answer: "محمد منير",
+      audio: "/Songs/Reverse/Yunis reverse.mp3",
+      audio2: "/Songs/Normal/Yunis.mp3",
+    },
+    {
+      id: 13,
+      text: "قلبي",
+      answer: "الشاب خالد - عمرو دياب",
+      audio: "/Songs/Reverse/Alby with_Cheb-Khaled R.mp3",
+      audio2: "/Songs/Normal/Alby_with_Cheb-Khaled.mp3",
+    },
+    {
+      id: 14,
+      text: "جانا الهوي",
+      answer: "عبد الحليم حافظ",
+      audio: "/Songs/Reverse/Gana El Hawa R.mp3",
+      audio2: "/Songs/Normal/Gana El Hawa.mp3",
+    },
+    {
+      id: 15,
+      text: "الشاب خالد",
+      answer: "عبد القادر",
+      audio: "/Songs/Reverse/Cheb Khalid_Abdelqader R.mp3",
+      audio2: "/Songs/Normal/Cheb Khalid_Abdelqader.mp3",
+    },
+    {
+      id: 16,
+      text: "العالم الله",
+      answer: "عمرو دياب",
+      audio: "/Songs/Reverse/El-Alem-Alla R.mp3",
+      audio2: "/Songs/Normal/El-Alem-Alla.mp3",
+    },
+    {
+      id: 17,
+      text: "كده عيني عينك",
+      answer: "عمرو دياب",
+      audio: "/Songs/Reverse/Keda-Eny-Einak R.mp3",
+      audio2: "/Songs/Normal/Keda-Eny-Einak.mp3",
+    },
+    {
+      id: 18,
+      text: "إلعب",
+      answer: "ماريا",
+      audio: "/Songs/Reverse/Maria_Elaab R.mp3",
+      audio2: "/Songs/Normal/Maria_Elaab.mp3",
+    },
+    {
+      id: 19,
+      text: "فيسبوكي",
+      answer: "أحمد ميكي",
+      audio: "/Songs/Reverse/Ahmed.Mekky.Facebooky R.mp3",
+      audio2: "/Songs/Normal/Ahmed.Mekky.Facebooky.mp3",
+    },
+    {
+      id: 20,
+      text: "C'est la vie",
+      answer: "الشاب خالد",
+      audio: "/Songs/Reverse/Cest_La_Vie R.mp3",
+      audio2: "/Songs/Normal/Cest_La_Vie.mp3",
+    },
+    {
+      id: 21,
+      text: "ماس و لولي",
+      answer: "ديانا حداد - الشاب خالد",
+      audio: "/Songs/Reverse/Mas wi Loli R.mp3",
+      audio2: "/Songs/Normal/Mas wi Loli.mp3",
+    },
+    {
+      id: 22,
+      text: "الناس الرايقة",
+      answer: "أحمد عدوية - رامي عياش",
+      audio: "/Songs/Reverse/Elnas.Elraya R.mp3",
+      audio2: "/Songs/Normal/Elnas.Elraya.mp3",
+    },
+    {
+      id: 23,
+      text: "كيفك إنت",
+      answer: "فيروز",
+      audio: "/Songs/Reverse/Keyfak_Enta R.mp3",
+      audio2: "/Songs/Normal/Keyfak_Enta.mp3",
+    },
+    {
+      id: 24,
+      text: "شمندورة",
+      answer: "محمد منير",
+      audio: "/Songs/Reverse/Shamandora R.mp3",
+      audio2: "/Songs/Normal/Shamandora.mp3",
+    },
+    {
+      id: 25,
+      text: "قول تاني كده",
+      answer: "نانسي عجرم",
+      audio: "/Songs/Reverse/oultanyeeh R.mp3",
+      audio2: "/Songs/Normal/oultanyeeh.mp3",
+    },
+    {
+      id: 26,
+      text: "السود عيونه",
+      answer: "مصطفي قمر",
+      audio: "/Songs/Reverse/ElSoudEyounoh R.mp3",
+      audio2: "/Songs/Normal/ElSoudEyounoh.mp3",
+    },
+    {
+      id: 27,
+      text: "عما يا إسكندرية",
+      answer: "محمد الحلو",
+      audio: "/Songs/Reverse/zezenya R.mp3",
+      audio2: "/Songs/Normal/zezenya.mp3",
+    },
+    {
+      id: 28,
+      text: "لقيت الطبطبة",
+      answer: "حسين الجسمي",
+      audio: "/Songs/Reverse/eltabtaba R.mp3",
+      audio2: "/Songs/Normal/eltabtaba.mp3",
+    },
+    {
+      id: 29,
+      text: "بحبكِ وحشتيني",
+      answer: "حسين الجسمي",
+      audio: "/Songs/Reverse/Bahebk R.mp3",
+      audio2: "/Songs/Normal/Bahebk.mp3",
+    },
+    {
+      id: 30,
+      text: "قمرين",
+      answer: "عمرو دياب",
+      audio: "/Songs/Reverse/Amarain R.mp3",
+      audio2: "/Songs/Normal/Amarain.mp3",
+    },
+    {
+      id: 31,
+      text: "سهر الليالي",
+      answer: "فيروز",
+      audio: "/Songs/Reverse/Sahar_El_Layali R.mp3",
+      audio2: "/Songs/Normal/Sahar_El_Layali.mp3",
+    },
+    {
+      id: 32,
+      text: "سألوني الناس",
+      answer: "فيرروز",
+      audio: "/Songs/Reverse/Saalone_El_Nas R.mp3",
+      audio2: "/Songs/Normal/Saalone_El_Nas.mp3",
+    },
+    {
+      id: 33,
+      text: "تملِّي معاك",
+      answer: "عمرو دياب",
+      audio: "/Songs/Reverse/Tamally_Maak R.mp3",
+      audio2: "/Songs/Normal/Tamally_Maak.mp3",
+    },
+    {
+      id: 34,
+      text: "الملاك البريء",
+      answer: "عمرو دياب",
+      audio: "/Songs/Reverse/El_Malak R.mp3",
+      audio2: "/Songs/Normal/El_Malak.mp3",
+    },
+    {
+      id: 35,
+      text: "كان طيب",
+      answer: "عمرو دياب",
+      audio: "/Songs/Reverse/Kan_Tayeb R.mp3",
+      audio2: "/Songs/Normal/Kan_Tayeb.mp3",
+    },
   ]
 };
 

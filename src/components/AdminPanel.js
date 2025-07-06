@@ -28,6 +28,11 @@ const AdminPanel = ({
   const [showReloadWarning, setShowReloadWarning] = useState(false);
   const audioRef = useRef(null);
   const [pausedTime, setPausedTime] = useState(0);
+  
+  // States for normal audio
+  const [audio2Playing, setAudio2Playing] = useState(false);
+  const [pausedTime2, setPausedTime2] = useState(0);
+  const audioRef2 = useRef(null);
 
   const activePlayerData = players.find(p => p.id === activePlayer);
   const adminPlayer = players.find(p => p.isAdmin);
@@ -80,6 +85,50 @@ const AdminPanel = ({
     setTimeout(handlePlayAudio, 100);
   };
 
+  // Handlers for normal audio
+  const handlePlayAudio2 = () => {
+    if (audioRef2.current) {
+      audioRef2.current.play()
+        .then(() => setAudio2Playing(true))
+        .catch(error => console.error("Audio2 play failed:", error));
+      socket.emit('play_audio2', roomCode);
+    }
+  };
+  
+  const handleContinueAudio2 = () => {
+    if (audioRef2.current && pausedTime2 > 0) {
+      audioRef2.current.currentTime = pausedTime2;
+      audioRef2.current.play()
+        .then(() => setAudio2Playing(true))
+        .catch(error => console.error("Audio2 continue failed:", error));
+      socket.emit('continue_audio2', roomCode, pausedTime2);
+    }
+  };
+
+  const handlePauseAudio2 = () => {
+    if (audioRef2.current) {
+      setPausedTime2(audioRef2.current.currentTime);
+      audioRef2.current.pause();
+      setAudio2Playing(false);
+      socket.emit('pause_audio2', roomCode);
+    }
+  };
+
+  const handleStopAudio2 = () => {
+    if (audioRef2.current) {
+      setPausedTime2(0);
+      audioRef2.current.pause();
+      audioRef2.current.currentTime = 0;
+      setAudio2Playing(false);
+      socket.emit('stop_audio2', roomCode);
+    }
+  };
+
+  const handleReplayAudio2 = () => {
+    handleStopAudio2();
+    setTimeout(handlePlayAudio2, 100);
+  };
+
   const handleNextQuestion = () => {
     onPlayRandomQuestion();
   };
@@ -101,13 +150,35 @@ const AdminPanel = ({
           .catch(error => console.error("Audio continue failed:", error));
       }
     };
+    
+    // Listeners for normal audio
+    const handlePauseAudio2Event = () => {
+      if (audioRef2.current) {
+        setPausedTime2(audioRef2.current.currentTime);
+        audioRef2.current.pause();
+        setAudio2Playing(false);
+      }
+    };
+
+    const handleContinueAudio2Event = (time) => {
+      if (audioRef2.current) {
+        audioRef2.current.currentTime = time;
+        audioRef2.current.play()
+          .then(() => setAudio2Playing(true))
+          .catch(error => console.error("Audio2 continue failed:", error));
+      }
+    };
 
     socket.on('pause_audio', handlePauseAudioEvent);
     socket.on('continue_audio', handleContinueAudioEvent);
+    socket.on('pause_audio2', handlePauseAudio2Event);
+    socket.on('continue_audio2', handleContinueAudio2Event);
 
     return () => {
       socket.off('pause_audio', handlePauseAudioEvent);
       socket.off('continue_audio', handleContinueAudioEvent);
+      socket.off('pause_audio2', handlePauseAudio2Event);
+      socket.off('continue_audio2', handleContinueAudio2Event);
     };
   }, [socket, roomCode]);
 
@@ -118,6 +189,15 @@ const AdminPanel = ({
       audioRef.current.load();
       setAudioPlaying(false);
       setPausedTime(0);
+    }
+    
+    // Load normal audio
+    if (currentQuestion && currentQuestion.audio2 && audioRef2.current) {
+      const audioUrl2 = `${process.env.PUBLIC_URL}${currentQuestion.audio2}`;
+      audioRef2.current.src = audioUrl2;
+      audioRef2.current.load();
+      setAudio2Playing(false);
+      setPausedTime2(0);
     }
   }, [currentQuestion]);
 
@@ -388,6 +468,75 @@ const AdminPanel = ({
                 onPause={() => setAudioPlaying(false)}
                 onEnded={() => setAudioPlaying(false)}
                 onError={(e) => console.error("Audio error:", e)}
+              />
+            </div>
+          )}
+          
+          {/* Normal Audio Controls */}
+          {currentQuestion && currentQuestion.audio2 && (
+            <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+              <h2 className="text-xl font-semibold mb-3">Normal Audio Controls</h2>
+              
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handlePlayAudio2}
+                  disabled={audio2Playing}
+                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                    audio2Playing 
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  <FaVolumeUp /> Play Normal
+                </button>
+                
+                <button
+                  onClick={handleContinueAudio2}
+                  disabled={audio2Playing || pausedTime2 === 0}
+                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                    audio2Playing || pausedTime2 === 0
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  <FaPlay /> Continue Normal
+                </button>
+                
+                <button
+                  onClick={handlePauseAudio2}
+                  disabled={!audio2Playing}
+                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                    !audio2Playing 
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-yellow-600 hover:bg-yellow-700'
+                  }`}
+                >
+                  <FaVolumeUp /> Pause Normal
+                </button>
+                
+                <button
+                  onClick={handleStopAudio2}
+                  className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 flex items-center justify-center gap-2"
+                >
+                  <FaVolumeUp /> Stop Normal
+                </button>
+                
+                <button
+                  onClick={handleReplayAudio2}
+                  className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex items-center justify-center gap-2"
+                >
+                  <FaVolumeUp /> Replay Normal
+                </button>
+              </div>
+              
+              {/* Audio element for normal audio */}
+              <audio 
+                ref={audioRef2}
+                className="w-full mt-4"
+                onPlay={() => setAudio2Playing(true)}
+                onPause={() => setAudio2Playing(false)}
+                onEnded={() => setAudio2Playing(false)}
+                onError={(e) => console.error("Audio2 error:", e)}
               />
             </div>
           )}
