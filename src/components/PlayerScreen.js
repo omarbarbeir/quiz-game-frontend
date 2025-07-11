@@ -218,7 +218,7 @@ const PlayerScreen = ({
                     <img 
                       src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
                       alt="Your unique question" 
-                      className="max-h-64 mx-auto rounded-lg"
+                      className="h-[430px] mx-auto rounded-lg"
                     />
                   </div>
                 </div>
