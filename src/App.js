@@ -6,7 +6,12 @@ import RoomJoin from './components/RoomJoin';
 import categories from './data/categories';
 import questions from './data/questions';
 
-const socket = io('https://ancient-prawn-omarelbarbeir-9282bb8f.koyeb.app', {
+// Use relative path for development, absolute for production
+const SOCKET_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:3001' 
+  : 'https://ancient-prawn-omarelbarbeir-9282bb8f.koyeb.app';
+
+const socket = io(SOCKET_URL, {
   transports: ['websocket'],
   reconnection: true,
   reconnectionAttempts: 5,
@@ -33,8 +38,8 @@ function App() {
   const [buzzerLocked, setBuzzerLocked] = useState(false);
   const [showJoinScreen, setShowJoinScreen] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
 
-  // Session storage for state persistence
   useEffect(() => {
     const savedState = sessionStorage.getItem('quizGameState');
     if (savedState) {
@@ -62,7 +67,6 @@ function App() {
     }
   }, [roomCode, playerName, playerId, isAdmin, showJoinScreen]);
 
-  // Page reload prevention
   useEffect(() => {
     if (!showJoinScreen) {
       const handleBeforeUnload = (e) => {
@@ -98,7 +102,6 @@ function App() {
       setGameStatus('lobby');
       setShowJoinScreen(false);
       
-      // Add admin as a player
       const adminPlayer = {
         id: `admin_${Date.now()}`,
         name: "Quiz Master",
@@ -157,6 +160,17 @@ function App() {
       alert(`${data.playerName} disconnected from the game`);
     };
 
+    // Handle individual photo questions
+    const handlePlayerPhotoQuestion = (photoData) => {
+      // Only set the question if it's for this player
+      if (photoData.playerId === playerId) {
+        setCurrentQuestion(photoData);
+        setActivePlayer(null);
+        setBuzzerLocked(false);
+        setGameStatus('playing');
+      }
+    };
+
     socket.on('room_created', handleRoomCreated);
     socket.on('player_joined', handlePlayerJoined);
     socket.on('player_left', handlePlayerLeft);
@@ -167,6 +181,7 @@ function App() {
     socket.on('game_ended', handleGameEnded);
     socket.on('room_closed', handleRoomClosed);
     socket.on('player_disconnected', handlePlayerDisconnected);
+    socket.on('player_photo_question', handlePlayerPhotoQuestion);
 
     return () => {
       socket.off('connect');
@@ -182,8 +197,9 @@ function App() {
       socket.off('game_ended', handleGameEnded);
       socket.off('room_closed', handleRoomClosed);
       socket.off('player_disconnected', handlePlayerDisconnected);
+      socket.off('player_photo_question', handlePlayerPhotoQuestion);
     };
-  }, [activePlayer, roomCode]);
+  }, [activePlayer, roomCode, playerId]);
 
   const createRoom = () => {
     socket.emit('create_room');
@@ -215,19 +231,15 @@ function App() {
     }
   };
 
-  // UPDATED: Score change function with buzzer reset logic
   const handleScoreChange = (playerId, change) => {
-    // Optimistic UI update
     setPlayers(prev => 
       prev.map(p => 
         p.id === playerId ? {...p, score: p.score + change} : p
       )
     );
     
-    // Emit to server
     socket.emit('update_score', { roomCode, playerId, change });
     
-    // Reset buzzer if scoring the active player
     if (activePlayer === playerId) {
       setActivePlayer(null);
       setBuzzerLocked(false);
@@ -242,10 +254,44 @@ function App() {
   };
 
   const playRandomQuestion = () => {
-    if (selectedCategory && questions[selectedCategory]?.length > 0) {
-      const randomIndex = Math.floor(Math.random() * questions[selectedCategory].length);
-      const randomQuestion = questions[selectedCategory][randomIndex];
-      playQuestion(randomQuestion);
+    if (selectedCategory === 'random-photos' && selectedSubcategory) {
+      // Use server to handle random photo distribution
+      socket.emit('play_random_question', { 
+        roomCode, 
+        subcategoryId: selectedSubcategory 
+      });
+    } else if (selectedCategory === 'photos') {
+      const subcategories = Object.keys(questions[selectedCategory]);
+      if (subcategories.length > 0) {
+        const randomSubcat = subcategories[Math.floor(Math.random() * subcategories.length)];
+        const subcatQuestions = questions[selectedCategory][randomSubcat];
+        if (subcatQuestions && subcatQuestions.length > 0) {
+          const randomIndex = Math.floor(Math.random() * subcatQuestions.length);
+          const randomQuestion = {
+            ...subcatQuestions[randomIndex],
+            category: 'photos'
+          };
+          playQuestion(randomQuestion);
+        }
+      }
+    } else if (selectedCategory && Array.isArray(questions[selectedCategory])) {
+      const categoryQuestions = questions[selectedCategory];
+      if (categoryQuestions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * categoryQuestions.length);
+        const randomQuestion = categoryQuestions[randomIndex];
+        playQuestion(randomQuestion);
+      }
+    } else if (selectedCategory && questions[selectedCategory]) {
+      const subcategories = Object.keys(questions[selectedCategory]);
+      if (subcategories.length > 0) {
+        const randomSubcat = subcategories[Math.floor(Math.random() * subcategories.length)];
+        const subcatQuestions = questions[selectedCategory][randomSubcat];
+        if (subcatQuestions && subcatQuestions.length > 0) {
+          const randomIndex = Math.floor(Math.random() * subcatQuestions.length);
+          const randomQuestion = subcatQuestions[randomIndex];
+          playQuestion(randomQuestion);
+        }
+      }
     }
   };
 
@@ -276,11 +322,17 @@ function App() {
     setBuzzerLocked(false);
     setShowJoinScreen(true);
     setSelectedCategory(null);
+    setSelectedSubcategory(null);
     sessionStorage.removeItem('quizGameState');
   };
 
   const handleCategorySelect = (categoryId) => {
     setSelectedCategory(categoryId);
+    setSelectedSubcategory(null);
+  };
+
+  const handleSubcategorySelect = (subcategoryId) => {
+    setSelectedSubcategory(subcategoryId);
   };
 
   return (
@@ -303,10 +355,14 @@ function App() {
           gameStatus={gameStatus}
           categories={categories}
           selectedCategory={selectedCategory}
+          selectedSubcategory={selectedSubcategory}
           onCategorySelect={handleCategorySelect}
+          onSubcategorySelect={handleSubcategorySelect}
           socket={socket}
           questions={questions}
           buzzerLocked={buzzerLocked}
+          isAdmin={true}
+          randomPhotosCategory={categories.find(c => c.id === 'random-photos')}
         />
       ) : (
         <PlayerScreen 
@@ -321,6 +377,11 @@ function App() {
           onLeaveRoom={leaveRoom}
           gameStatus={gameStatus}
           socket={socket}
+          isAdmin={false}
+          setCurrentQuestion={setCurrentQuestion}
+          setActivePlayer={setActivePlayer}
+          setBuzzerLocked={setBuzzerLocked}
+          setGameStatus={setGameStatus}
         />
       )}
     </div>

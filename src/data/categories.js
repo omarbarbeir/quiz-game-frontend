@@ -70,7 +70,43 @@ const categories = [
     name: "Music",
     icon: "🎵",
     color: "from-pink-600 to-rose-600"
-  }
+  },
+    {
+    id: 'photos',
+    name: 'الصور'
+  },
+
+  {
+    id: 'random-photos',
+    name: 'Random Photos',
+    subcategories: [
+      {
+        id: 'footballers',
+        name: 'Football Players'
+      },
+      {
+        id: 'food',
+        name: 'Food'
+      },
+      {
+        id: 'actors',
+        name: 'Actors'
+      },
+      {
+        id: 'animals',
+        name: 'Animals'
+      },
+      {
+        id: 'nature',
+        name: 'Nature'
+      },
+      {
+        id: 'art',
+        name: 'Art'
+      }
+    ]
+  } 
+
 ];
 
 export default categories;

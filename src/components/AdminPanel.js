@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaCrown, FaRedo, FaSignOutAlt, FaTimes, FaTrophy, FaVolumeUp, FaRandom, FaBell, FaPlay, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaCrown, FaRedo, FaSignOutAlt, FaTimes, FaTrophy, FaVolumeUp, FaRandom, FaBell, FaPlay, FaImage, FaArrowLeft } from 'react-icons/fa';
 import CategorySelector from './CategorySelector';
 
 const AdminPanel = ({ 
@@ -17,33 +17,31 @@ const AdminPanel = ({
   gameStatus,
   categories,
   selectedCategory,
+  selectedSubcategory,
   onCategorySelect,
+  onSubcategorySelect,
   socket,
   questions,
-  buzzerLocked
+  buzzerLocked,
+  isAdmin,
+  randomPhotosCategory
 }) => {
   const [audioPlaying, setAudioPlaying] = useState(false);
-  const [showQuestionText, setShowQuestionText] = useState(false);
-  const [showAnswer, setShowAnswer] = useState(false);
   const [showReloadWarning, setShowReloadWarning] = useState(false);
   const audioRef = useRef(null);
   const [pausedTime, setPausedTime] = useState(0);
   
-  // States for normal audio
   const [audio2Playing, setAudio2Playing] = useState(false);
   const [pausedTime2, setPausedTime2] = useState(0);
   const audioRef2 = useRef(null);
+  
+  const [loadingNext, setLoadingNext] = useState(false);
 
   const activePlayerData = players.find(p => p.id === activePlayer);
   const adminPlayer = players.find(p => p.isAdmin);
 
-  useEffect(() => {
-    setShowQuestionText(false);
-    setShowAnswer(false);
-  }, [currentQuestion]);
-
   const handlePlayAudio = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !currentQuestion?.image) {
       audioRef.current.play()
         .then(() => setAudioPlaying(true))
         .catch(error => console.error("Audio play failed:", error));
@@ -52,7 +50,7 @@ const AdminPanel = ({
   };
   
   const handleContinueAudio = () => {
-    if (audioRef.current && pausedTime > 0) {
+    if (audioRef.current && pausedTime > 0 && !currentQuestion?.image) {
       audioRef.current.currentTime = pausedTime;
       audioRef.current.play()
         .then(() => setAudioPlaying(true))
@@ -85,7 +83,6 @@ const AdminPanel = ({
     setTimeout(handlePlayAudio, 100);
   };
 
-  // Handlers for normal audio
   const handlePlayAudio2 = () => {
     if (audioRef2.current) {
       audioRef2.current.play()
@@ -130,7 +127,9 @@ const AdminPanel = ({
   };
 
   const handleNextQuestion = () => {
+    setLoadingNext(true);
     onPlayRandomQuestion();
+    setTimeout(() => setLoadingNext(false), 1000);
   };
 
   useEffect(() => {
@@ -151,7 +150,6 @@ const AdminPanel = ({
       }
     };
     
-    // Listeners for normal audio
     const handlePauseAudio2Event = () => {
       if (audioRef2.current) {
         setPausedTime2(audioRef2.current.currentTime);
@@ -180,30 +178,32 @@ const AdminPanel = ({
       socket.off('pause_audio2', handlePauseAudio2Event);
       socket.off('continue_audio2', handleContinueAudio2Event);
     };
-  }, [socket, roomCode]);
+  }, [socket, roomCode, currentQuestion]);
 
   useEffect(() => {
-    if (currentQuestion && audioRef.current) {
-      const audioUrl = `${process.env.PUBLIC_URL}${currentQuestion.audio}`;
-      audioRef.current.src = audioUrl;
-      audioRef.current.load();
-      setAudioPlaying(false);
-      setPausedTime(0);
-    }
-    
-    // Load normal audio
-    if (currentQuestion && currentQuestion.audio2 && audioRef2.current) {
-      const audioUrl2 = `${process.env.PUBLIC_URL}${currentQuestion.audio2}`;
-      audioRef2.current.src = audioUrl2;
-      audioRef2.current.load();
-      setAudio2Playing(false);
-      setPausedTime2(0);
+    if (currentQuestion) {
+      // Load main audio (reverse music for music category)
+      if (audioRef.current && !currentQuestion.image) {
+        const audioUrl = `${process.env.PUBLIC_URL}${currentQuestion.audio}`;
+        audioRef.current.src = audioUrl;
+        audioRef.current.load();
+        setAudioPlaying(false);
+        setPausedTime(0);
+      }
+      
+      // Load normal audio (audio2)
+      if (currentQuestion.audio2 && audioRef2.current) {
+        const audioUrl2 = `${process.env.PUBLIC_URL}${currentQuestion.audio2}`;
+        audioRef2.current.src = audioUrl2;
+        audioRef2.current.load();
+        setAudio2Playing(false);
+        setPausedTime2(0);
+      }
     }
   }, [currentQuestion]);
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Reload Warning Modal */}
       {showReloadWarning && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
@@ -244,8 +244,19 @@ const AdminPanel = ({
         </div>
       </div>
 
+      {selectedCategory && (
+        <button
+          onClick={() => {
+            onCategorySelect(null);
+            onSubcategorySelect(null);
+          }}
+          className="mb-4 bg-indigo-700 hover:bg-indigo-800 py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+        >
+          <FaArrowLeft /> Back to Categories
+        </button>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Players Section */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
             <div className="flex justify-between items-center mb-4">
@@ -301,7 +312,6 @@ const AdminPanel = ({
             </div>
           </div>
           
-          {/* Buzzer Control */}
           {activePlayer ? (
             <div className="bg-gradient-to-r from-amber-700 to-amber-600 rounded-xl p-4 shadow-lg animate-pulse">
               <div className="flex items-center justify-between">
@@ -352,17 +362,91 @@ const AdminPanel = ({
           )}
         </div>
         
-        {/* Game Controls */}
         <div className="space-y-6">
-          {/* Category Selector */}
-          <CategorySelector 
-            categories={categories}
-            onSelectCategory={onCategorySelect}
-            selectedCategory={selectedCategory}
-          />
+          {!selectedCategory || (selectedCategory === 'random-photos' && !selectedSubcategory) ? (
+            <CategorySelector 
+              categories={categories}
+              onSelectCategory={onCategorySelect}
+              selectedCategory={selectedCategory}
+              isAdmin={isAdmin}
+            />
+          ) : null}
           
-          {/* Question Display */}
-          {selectedCategory && (
+          {selectedCategory === 'random-photos' && !selectedSubcategory && (
+            <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+              <button
+                onClick={() => {
+                  onCategorySelect(null);
+                }}
+                className="mb-4 flex items-center gap-2 text-indigo-300 hover:text-white"
+              >
+                <FaArrowLeft /> Back to Categories
+              </button>
+              
+              <h2 className="text-xl font-semibold mb-3">Select Subcategory</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {randomPhotosCategory.subcategories.map(subcategory => (
+                  <button
+                    key={subcategory.id}
+                    onClick={() => onSubcategorySelect(subcategory.id)}
+                    className={`py-3 px-4 rounded-lg text-center transition-all ${
+                      selectedSubcategory === subcategory.id
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 transform scale-105'
+                        : 'bg-indigo-700 hover:bg-indigo-600'
+                    }`}
+                  >
+                    {subcategory.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {selectedSubcategory && (
+            <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    {randomPhotosCategory.subcategories.find(s => s.id === selectedSubcategory)?.name}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      onSubcategorySelect(null);
+                    }}
+                    className="flex items-center gap-1 text-sm text-indigo-300 hover:text-white mt-1"
+                  >
+                    <FaArrowLeft /> Change Subcategory
+                  </button>
+                </div>
+                
+                <button
+                  onClick={handleNextQuestion}
+                  disabled={loadingNext}
+                  className={`bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1 ${
+                    loadingNext ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <FaRandom /> {loadingNext ? 'Loading...' : 'Next Question'}
+                </button>
+              </div>
+              
+              {currentQuestion?.image && currentQuestion?.category === 'random-photos' && (
+                <div className="mt-4">
+                  <img 
+                    src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
+                    alt="Your unique photo" 
+                    className="max-h-64 mx-auto rounded-lg"
+                  />
+                  <div className="mt-4 bg-green-600 p-4 rounded-lg">
+                    <h3 className="font-semibold mb-2">Answer:</h3>
+                    <p className="text-lg font-bold">{currentQuestion.answer}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {selectedCategory && selectedCategory !== 'random-photos' && selectedCategory !== 'photos' && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">
@@ -379,10 +463,21 @@ const AdminPanel = ({
               <div className="space-y-4">
                 {currentQuestion ? (
                   <>
-                    <div className="bg-indigo-700 p-4 rounded-lg">
-                      <h3 className="font-semibold mb-2">Question:</h3>
-                      <p className="text-lg">{currentQuestion.text}</p>
-                    </div>
+                    {currentQuestion.image ? (
+                      <div className="bg-indigo-700 p-4 rounded-lg text-center">
+                        <h3 className="font-semibold mb-2">Photo Question:</h3>
+                        <img 
+                          src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
+                          alt="Question" 
+                          className="max-h-64 mx-auto rounded-lg"
+                        />
+                      </div>
+                    ) : (
+                      <div className="bg-indigo-700 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2">Question:</h3>
+                        <p className="text-lg">{currentQuestion.text}</p>
+                      </div>
+                    )}
                     
                     <div className="bg-green-600 p-4 rounded-lg">
                       <h3 className="font-semibold mb-2">Answer:</h3>
@@ -390,7 +485,7 @@ const AdminPanel = ({
                     </div>
 
                     <div className="bg-red-700 p-4 rounded-lg">
-                      <h3 className="font-semibold mb-2">تلميح زيادة:</h3>
+                      <h3 className="font-semibold mb-2">Hint:</h3>
                       <p className="text-lg font-bold">{currentQuestion.bounc}</p>
                     </div>
                   </>
@@ -403,10 +498,56 @@ const AdminPanel = ({
             </div>
           )}
           
-          {/* Question Controls */}
-          {currentQuestion && (
+          {selectedCategory === 'photos' && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-              <h2 className="text-xl font-semibold mb-3">Question Controls</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">
+                  Photos (Admin Only)
+                </h2>
+                <button
+                  onClick={handleNextQuestion}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
+                >
+                  <FaRandom /> Next Question
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {currentQuestion?.image && currentQuestion?.category === 'photos' ? (
+                  <>
+                    <div className="bg-indigo-700 p-4 rounded-lg text-center">
+                      <img 
+                        src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
+                        alt="Question" 
+                        className="max-h-64 mx-auto rounded-lg"
+                      />
+                    </div>
+                    
+                    <div className="bg-green-600 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-2">Answer:</h3>
+                      <p className="text-lg font-bold">{currentQuestion.answer}</p>
+                    </div>
+
+                    <div className="bg-red-700 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-2">Hint:</h3>
+                      <p className="text-lg font-bold">{currentQuestion.bounc}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-indigo-700 p-4 rounded-lg text-center">
+                    <p>Click "Next Question" to start</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Main audio controls (reverse music) */}
+          {currentQuestion && !currentQuestion.image && currentQuestion.audio && (
+            <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+              <h2 className="text-xl font-semibold mb-3">
+                {selectedCategory === 'music' ? "Reverse Music Controls" : "Question Controls"}
+              </h2>
               
               <div className="flex flex-wrap gap-3">
                 <button
@@ -460,7 +601,6 @@ const AdminPanel = ({
                 </button>
               </div>
               
-              {/* Audio element for admin */}
               <audio 
                 ref={audioRef}
                 className="w-full mt-4"
@@ -472,10 +612,12 @@ const AdminPanel = ({
             </div>
           )}
           
-          {/* Normal Audio Controls */}
+          {/* Normal audio controls (audio2) */}
           {currentQuestion && currentQuestion.audio2 && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-              <h2 className="text-xl font-semibold mb-3">Normal Audio Controls</h2>
+              <h2 className="text-xl font-semibold mb-3">
+                {selectedCategory === 'music' ? "Normal Music Controls" : "Audio 2 Controls"}
+              </h2>
               
               <div className="flex flex-wrap gap-3">
                 <button
@@ -487,7 +629,7 @@ const AdminPanel = ({
                       : 'bg-green-600 hover:bg-green-700'
                   }`}
                 >
-                  <FaVolumeUp /> Play Normal
+                  <FaVolumeUp /> Play
                 </button>
                 
                 <button
@@ -499,7 +641,7 @@ const AdminPanel = ({
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  <FaPlay /> Continue Normal
+                  <FaPlay /> Continue
                 </button>
                 
                 <button
@@ -511,25 +653,24 @@ const AdminPanel = ({
                       : 'bg-yellow-600 hover:bg-yellow-700'
                   }`}
                 >
-                  <FaVolumeUp /> Pause Normal
+                  <FaVolumeUp /> Pause
                 </button>
                 
                 <button
                   onClick={handleStopAudio2}
                   className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 flex items-center justify-center gap-2"
                 >
-                  <FaVolumeUp /> Stop Normal
+                  <FaVolumeUp /> Stop
                 </button>
                 
                 <button
                   onClick={handleReplayAudio2}
                   className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex items-center justify-center gap-2"
                 >
-                  <FaVolumeUp /> Replay Normal
+                  <FaVolumeUp /> Replay
                 </button>
               </div>
               
-              {/* Audio element for normal audio */}
               <audio 
                 ref={audioRef2}
                 className="w-full mt-4"
@@ -541,7 +682,6 @@ const AdminPanel = ({
             </div>
           )}
           
-          {/* Game Controls */}
           <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
             <h2 className="text-xl font-semibold mb-3">Game Controls</h2>
             
