@@ -135,7 +135,7 @@ const PlayerScreen = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <div className="lg:col-span-1">
+        {/* <div className="lg:col-span-1">
           <div className="bg-indigo-800 rounded-xl p-4 shadow-lg h-full">
             <h2 className="text-xl font-semibold mb-4">Leaderboard</h2>
             
@@ -166,7 +166,7 @@ const PlayerScreen = ({
               ))}
             </div>
           </div>
-        </div>
+        </div> */}
         
         <div className="lg:col-span-2 space-y-6">
           {gameStatus === 'ended' ? (
@@ -219,7 +219,7 @@ const PlayerScreen = ({
                     <img 
                       src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
                       alt="Your unique question" 
-                      className="h-[560px] w-[480px] mx-auto rounded-lg"
+                      className="h-[590px] w-[530px] mx-auto rounded-lg"
                     />
                       <div className="mt-4 bg-green-600 p-4 rounded-lg">
                         <h3 className="font-semibold mb-2">Answer:</h3>
