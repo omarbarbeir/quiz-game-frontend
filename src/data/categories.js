@@ -41,12 +41,12 @@ const categories = [
     icon: "🎬",
     color: "from-purple-600 to-indigo-600"
   },
-  // {
-  //   id: "movies",
-  //   name: "Movies",
-  //   icon: "🎬",
-  //   color: "from-purple-600 to-indigo-600"
-  // },
+  {
+    id: "reverse",
+    name: "الكلمات المعكوسة",
+    icon: "🔄",
+    color: "from-orange-600 to-amber-600"
+  },
   {
     id: "science",
     name: "Science",
@@ -71,7 +71,7 @@ const categories = [
     icon: "🎵",
     color: "from-pink-600 to-rose-600"
   },
-    {
+  {
     id: 'photos',
     name: 'الصور'
   },

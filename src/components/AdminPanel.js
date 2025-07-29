@@ -463,7 +463,17 @@ const AdminPanel = ({
               <div className="space-y-4">
                 {currentQuestion ? (
                   <>
-                    {currentQuestion.image ? (
+                    {selectedCategory === 'reverse' ? (
+                      <div className="bg-gradient-to-r from-orange-700 to-amber-700 p-6 rounded-lg">
+                        <h3 className="font-semibold mb-2 text-center">Reversed Word:</h3>
+                        <p className="text-2xl font-bold text-center mb-4">{currentQuestion.text}</p>
+                        
+                        {/* <div className="bg-indigo-900 p-4 rounded-lg">
+                          <h3 className="font-semibold mb-2 text-center">Hint:</h3>
+                          <p className="text-lg text-center">{currentQuestion.bounc}</p>
+                        </div> */}
+                      </div>
+                    ) : currentQuestion.image ? (
                       <div className="bg-indigo-700 p-4 rounded-lg text-center">
                         <h3 className="font-semibold mb-2">Photo Question:</h3>
                         <img 
@@ -484,10 +494,12 @@ const AdminPanel = ({
                       <p className="text-lg font-bold">{currentQuestion.answer}</p>
                     </div>
 
-                    <div className="bg-red-700 p-4 rounded-lg">
-                      <h3 className="font-semibold mb-2">Hint:</h3>
-                      <p className="text-lg font-bold">{currentQuestion.bounc}</p>
-                    </div>
+                    {currentQuestion.bounc && (
+                      <div className="bg-red-700 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2">Hint:</h3>
+                        <p className="text-lg font-bold">{currentQuestion.bounc}</p>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="bg-indigo-700 p-4 rounded-lg text-center">

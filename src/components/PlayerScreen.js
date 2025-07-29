@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo, FaImage } from 'react-icons/fa';
+import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo } from 'react-icons/fa';
 
 const PlayerScreen = ({ 
   playerId,
@@ -32,9 +32,12 @@ const PlayerScreen = ({
                          currentQuestion?.category === 'random-photos' && 
                          currentQuestion?.subcategory;
   
+  // Check if it's a reverse word question
+  const isReverseQuestion = currentQuestion?.category === 'reverse';
+  
   useEffect(() => {
     const handlePlayAudio = () => {
-      if (audioRef.current && !activePlayer && !shouldShowImage) {
+      if (audioRef.current && !activePlayer && !shouldShowImage && !isReverseQuestion) {
         audioRef.current.play()
           .then(() => setAudioPlaying(true))
           .catch(error => console.error("Audio play failed:", error));
@@ -79,17 +82,17 @@ const PlayerScreen = ({
       socket.off('continue_audio', handleContinueAudio);
       socket.off('player_photo_question', handlePlayerPhotoQuestion);
     };
-  }, [socket, activePlayer, currentQuestion, shouldShowImage, playerId, setCurrentQuestion, setActivePlayer, setBuzzerLocked, setGameStatus]);
+  }, [socket, activePlayer, currentQuestion, shouldShowImage, playerId, setCurrentQuestion, setActivePlayer, setBuzzerLocked, setGameStatus, isReverseQuestion]);
   
   useEffect(() => {
-    if (currentQuestion && audioRef.current && !shouldShowImage) {
+    if (currentQuestion && audioRef.current && !shouldShowImage && !isReverseQuestion) {
       const audioUrl = `${process.env.PUBLIC_URL}${currentQuestion.audio}`;
       audioRef.current.src = audioUrl;
       audioRef.current.load();
       setAudioPlaying(false);
       setPausedTime(0);
     }
-  }, [currentQuestion, shouldShowImage]);
+  }, [currentQuestion, shouldShowImage, isReverseQuestion]);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -134,40 +137,6 @@ const PlayerScreen = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* <div className="lg:col-span-1">
-          <div className="bg-indigo-800 rounded-xl p-4 shadow-lg h-full">
-            <h2 className="text-xl font-semibold mb-4">Leaderboard</h2>
-            
-            <div className="space-y-3">
-              {sortedPlayers.map((player, index) => (
-                <div 
-                  key={player.id} 
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    player.id === playerId 
-                      ? 'bg-gradient-to-r from-purple-700 to-indigo-700' 
-                      : 'bg-indigo-700'
-                  } ${
-                    index === 0 ? 'border-2 border-amber-400' : ''
-                  } ${player.isAdmin ? 'border-2 border-yellow-400' : ''}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      index === 0 ? 'bg-amber-500' : 'bg-indigo-600'
-                    } ${player.isAdmin ? 'bg-yellow-500' : ''}`}>
-                      <span className="font-bold">{index + 1}</span>
-                    </div>
-                    <span className={`${player.id === playerId ? 'font-bold' : ''}`}>
-                      {player.isAdmin ? "Quiz Master" : `Player ${index + 1}`}
-                    </span>
-                  </div>
-                  <span className="font-bold">{player.score}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div> */}
-        
         <div className="lg:col-span-2 space-y-6">
           {gameStatus === 'ended' ? (
             <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl p-6 shadow-lg text-center">
@@ -205,7 +174,7 @@ const PlayerScreen = ({
                 <div className="bg-indigo-800 rounded-xl p-6 shadow-lg text-center">
                   <div className="mb-4">
                     <div className="flex justify-center mb-3">
-                      <FaImage className="text-4xl text-indigo-300" />
+                      <span className="text-4xl text-indigo-300" />
                     </div>
                     <h2 className="text-xl font-semibold">
                       Random Photos: {currentQuestion.subcategory}
@@ -225,6 +194,23 @@ const PlayerScreen = ({
                         <h3 className="font-semibold mb-2">Answer:</h3>
                         <p className="text-3xl font-bold">{currentQuestion.answer}</p>
                       </div>
+                  </div>
+                </div>
+              ) : isReverseQuestion ? (
+                <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
+                  <div className="mb-4 text-center">
+                    <h2 className="text-xl font-semibold">الكلمات المعكوسة</h2>
+                    <p className="text-indigo-300 mt-2">Reversed Words Challenge</p>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-6 rounded-lg">
+                    <h3 className="font-semibold mb-2 text-center">Question:</h3>
+                    <p className="text-2xl font-bold text-center mb-6">{currentQuestion.text}</p>
+                    
+                    <div className="bg-indigo-900 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-2 text-center">Hint:</h3>
+                      <p className="text-lg text-center">{currentQuestion.bounc}</p>
+                    </div>
                   </div>
                 </div>
               ) : currentQuestion?.audio ? (
@@ -322,13 +308,6 @@ const PlayerScreen = ({
               </div>
             </>
           )}
-          
-          {/* <button
-            onClick={() => setShowReloadWarning(true)}
-            className="mt-4 bg-indigo-700 hover:bg-indigo-800 py-2 px-4 rounded-lg flex items-center justify-center gap-2"
-          >
-            <FaRedo /> Reload Page
-          </button> */}
           
           <button
             onClick={onLeaveRoom}
