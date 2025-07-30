@@ -1,269 +1,293 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FaPause, FaPlay, FaForward, FaUndo, FaSignOutAlt, FaRandom } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaRedo, FaClock } from 'react-icons/fa';
 
-const TicTacToeGame = ({ 
-  players, 
-  currentPlayerId,
-  roomCode, 
-  socket,
-  isAdmin,
-  board,
-  onSquareClick,
-  currentPlayerIndex,
-  winner,
-  onNextPlayer,
-  onResetGame,
-  onNewRound,
-  onLeaveGame,
-  currentRound
-}) => {
-  const [timerSeconds, setTimerSeconds] = useState(20);
-  const [timerActive, setTimerActive] = useState(true);
-  const timerRef = useRef(null);
+const TicTacToe = ({ isAdmin, socket, roomCode, players }) => {
+  // Define the rounds with image data
+  const rounds = [
+    {
+      logo1: "/Net/acmilan.jpg",
+      logo2: "/Net/africa_cup.jpg",
+      logo3: "/Net/Africa_Map.jpg",
+      logoleft1: "/Net/ajax.jpg",
+      logoleft2: "/Net/alex_ferg.jpg",
+      logoleft3: "/Net/Argentina.jpg",
+    },
+    {
+      logo1: "/Net/arsenal.jpg",
+      logo2: "/Net/aston_villa.jpg",
+      logo3: "/Net/atletico_madrid.jpg",
+      logoleft1: "/Net/barcelona.jpg",
+      logoleft2: "/Net/bayern_munich.jpg",
+      logoleft3: "/Net/benfica.jpg",
+    },
+    {
+      logo1: "/Net/borussia_dortmund.jpg",
+      logo2: "/Net/brazil.jpg",
+      logo3: "/Net/chelsea.jpg",
+      logoleft1: "/Net/copa_america.jpg",
+      logoleft2: "/Net/diego_maradona.jpg",
+      logoleft3: "/Net/england.jpg",
+    }
+  ];
+  
+  const [currentRound, setCurrentRound] = useState(0);
+  const [squares, setSquares] = useState(Array(6).fill(null));
+  const [currentPlayer, setCurrentPlayer] = useState(0);
+  const [timer, setTimer] = useState(30);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
   
   // Player colors
   const playerColors = [
-    'bg-red-500', 
-    'bg-blue-500', 
-    'bg-green-500', 
-    'bg-yellow-500',
-    'bg-purple-500',
-    'bg-pink-500'
+    'bg-red-500', 'bg-blue-500', 'bg-green-500', 
+    'bg-yellow-500', 'bg-purple-500', 'bg-pink-500'
   ];
-  
-  // Player symbols
-  const playerSymbols = ['X', 'O', '△', '□', '◯', '☆'];
 
-  // Initialize player data
-  const playerData = players.map((player, index) => ({
-    ...player,
-    color: playerColors[index],
-    symbol: playerSymbols[index]
-  }));
+  // Initialize game
+  useEffect(() => {
+    setIsTimerRunning(true);
+    socket.emit('init_tic_tac_toe', { 
+      roomCode, 
+      squares: Array(6).fill(null),
+      currentPlayer: 0,
+      currentRound: 0
+    });
+  }, []);
 
-  // Current player
-  const currentPlayer = playerData[currentPlayerIndex];
-  
-  // Move to next player
-  const nextPlayer = () => {
-    onNextPlayer();
+  // Handle square click
+  const handleSquareClick = (index) => {
+    if (!isAdmin || !isTimerRunning) return;
+    
+    const newSquares = [...squares];
+    newSquares[index] = {
+      playerId: players[currentPlayer].id,
+      playerName: players[currentPlayer].name,
+      color: playerColors[currentPlayer]
+    };
+    
+    setSquares(newSquares);
+    socket.emit('update_tic_tac_toe', { 
+      roomCode, 
+      squares: newSquares,
+      currentPlayer
+    });
   };
 
-  // Reset timer
-  const resetTimer = () => {
-    setTimerSeconds(20);
+  // Reset all squares
+  const resetSquares = () => {
+    const newSquares = Array(6).fill(null);
+    setSquares(newSquares);
+    setTimer(30);
+    setIsTimerRunning(true);
+    
+    socket.emit('update_tic_tac_toe', { 
+      roomCode, 
+      squares: newSquares,
+      currentPlayer
+    });
   };
 
-  // Toggle timer
-  const toggleTimer = () => {
-    setTimerActive(!timerActive);
+  // Change current player
+  const changePlayer = () => {
+    const nextPlayer = (currentPlayer + 1) % players.length;
+    setCurrentPlayer(nextPlayer);
+    
+    socket.emit('change_tic_tac_toe_player', { 
+      roomCode, 
+      playerIndex: nextPlayer 
+    });
   };
+
+  // Move to next round
+  const nextRound = () => {
+    const nextRound = (currentRound + 1) % rounds.length;
+    setCurrentRound(nextRound);
+    resetSquares();
+    
+    socket.emit('change_tic_tac_toe_round', { 
+      roomCode, 
+      round: nextRound 
+    });
+  };
+
+  // Socket listeners
+  useEffect(() => {
+    const handleTicTacToeInit = (data) => {
+      if (data.roomCode === roomCode) {
+        setSquares(data.squares);
+        setCurrentPlayer(data.currentPlayer);
+        setCurrentRound(data.currentRound);
+        setTimer(30);
+        setIsTimerRunning(true);
+      }
+    };
+
+    const handleTicTacToeUpdate = (data) => {
+      if (data.roomCode === roomCode) {
+        setSquares(data.squares);
+        setCurrentPlayer(data.currentPlayer);
+      }
+    };
+
+    const handlePlayerChange = (data) => {
+      if (data.roomCode === roomCode) {
+        setCurrentPlayer(data.playerIndex);
+      }
+    };
+
+    const handleRoundChange = (data) => {
+      if (data.roomCode === roomCode) {
+        setCurrentRound(data.round);
+        resetSquares();
+      }
+    };
+
+    socket.on('tic_tac_toe_initialized', handleTicTacToeInit);
+    socket.on('tic_tac_toe_updated', handleTicTacToeUpdate);
+    socket.on('tic_tac_toe_player_changed', handlePlayerChange);
+    socket.on('tic_tac_toe_round_changed', handleRoundChange);
+
+    return () => {
+      socket.off('tic_tac_toe_initialized', handleTicTacToeInit);
+      socket.off('tic_tac_toe_updated', handleTicTacToeUpdate);
+      socket.off('tic_tac_toe_player_changed', handlePlayerChange);
+      socket.off('tic_tac_toe_round_changed', handleRoundChange);
+    };
+  }, [socket, roomCode]);
 
   // Timer effect
   useEffect(() => {
-    if (timerActive && !winner) {
-      timerRef.current = setInterval(() => {
-        setTimerSeconds(prev => {
-          if (prev <= 1) {
-            nextPlayer();
-            return 20;
-          }
-          return prev - 1;
-        });
+    let interval;
+    if (isTimerRunning && timer > 0) {
+      interval = setInterval(() => {
+        setTimer(prev => prev - 1);
       }, 1000);
+    } else if (timer === 0) {
+      setIsTimerRunning(false);
     }
     
-    return () => clearInterval(timerRef.current);
-  }, [timerActive, winner]);
+    return () => clearInterval(interval);
+  }, [isTimerRunning, timer]);
 
-  // Reset timer when player changes
-  useEffect(() => {
-    resetTimer();
-  }, [currentPlayerIndex]);
-
-  // Render game board with photos
-  const renderBoard = () => {
-    return (
-      <div className="grid grid-cols-4 gap-2 w-full max-w-md mx-auto">
-        {/* Top Row - Logo and Photos */}
-        <div className="col-span-1 row-span-1 flex items-center justify-center p-2">
-          <div className="w-full h-full flex items-center justify-center font-bold text-lg bg-indigo-700 rounded-lg">
-            LOGO
-          </div>
-        </div>
-        <div className="col-span-1 row-span-1 flex items-center justify-center p-2">
-          <img 
-            src={currentRound?.logo1} 
-            alt="Top Row 1" 
-            className="w-full h-full object-contain rounded-lg"
-          />
-        </div>
-        <div className="col-span-1 row-span-1 flex items-center justify-center p-2">
-          <img 
-            src={currentRound?.logo2} 
-            alt="Top Row 2" 
-            className="w-full h-full object-contain rounded-lg"
-          />
-        </div>
-        <div className="col-span-1 row-span-1 flex items-center justify-center p-2">
-          <img 
-            src={currentRound?.logo3} 
-            alt="Top Row 3" 
-            className="w-full h-full object-contain rounded-lg"
-          />
-        </div>
-        
-        {/* Left Column - Photos */}
-        <div className="col-span-1 row-span-1 flex items-center justify-center p-2">
-          <img 
-            src={currentRound?.logoleft1} 
-            alt="Left Column 1" 
-            className="w-full h-full object-contain rounded-lg"
-          />
-        </div>
-        {renderPlayableSquare(4)}
-        {renderPlayableSquare(5)}
-        {renderPlayableSquare(6)}
-        
-        <div className="col-span-1 row-span-1 flex items-center justify-center p-2">
-          <img 
-            src={currentRound?.logoleft2} 
-            alt="Left Column 2" 
-            className="w-full h-full object-contain rounded-lg"
-          />
-        </div>
-        {renderPlayableSquare(7)}
-        {renderPlayableSquare(8)}
-        {renderPlayableSquare(9)}
-        
-        <div className="col-span-1 row-span-1 flex items-center justify-center p-2">
-          <img 
-            src={currentRound?.logoleft3} 
-            alt="Left Column 3" 
-            className="w-full h-full object-contain rounded-lg"
-          />
-        </div>
-        {renderPlayableSquare(10)}
-        {renderPlayableSquare(11)}
-        {renderPlayableSquare(12)}
-        
-        {/* Bottom Row - Playable squares */}
-        <div className="col-span-1 row-span-1"></div> {/* Empty space for alignment */}
-        {renderPlayableSquare(13)}
-        {renderPlayableSquare(14)}
-        {renderPlayableSquare(15)}
-      </div>
-    );
-  };
-
-  const renderPlayableSquare = (index) => (
-    <div 
-      key={index}
-      onClick={() => onSquareClick(index)}
-      className={`
-        aspect-square flex items-center justify-center text-3xl font-bold
-        border-4 border-indigo-700 rounded-lg cursor-pointer
-        transition-all duration-200 hover:scale-105
-        ${board[index] !== null ? playerData[board[index]]?.color + ' text-white' : 'bg-indigo-800'}
-      `}
-    >
-      {board[index] !== null ? playerData[board[index]]?.symbol : ''}
-    </div>
-  );
+  // Get images for current round
+  const leftImages = [
+    rounds[currentRound].logoleft1,
+    rounds[currentRound].logoleft2,
+    rounds[currentRound].logoleft3,
+    rounds[currentRound].logoleft1,
+    rounds[currentRound].logoleft2,
+    rounds[currentRound].logoleft3,
+  ];
+  
+  const rightImages = [
+    rounds[currentRound].logo1,
+    rounds[currentRound].logo2,
+    rounds[currentRound].logo3,
+    rounds[currentRound].logo1,
+    rounds[currentRound].logo2,
+    rounds[currentRound].logo3,
+  ];
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">تيك تاك تو</h1>
-        <button
-          onClick={onLeaveGame}
-          className="bg-indigo-700 hover:bg-indigo-800 py-2 px-4 rounded-lg flex items-center gap-2"
-        >
-          <FaSignOutAlt /> العودة إلى المسابقة
-        </button>
-      </div>
-
-      {/* Player status */}
-      <div className="bg-indigo-800 rounded-xl p-4 mb-6">
-        <div className="flex flex-wrap justify-center gap-4 mb-4">
-          {playerData.map((player, index) => (
-            <div 
-              key={player.id}
-              className={`flex items-center gap-2 p-2 rounded-lg ${
-                currentPlayerIndex === index ? 'ring-4 ring-yellow-500' : ''
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-full ${player.color}`}></div>
-              <span className="font-medium">
-                {player.name} ({player.symbol})
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center py-3">
-          {winner ? (
-            <div className="text-2xl font-bold">
-              الفائز: <span className={`${playerData.find(p => p.id === winner.id)?.color} px-3 py-1 rounded-lg`}>{winner.name}</span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-4">
-              <div className="text-xl">
-                اللاعب الحالي: <span className="font-bold">{currentPlayer.name}</span>
+    <div className="bg-gradient-to-br from-indigo-900 to-purple-800 rounded-xl p-6 shadow-lg">
+      <div className="grid grid-cols-2 gap-8">
+        {/* Left Column - Player Squares */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {leftImages.map((image, index) => (
+              <div 
+                key={`left-${index}`}
+                onClick={() => handleSquareClick(index)}
+                className={`aspect-square rounded-lg flex items-center justify-center cursor-pointer overflow-hidden relative
+                  ${squares[index] ? squares[index].color : 'bg-indigo-700 hover:bg-indigo-600'} 
+                  ${isAdmin && isTimerRunning ? 'hover:opacity-90' : ''}`}
+              >
+                {squares[index] ? (
+                  <span className="text-white font-bold text-center px-2 truncate">
+                    {squares[index].playerName}
+                  </span>
+                ) : (
+                  <img 
+                    src={image} 
+                    alt={`Left ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
-              <div className="text-xl">
-                الوقت: <span className="font-mono">{timerSeconds} ثانية</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Game board */}
-      <div className="mb-8">
-        {renderBoard()}
-      </div>
-
-      {/* Admin Controls */}
-      {isAdmin && (
-        <div className="bg-indigo-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold mb-3">تحكم المشرف</h3>
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              onClick={toggleTimer}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                timerActive ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              {timerActive ? <FaPause /> : <FaPlay />}
-              {timerActive ? 'إيقاف المؤقت' : 'تشغيل المؤقت'}
-            </button>
-            
-            <button
-              onClick={nextPlayer}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
-            >
-              <FaForward /> اللاعب التالي
-            </button>
-            
-            <button
-              onClick={onResetGame}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex items-center gap-2"
-            >
-              <FaUndo /> إعادة المربعات
-            </button>
-            
-            <button
-              onClick={onNewRound}
-              className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 flex items-center gap-2"
-            >
-              <FaRandom /> جولة جديدة
-            </button>
+            ))}
           </div>
+          
+          <div className="text-center">
+            <h3 className="font-bold text-lg mb-2">المربعات</h3>
+          </div>
+        </div>
+        
+        {/* Right Column - Image Squares */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {rightImages.map((image, index) => (
+              <div 
+                key={`right-${index}`}
+                className={`aspect-square rounded-lg flex items-center justify-center overflow-hidden
+                  ${squares[index] ? squares[index].color : 'bg-indigo-700'}`}
+              >
+                {!squares[index] && (
+                  <img 
+                    src={image} 
+                    alt={`Right ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <div className="text-center">
+            <h3 className="font-bold text-lg mb-2">بيغربول</h3>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 bg-indigo-800 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Current Player:</span>
+            <div className={`w-6 h-6 rounded-full ${playerColors[currentPlayer]}`}></div>
+            <span className="font-bold">{players[currentPlayer]?.name || 'Player'}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <FaClock className="text-amber-400" />
+            <span className="font-mono text-xl">{timer.toString().padStart(2, '0')}</span>
+          </div>
+        </div>
+      </div>
+
+      {isAdmin && (
+        <div className="mt-6 grid grid-cols-3 gap-4">
+          <button 
+            onClick={resetSquares}
+            className="bg-amber-600 hover:bg-amber-700 py-3 rounded-lg flex items-center justify-center gap-2"
+          >
+            <FaRedo /> إعادة المربعات
+          </button>
+          
+          <button 
+            onClick={changePlayer}
+            className="bg-blue-600 hover:bg-blue-700 py-3 rounded-lg"
+          >
+            تغيير الدور
+          </button>
+          
+          <button 
+            onClick={nextRound}
+            className="bg-green-600 hover:bg-green-700 py-3 rounded-lg"
+          >
+            الترميلان
+          </button>
         </div>
       )}
     </div>
   );
 };
 
-export default TicTacToeGame;
+export default TicTacToe;
