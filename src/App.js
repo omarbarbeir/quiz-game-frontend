@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import AdminPanel from './components/AdminPanel';
 import PlayerScreen from './components/PlayerScreen';
 import RoomJoin from './components/RoomJoin';
+import Whiteboard from './components/Whiteboard';
 import categories from './data/categories';
 import questions from './data/questions';
 
@@ -162,7 +163,6 @@ function App() {
 
     // Handle individual photo questions
     const handlePlayerPhotoQuestion = (photoData) => {
-      // Only set the question if it's for this player
       if (photoData.playerId === playerId) {
         setCurrentQuestion(photoData);
         setActivePlayer(null);
@@ -254,8 +254,15 @@ function App() {
   };
 
   const playRandomQuestion = () => {
-    if (selectedCategory === 'random-photos' && selectedSubcategory) {
-      // Use server to handle random photo distribution
+    if (selectedCategory === 'whiteboard') {
+      playQuestion({
+        id: 'whiteboard',
+        category: 'whiteboard',
+        text: 'السبورة التعاونية',
+        answer: ''
+      });
+    }
+    else if (selectedCategory === 'random-photos' && selectedSubcategory) {
       socket.emit('play_random_question', { 
         roomCode, 
         subcategoryId: selectedSubcategory 
@@ -340,49 +347,53 @@ function App() {
       {showJoinScreen ? (
         <RoomJoin onCreateRoom={createRoom} onJoinRoom={joinRoom} />
       ) : isAdmin ? (
-        <AdminPanel 
-          roomCode={roomCode}
-          players={players}
-          activePlayer={activePlayer}
-          currentQuestion={currentQuestion}
-          onScoreChange={handleScoreChange}
-          onPlayQuestion={playQuestion}
-          onPlayRandomQuestion={playRandomQuestion}
-          onResetBuzzer={resetBuzzer}
-          onEndGame={endGame}
-          onLeaveRoom={leaveRoom}
-          onAdminBuzzer={handleAdminBuzzer}
-          gameStatus={gameStatus}
-          categories={categories}
-          selectedCategory={selectedCategory}
-          selectedSubcategory={selectedSubcategory}
-          onCategorySelect={handleCategorySelect}
-          onSubcategorySelect={handleSubcategorySelect}
-          socket={socket}
-          questions={questions}
-          buzzerLocked={buzzerLocked}
-          isAdmin={true}
-          randomPhotosCategory={categories.find(c => c.id === 'random-photos')}
-        />
+        <div className="max-w-6xl mx-auto">
+          <AdminPanel 
+            roomCode={roomCode}
+            players={players}
+            activePlayer={activePlayer}
+            currentQuestion={currentQuestion}
+            onScoreChange={handleScoreChange}
+            onPlayQuestion={playQuestion}
+            onPlayRandomQuestion={playRandomQuestion}
+            onResetBuzzer={resetBuzzer}
+            onEndGame={endGame}
+            onLeaveRoom={leaveRoom}
+            onAdminBuzzer={handleAdminBuzzer}
+            gameStatus={gameStatus}
+            categories={categories}
+            selectedCategory={selectedCategory}
+            selectedSubcategory={selectedSubcategory}
+            onCategorySelect={handleCategorySelect}
+            onSubcategorySelect={handleSubcategorySelect}
+            socket={socket}
+            questions={questions}
+            buzzerLocked={buzzerLocked}
+            isAdmin={true}
+            randomPhotosCategory={categories.find(c => c.id === 'random-photos')}
+          />
+        </div>
       ) : (
-        <PlayerScreen 
-          playerId={playerId}
-          playerName={playerName}
-          roomCode={roomCode}
-          players={players}
-          activePlayer={activePlayer}
-          currentQuestion={currentQuestion}
-          onBuzzerPress={handleBuzzer}
-          buzzerLocked={buzzerLocked}
-          onLeaveRoom={leaveRoom}
-          gameStatus={gameStatus}
-          socket={socket}
-          isAdmin={false}
-          setCurrentQuestion={setCurrentQuestion}
-          setActivePlayer={setActivePlayer}
-          setBuzzerLocked={setBuzzerLocked}
-          setGameStatus={setGameStatus}
-        />
+        <div className="max-w-6xl mx-auto">
+          <PlayerScreen 
+            playerId={playerId}
+            playerName={playerName}
+            roomCode={roomCode}
+            players={players}
+            activePlayer={activePlayer}
+            currentQuestion={currentQuestion}
+            onBuzzerPress={handleBuzzer}
+            buzzerLocked={buzzerLocked}
+            onLeaveRoom={leaveRoom}
+            gameStatus={gameStatus}
+            socket={socket}
+            isAdmin={false}
+            setCurrentQuestion={setCurrentQuestion}
+            setActivePlayer={setActivePlayer}
+            setBuzzerLocked={setBuzzerLocked}
+            setGameStatus={setGameStatus}
+          />
+        </div>
       )}
     </div>
   );

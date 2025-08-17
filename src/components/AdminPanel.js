@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaCrown, FaRedo, FaSignOutAlt, FaTimes, FaTrophy, FaVolumeUp, FaRandom, FaBell, FaPlay, FaImage, FaArrowLeft } from 'react-icons/fa';
 import CategorySelector from './CategorySelector';
+import Whiteboard from './Whiteboard';
 
 const AdminPanel = ({ 
   roomCode, 
@@ -11,7 +12,7 @@ const AdminPanel = ({
   onPlayQuestion,
   onPlayRandomQuestion,
   onResetBuzzer, 
-  onEndGame, 
+ onEndGame, 
   onLeaveRoom,
   onAdminBuzzer,
   gameStatus,
@@ -202,14 +203,14 @@ const AdminPanel = ({
     }
   }, [currentQuestion]);
 
-  return (
-    <div className="max-w-6xl mx-auto">
+    return (
+    <div className="w-full">
       {showReloadWarning && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4 text-center">Warning!</h2>
+            <h2 className="text-2xl font-bold mb-4 text-center">تحذير!</h2>
             <p className="text-lg mb-6 text-center">
-              Reloading will end the game for all players
+              إعادة التحميل ستنهي اللعبة لجميع اللاعبين
             </p>
             <div className="flex gap-4">
               <button
@@ -219,27 +220,27 @@ const AdminPanel = ({
                 }}
                 className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold"
               >
-                Quit Anyway
+                خروج على أي حال
               </button>
               <button
                 onClick={() => setShowReloadWarning(false)}
                 className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-bold"
               >
-                Continue Admin
+                متابعة المسؤول
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
         <div className="flex items-center gap-3">
           <FaCrown className="text-yellow-400 text-2xl" />
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
+          <h1 className="text-2xl font-bold">لوحة المسؤول</h1>
         </div>
         
         <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
-          <span className="font-medium">Room Code:</span>
+          <span className="font-medium">رمز الغرفة:</span>
           <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
         </div>
       </div>
@@ -252,7 +253,7 @@ const AdminPanel = ({
           }}
           className="mb-4 bg-indigo-700 hover:bg-indigo-800 py-2 px-4 rounded-lg flex items-center justify-center gap-2"
         >
-          <FaArrowLeft /> Back to Categories
+          <FaArrowLeft /> العودة للفئات
         </button>
       )}
 
@@ -260,9 +261,9 @@ const AdminPanel = ({
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Players</h2>
+              <h2 className="text-xl font-semibold">اللاعبون</h2>
               <span className="bg-indigo-700 px-3 py-1 rounded-full">
-                {players.length} {players.length === 1 ? 'player' : 'players'}
+                {players.length} {players.length === 1 ? 'لاعب' : 'لاعبين'}
               </span>
             </div>
             
@@ -314,14 +315,14 @@ const AdminPanel = ({
           
           {activePlayer ? (
             <div className="bg-gradient-to-r from-amber-700 to-amber-600 rounded-xl p-4 shadow-lg animate-pulse">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center justify-between">
+                <div className="flex items-center gap-3 mb-3 sm:mb-0">
                   <div className="bg-amber-800 w-12 h-12 rounded-full flex items-center justify-center">
                     <span className="font-bold text-xl">{activePlayerData?.name?.charAt(0)}</span>
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">{activePlayerData?.name} is answering!</h3>
-                    <p className="text-amber-100">Awaiting your scoring decision...</p>
+                    <h3 className="font-bold text-lg">{activePlayerData?.name} يجيب!</h3>
+                    <p className="text-amber-100">بانتظار قرارك في التصحيح...</p>
                   </div>
                 </div>
                 
@@ -329,20 +330,20 @@ const AdminPanel = ({
                   onClick={onResetBuzzer}
                   className="bg-amber-700 hover:bg-amber-800 px-4 py-2 rounded-lg flex items-center gap-2"
                 >
-                  <FaRedo /> Reset Buzzer
+                  <FaRedo /> إعادة الزر
                 </button>
               </div>
             </div>
           ) : (
             <div className="bg-gradient-to-r from-blue-700 to-indigo-700 rounded-xl p-4 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center justify-between">
+                <div className="flex items-center gap-3 mb-3 sm:mb-0">
                   <div className="bg-blue-800 w-12 h-12 rounded-full flex items-center justify-center">
                     <FaBell className="text-xl" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">Buzzer Control</h3>
-                    <p className="text-blue-100">Press to buzz as admin</p>
+                    <h3 className="font-bold text-lg">تحكم الزر</h3>
+                    <p className="text-blue-100">اضغط للضغط كمسؤول</p>
                   </div>
                 </div>
                 
@@ -355,7 +356,7 @@ const AdminPanel = ({
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  <FaBell /> Admin Buzz
+                  <FaBell /> ضغط المسؤول
                 </button>
               </div>
             </div>
@@ -380,10 +381,10 @@ const AdminPanel = ({
                 }}
                 className="mb-4 flex items-center gap-2 text-indigo-300 hover:text-white"
               >
-                <FaArrowLeft /> Back to Categories
+                <FaArrowLeft /> العودة للفئات
               </button>
               
-              <h2 className="text-xl font-semibold mb-3">Select Subcategory</h2>
+              <h2 className="text-xl font-semibold mb-3">اختر الفئة الفرعية</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {randomPhotosCategory.subcategories.map(subcategory => (
                   <button
@@ -404,7 +405,7 @@ const AdminPanel = ({
           
           {selectedSubcategory && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between items-center">
                 <div>
                   <h2 className="text-xl font-semibold">
                     {randomPhotosCategory.subcategories.find(s => s.id === selectedSubcategory)?.name}
@@ -415,30 +416,32 @@ const AdminPanel = ({
                     }}
                     className="flex items-center gap-1 text-sm text-indigo-300 hover:text-white mt-1"
                   >
-                    <FaArrowLeft /> Change Subcategory
+                    <FaArrowLeft /> تغيير الفئة الفرعية
                   </button>
                 </div>
                 
                 <button
                   onClick={handleNextQuestion}
                   disabled={loadingNext}
-                  className={`bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1 ${
+                  className={`mt-3 sm:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1 ${
                     loadingNext ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  <FaRandom /> {loadingNext ? 'Loading...' : 'Next Question'}
+                  <FaRandom /> {loadingNext ? 'جاري التحميل...' : 'السؤال التالي'}
                 </button>
               </div>
               
               {currentQuestion?.image && currentQuestion?.category === 'random-photos' && (
                 <div className="mt-4">
-                  <img 
-                    src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
-                    alt="Your unique photo" 
-                    className="max-h-64 mx-auto rounded-lg"
-                  />
+                  <div className="aspect-w-1 aspect-h-1">
+                    <img 
+                      src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
+                      alt="Your unique photo" 
+                      className="object-contain rounded-lg max-h-64 mx-auto"
+                    />
+                  </div>
                   <div className="mt-4 bg-green-600 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">Answer:</h3>
+                    <h3 className="font-semibold mb-2">الإجابة:</h3>
                     <p className="text-lg font-bold">{currentQuestion.answer}</p>
                   </div>
                 </div>
@@ -446,17 +449,17 @@ const AdminPanel = ({
             </div>
           )}
           
-          {selectedCategory && selectedCategory !== 'random-photos' && selectedCategory !== 'photos' && (
+          {selectedCategory && selectedCategory !== 'random-photos' && selectedCategory !== 'photos' && selectedCategory !== 'whiteboard' && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">
-                  {categories.find(c => c.id === selectedCategory)?.name} Questions
+                  {categories.find(c => c.id === selectedCategory)?.name}
                 </h2>
                 <button
                   onClick={handleNextQuestion}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
+                  className="mt-2 sm:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
                 >
-                  <FaRandom /> Next Question
+                  <FaRandom /> السؤال التالي
                 </button>
               </div>
               
@@ -465,45 +468,42 @@ const AdminPanel = ({
                   <>
                     {selectedCategory === 'reverse' ? (
                       <div className="bg-gradient-to-r from-orange-700 to-amber-700 p-6 rounded-lg">
-                        <h3 className="font-semibold mb-2 text-center">Reversed Word:</h3>
+                        <h3 className="font-semibold mb-2 text-center">الكلمة المعكوسة:</h3>
                         <p className="text-2xl font-bold text-center mb-4">{currentQuestion.text}</p>
-                        
-                        {/* <div className="bg-indigo-900 p-4 rounded-lg">
-                          <h3 className="font-semibold mb-2 text-center">Hint:</h3>
-                          <p className="text-lg text-center">{currentQuestion.bounc}</p>
-                        </div> */}
                       </div>
                     ) : currentQuestion.image ? (
                       <div className="bg-indigo-700 p-4 rounded-lg text-center">
-                        <h3 className="font-semibold mb-2">Photo Question:</h3>
-                        <img 
-                          src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
-                          alt="Question" 
-                          className="max-h-64 mx-auto rounded-lg"
-                        />
+                        <h3 className="font-semibold mb-2">سؤال بالصورة:</h3>
+                        <div className="aspect-w-1 aspect-h-1">
+                          <img 
+                            src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
+                            alt="Question" 
+                            className="object-contain rounded-lg max-h-64 mx-auto"
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div className="bg-indigo-700 p-4 rounded-lg">
-                        <h3 className="font-semibold mb-2">Question:</h3>
+                        <h3 className="font-semibold mb-2">السؤال:</h3>
                         <p className="text-lg">{currentQuestion.text}</p>
                       </div>
                     )}
                     
                     <div className="bg-green-600 p-4 rounded-lg">
-                      <h3 className="font-semibold mb-2">Answer:</h3>
+                      <h3 className="font-semibold mb-2">الإجابة:</h3>
                       <p className="text-lg font-bold">{currentQuestion.answer}</p>
                     </div>
 
                     {currentQuestion.bounc && (
                       <div className="bg-red-700 p-4 rounded-lg">
-                        <h3 className="font-semibold mb-2">Hint:</h3>
+                        <h3 className="font-semibold mb-2">تلميح:</h3>
                         <p className="text-lg font-bold">{currentQuestion.bounc}</p>
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="bg-indigo-700 p-4 rounded-lg text-center">
-                    <p>Click "Next Question" to start</p>
+                    <p>اضغط "السؤال التالي" للبدء</p>
                   </div>
                 )}
               </div>
@@ -512,15 +512,15 @@ const AdminPanel = ({
           
           {selectedCategory === 'photos' && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">
-                  Photos (Admin Only)
+                  الصور (للمسؤول فقط)
                 </h2>
                 <button
                   onClick={handleNextQuestion}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
+                  className="mt-2 sm:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
                 >
-                  <FaRandom /> Next Question
+                  <FaRandom /> السؤال التالي
                 </button>
               </div>
               
@@ -528,29 +528,49 @@ const AdminPanel = ({
                 {currentQuestion?.image && currentQuestion?.category === 'photos' ? (
                   <>
                     <div className="bg-indigo-700 p-4 rounded-lg text-center">
-                      <img 
-                        src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
-                        alt="Question" 
-                        className="max-h-64 mx-auto rounded-lg"
-                      />
+                      <div className="aspect-w-1 aspect-h-1">
+                        <img 
+                          src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
+                          alt="Question" 
+                          className="object-contain rounded-lg max-h-64 mx-auto"
+                        />
+                      </div>
                     </div>
                     
                     <div className="bg-green-600 p-4 rounded-lg">
-                      <h3 className="font-semibold mb-2">Answer:</h3>
+                      <h3 className="font-semibold mb-2">الإجابة:</h3>
                       <p className="text-lg font-bold">{currentQuestion.answer}</p>
                     </div>
 
                     <div className="bg-red-700 p-4 rounded-lg">
-                      <h3 className="font-semibold mb-2">Hint:</h3>
+                      <h3 className="font-semibold mb-2">تلميح:</h3>
                       <p className="text-lg font-bold">{currentQuestion.bounc}</p>
                     </div>
                   </>
                 ) : (
                   <div className="bg-indigo-700 p-4 rounded-lg text-center">
-                    <p>Click "Next Question" to start</p>
+                    <p>اضغط "السؤال التالي" للبدء</p>
                   </div>
                 )}
               </div>
+            </div>
+          )}
+          
+          {selectedCategory === 'whiteboard' && (
+            <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">السبورة التعاونية</h2>
+                <button
+                  onClick={handleNextQuestion}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
+                >
+                  <FaRandom /> إظهار السبورة
+                </button>
+              </div>
+              
+              {currentQuestion?.category === 'whiteboard' && (
+                <Whiteboard socket={socket} roomCode={roomCode} />
+              )}
             </div>
           )}
           
@@ -558,58 +578,63 @@ const AdminPanel = ({
           {currentQuestion && !currentQuestion.image && currentQuestion.audio && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
               <h2 className="text-xl font-semibold mb-3">
-                {selectedCategory === 'music' ? "Reverse Music Controls" : "Question Controls"}
+                {selectedCategory === 'music' ? "تحكم موسيقى معكوسة" : "تحكم السؤال"}
               </h2>
               
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <button
                   onClick={handlePlayAudio}
                   disabled={audioPlaying}
-                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
                     audioPlaying 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-green-600 hover:bg-green-700'
                   }`}
                 >
-                  <FaVolumeUp /> Play
+                  <FaVolumeUp className="text-lg" />
+                  <span className="text-sm">تشغيل</span>
                 </button>
                 
                 <button
                   onClick={handleContinueAudio}
                   disabled={audioPlaying || pausedTime === 0}
-                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
                     audioPlaying || pausedTime === 0
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  <FaPlay /> Continue
+                  <FaPlay className="text-lg" />
+                  <span className="text-sm">استئناف</span>
                 </button>
                 
                 <button
                   onClick={handlePauseAudio}
                   disabled={!audioPlaying}
-                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
                     !audioPlaying 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-yellow-600 hover:bg-yellow-700'
                   }`}
                 >
-                  <FaVolumeUp /> Pause
+                  <FaVolumeUp className="text-lg" />
+                  <span className="text-sm">إيقاف مؤقت</span>
                 </button>
                 
                 <button
                   onClick={handleStopAudio}
-                  className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 flex items-center justify-center gap-2"
+                  className="py-2 rounded-lg bg-red-600 hover:bg-red-700 flex flex-col items-center justify-center gap-1"
                 >
-                  <FaVolumeUp /> Stop
+                  <FaVolumeUp className="text-lg" />
+                  <span className="text-sm">إيقاف</span>
                 </button>
                 
                 <button
                   onClick={handleReplayAudio}
-                  className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex items-center justify-center gap-2"
+                  className="py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex flex-col items-center justify-center gap-1"
                 >
-                  <FaVolumeUp /> Replay
+                  <FaVolumeUp className="text-lg" />
+                  <span className="text-sm">إعادة تشغيل</span>
                 </button>
               </div>
               
@@ -628,58 +653,63 @@ const AdminPanel = ({
           {currentQuestion && currentQuestion.audio2 && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
               <h2 className="text-xl font-semibold mb-3">
-                {selectedCategory === 'music' ? "Normal Music Controls" : "Audio 2 Controls"}
+                {selectedCategory === 'music' ? "تحكم موسيقى طبيعية" : "تحكم الصوت 2"}
               </h2>
               
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <button
                   onClick={handlePlayAudio2}
                   disabled={audio2Playing}
-                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
                     audio2Playing 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-green-600 hover:bg-green-700'
                   }`}
                 >
-                  <FaVolumeUp /> Play
+                  <FaVolumeUp className="text-lg" />
+                  <span className="text-sm">تشغيل</span>
                 </button>
                 
                 <button
                   onClick={handleContinueAudio2}
                   disabled={audio2Playing || pausedTime2 === 0}
-                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
                     audio2Playing || pausedTime2 === 0
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  <FaPlay /> Continue
+                  <FaPlay className="text-lg" />
+                  <span className="text-sm">استئناف</span>
                 </button>
                 
                 <button
                   onClick={handlePauseAudio2}
                   disabled={!audio2Playing}
-                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
                     !audio2Playing 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-yellow-600 hover:bg-yellow-700'
                   }`}
                 >
-                  <FaVolumeUp /> Pause
+                  <FaVolumeUp className="text-lg" />
+                  <span className="text-sm">إيقاف مؤقت</span>
                 </button>
                 
                 <button
                   onClick={handleStopAudio2}
-                  className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 flex items-center justify-center gap-2"
+                  className="py-2 rounded-lg bg-red-600 hover:bg-red-700 flex flex-col items-center justify-center gap-1"
                 >
-                  <FaVolumeUp /> Stop
+                  <FaVolumeUp className="text-lg" />
+                  <span className="text-sm">إيقاف</span>
                 </button>
                 
                 <button
                   onClick={handleReplayAudio2}
-                  className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex items-center justify-center gap-2"
+                  className="py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex flex-col items-center justify-center gap-1"
                 >
-                  <FaVolumeUp /> Replay
+                  <FaVolumeUp className="text-lg" />
+                  <span className="text-sm">إعادة تشغيل</span>
                 </button>
               </div>
               
@@ -695,7 +725,7 @@ const AdminPanel = ({
           )}
           
           <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-            <h2 className="text-xl font-semibold mb-3">Game Controls</h2>
+            <h2 className="text-xl font-semibold mb-3">تحكم اللعبة</h2>
             
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -703,7 +733,7 @@ const AdminPanel = ({
                 className="bg-amber-600 hover:bg-amber-700 py-3 rounded-lg flex flex-col items-center justify-center"
               >
                 <FaRedo className="text-xl mb-1" />
-                Reset Buzzer
+                إعادة الزر
               </button>
               
               <button
@@ -711,7 +741,7 @@ const AdminPanel = ({
                 className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 py-3 rounded-lg flex flex-col items-center justify-center"
               >
                 <FaTrophy className="text-xl mb-1" />
-                End Game
+                إنهاء اللعبة
               </button>
             </div>
             
@@ -719,14 +749,14 @@ const AdminPanel = ({
               onClick={() => setShowReloadWarning(true)}
               className="w-full mt-4 bg-indigo-700 hover:bg-indigo-800 py-3 rounded-lg flex items-center justify-center gap-2"
             >
-              <FaRedo /> Reload Page
+              <FaRedo /> إعادة تحميل الصفحة
             </button>
             
             <button
               onClick={onLeaveRoom}
               className="w-full mt-4 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2"
             >
-              <FaSignOutAlt /> Leave Room
+              <FaSignOutAlt /> مغادرة الغرفة
             </button>
           </div>
         </div>

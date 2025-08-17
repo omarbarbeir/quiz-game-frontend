@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo } from 'react-icons/fa';
+import Whiteboard from './Whiteboard';
 
 const PlayerScreen = ({ 
   playerId,
@@ -95,13 +96,13 @@ const PlayerScreen = ({
   }, [currentQuestion, shouldShowImage, isReverseQuestion]);
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full">
       {showReloadWarning && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4 text-center">Warning!</h2>
+            <h2 className="text-2xl font-bold mb-4 text-center">تحذير!</h2>
             <p className="text-lg mb-6 text-center">
-              If you reload this page you will quit and lose your score
+              إذا قمت بإعادة تحميل الصفحة، ستخرج وستفقد نقاطك
             </p>
             <div className="flex gap-4">
               <button
@@ -111,27 +112,27 @@ const PlayerScreen = ({
                 }}
                 className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold"
               >
-                Quit Anyway
+                خروج على أي حال
               </button>
               <button
                 onClick={() => setShowReloadWarning(false)}
                 className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-bold"
               >
-                Stay in Game
+                البقاء في اللعبة
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Quiz Player</h1>
-          <p className="text-indigo-200">Welcome, {playerName}</p>
+          <h1 className="text-2xl font-bold text-right">لاعب المسابقة</h1>
+          <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
         </div>
         
         <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
-          <span className="font-medium">Room Code:</span>
+          <span className="font-medium">رمز الغرفة:</span>
           <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
         </div>
       </div>
@@ -143,20 +144,20 @@ const PlayerScreen = ({
               <div className="flex justify-center mb-4">
                 <FaTrophy className="text-5xl text-amber-300" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Game Ended!</h2>
-              <p className="mb-6">The quiz master has ended the game.</p>
+              <h2 className="text-2xl font-bold mb-2">انتهت اللعبة!</h2>
+              <p className="mb-6">أنهى المسؤول المسابقة.</p>
               
               {sortedPlayers.length > 0 && (
                 <div className="bg-amber-800 bg-opacity-50 rounded-lg p-4 mb-6">
-                  <h3 className="font-bold text-lg mb-3">Final Standings</h3>
+                  <h3 className="font-bold text-lg mb-3">النتائج النهائية</h3>
                   <div className="flex justify-center">
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex flex-col items-center justify-center mb-4">
                       <span className="text-3xl font-bold text-amber-900">1</span>
-                      <span className="text-xs font-bold text-amber-900">PLACE</span>
+                      <span className="text-xs font-bold text-amber-900">المركز</span>
                     </div>
                   </div>
                   <p className="text-xl font-bold">
-                    {sortedPlayers[0].isAdmin ? "Quiz Master" : "Player 1"} ({sortedPlayers[0].score} points)
+                    {sortedPlayers[0].isAdmin ? "المسؤول" : "اللاعب الأول"} ({sortedPlayers[0].score} نقاط)
                   </p>
                 </div>
               )}
@@ -165,33 +166,37 @@ const PlayerScreen = ({
                 onClick={onLeaveRoom}
                 className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 px-6 py-3 rounded-lg font-bold"
               >
-                Leave Game
+                مغادرة اللعبة
               </button>
+            </div>
+          ) : currentQuestion?.category === 'whiteboard' ? (
+            <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
+              <h2 className="text-xl font-semibold mb-4 text-center">السبورة التعاونية</h2>
+              <Whiteboard socket={socket} roomCode={roomCode} />
             </div>
           ) : (
             <>
               {shouldShowImage ? (
                 <div className="bg-indigo-800 rounded-xl p-6 shadow-lg text-center">
                   <div className="mb-4">
-                    <div className="flex justify-center mb-3">
-                      <span className="text-4xl text-indigo-300" />
-                    </div>
                     <h2 className="text-xl font-semibold">
-                      Random Photos: {currentQuestion.subcategory}
+                      أنا مين: {currentQuestion.subcategory}
                     </h2>
                     <p className="text-indigo-300 mt-2">
-                      Your unique photo to identify
+                      صورتك الفريدة لتتعرف عليها
                     </p>
                   </div>
                   
                   <div className="mt-4">
-                    <img 
-                      src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
-                      alt="Your unique question" 
-                      className="h-[590px] w-[530px] mx-auto rounded-lg"
-                    />
+                    <div className="aspect-w-1 aspect-h-1">
+                      <img 
+                        src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
+                        alt="Your unique question" 
+                        className="object-contain rounded-lg max-h-[60vh] mx-auto"
+                      />
+                    </div>
                       <div className="mt-4 bg-green-600 p-4 rounded-lg">
-                        <h3 className="font-semibold mb-2">Answer:</h3>
+                        <h3 className="font-semibold mb-2">الإجابة:</h3>
                         <p className="text-3xl font-bold">{currentQuestion.answer}</p>
                       </div>
                   </div>
@@ -200,15 +205,15 @@ const PlayerScreen = ({
                 <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
                   <div className="mb-4 text-center">
                     <h2 className="text-xl font-semibold">الكلمات المعكوسة</h2>
-                    <p className="text-indigo-300 mt-2">Reversed Words Challenge</p>
+                    <p className="text-indigo-300 mt-2">تحدي الكلمات المعكوسة</p>
                   </div>
                   
                   <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-6 rounded-lg">
-                    <h3 className="font-semibold mb-2 text-center">Question:</h3>
+                    <h3 className="font-semibold mb-2 text-center">السؤال:</h3>
                     <p className="text-2xl font-bold text-center mb-6">{currentQuestion.text}</p>
                     
                     <div className="bg-indigo-900 p-4 rounded-lg">
-                      <h3 className="font-semibold mb-2 text-center">Hint:</h3>
+                      <h3 className="font-semibold mb-2 text-center">تلميح:</h3>
                       <p className="text-lg text-center">{currentQuestion.bounc}</p>
                     </div>
                   </div>
@@ -223,9 +228,9 @@ const PlayerScreen = ({
                     }`}>
                       <FaVolumeUp className="text-2xl" />
                     </div>
-                    <h2 className="text-xl font-semibold">Current Question</h2>
+                    <h2 className="text-xl font-semibold">السؤال الحالي</h2>
                     <p className="mt-2 text-indigo-300">
-                      {audioPlaying ? "Audio is playing..." : "Waiting for audio..."}
+                      {audioPlaying ? "الصوت قيد التشغيل..." : "في انتظار الصوت..."}
                     </p>
                   </div>
                   
@@ -241,7 +246,7 @@ const PlayerScreen = ({
                         }}
                         className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 mx-auto"
                       >
-                        <FaVolumeUp /> Play Question Again
+                        <FaVolumeUp /> تشغيل السؤال مرة أخرى
                       </button>
                     )}
                     
@@ -257,8 +262,8 @@ const PlayerScreen = ({
                 </div>
               ) : (
                 <div className="bg-indigo-800 rounded-xl p-8 shadow-lg text-center">
-                  <h2 className="text-xl font-semibold">Waiting for Question</h2>
-                  <p className="text-indigo-300">The quiz master will start the game soon...</p>
+                  <h2 className="text-xl font-semibold">في انتظار السؤال</h2>
+                  <p className="text-indigo-300">سيبدأ المسؤول اللعبة قريبًا...</p>
                 </div>
               )}
 
@@ -277,19 +282,19 @@ const PlayerScreen = ({
                   }`}
                 >
                   {isActivePlayer ? (
-                    <span>YOU BUZZED!</span>
+                    <span>لقد ضغطت!</span>
                   ) : activePlayer ? (
                     <>
                       <FaLock className="text-2xl mb-2" />
-                      <span>BUZZER LOCKED</span>
+                      <span>تم قفل الزر</span>
                     </>
                   ) : buzzerLocked ? (
                     <>
                       <FaLock className="text-2xl mb-2" />
-                      <span>BUZZER LOCKED</span>
+                      <span>تم قفل الزر</span>
                     </>
                   ) : (
-                    <span>BUZZ IN!</span>
+                    <span>اضغط للجواب!</span>
                   )}
                 </button>
                 
@@ -298,9 +303,9 @@ const PlayerScreen = ({
                     <p className="text-lg">
                       <span className="font-bold">
                         {players.find(p => p.id === activePlayer)?.isAdmin 
-                          ? "Quiz Master" 
-                          : "A Player"
-                        } buzzed in!
+                          ? "المسؤول" 
+                          : "لاعب"
+                        } ضغط على الزر!
                       </span>
                     </p>
                   </div>
@@ -313,7 +318,7 @@ const PlayerScreen = ({
             onClick={onLeaveRoom}
             className="w-full bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2"
           >
-            <FaSignOutAlt /> Leave Room
+            <FaSignOutAlt /> مغادرة الغرفة
           </button>
         </div>
       </div>
