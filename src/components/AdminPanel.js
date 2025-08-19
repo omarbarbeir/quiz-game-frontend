@@ -183,7 +183,6 @@ const AdminPanel = ({
 
   useEffect(() => {
     if (currentQuestion) {
-      // Load main audio (reverse music for music category)
       if (audioRef.current && !currentQuestion.image) {
         const audioUrl = `${process.env.PUBLIC_URL}${currentQuestion.audio}`;
         audioRef.current.src = audioUrl;
@@ -192,7 +191,6 @@ const AdminPanel = ({
         setPausedTime(0);
       }
       
-      // Load normal audio (audio2)
       if (currentQuestion.audio2 && audioRef2.current) {
         const audioUrl2 = `${process.env.PUBLIC_URL}${currentQuestion.audio2}`;
         audioRef2.current.src = audioUrl2;
@@ -569,7 +567,7 @@ const AdminPanel = ({
               </div>
               
               {currentQuestion?.category === 'whiteboard' && (
-                <Whiteboard socket={socket} roomCode={roomCode} />
+                <Whiteboard socket={socket} roomCode={roomCode} isAdmin={true} />
               )}
             </div>
           )}

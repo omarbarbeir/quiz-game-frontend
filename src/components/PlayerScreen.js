@@ -28,12 +28,10 @@ const PlayerScreen = ({
 
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
   
-  // Only show image if it's from Random Photos category
   const shouldShowImage = currentQuestion?.image && 
                          currentQuestion?.category === 'random-photos' && 
                          currentQuestion?.subcategory;
   
-  // Check if it's a reverse word question
   const isReverseQuestion = currentQuestion?.category === 'reverse';
   
   useEffect(() => {
@@ -62,7 +60,6 @@ const PlayerScreen = ({
       }
     };
     
-    // Handle individual photo questions
     const handlePlayerPhotoQuestion = (photoData) => {
       if (photoData.playerId === playerId) {
         setCurrentQuestion(photoData);
@@ -172,7 +169,7 @@ const PlayerScreen = ({
           ) : currentQuestion?.category === 'whiteboard' ? (
             <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
               <h2 className="text-xl font-semibold mb-4 text-center">السبورة التعاونية</h2>
-              <Whiteboard socket={socket} roomCode={roomCode} />
+              <Whiteboard socket={socket} roomCode={roomCode} isAdmin={false} />
             </div>
           ) : (
             <>
