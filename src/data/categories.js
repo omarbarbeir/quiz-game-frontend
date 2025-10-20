@@ -12,6 +12,11 @@ const categories = [
     icon: "🎬",
     color: "from-purple-600 to-indigo-600"
   },
+ {
+    id: 'card-game',
+    name: 'لعبة البطاقات',
+    description: 'لعبة البطاقات الجماعية'
+  },
   {
     id: "reverse",
     name: "الكلمات المعكوسة",

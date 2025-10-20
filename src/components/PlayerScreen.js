@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo } from 'react-icons/fa';
 import Whiteboard from './Whiteboard';
+import CardGame from './CardGame';
 
 const PlayerScreen = ({ 
   playerId,
@@ -18,7 +19,8 @@ const PlayerScreen = ({
   setCurrentQuestion,
   setActivePlayer,
   setBuzzerLocked,
-  setGameStatus
+  setGameStatus,
+  cardGameState
 }) => {
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [showReloadWarning, setShowReloadWarning] = useState(false);
@@ -68,17 +70,32 @@ const PlayerScreen = ({
         setGameStatus('playing');
       }
     };
+
+    const handleCardGameStateUpdate = (gameState) => {
+      console.log('🃏 Player received card game state:', gameState);
+      if (gameState && gameState.gameStarted) {
+        setCurrentQuestion({
+          id: 'card-game',
+          category: 'card-game',
+          text: 'لعبة البطاقات',
+          answer: ''
+        });
+        setGameStatus('playing');
+      }
+    };
     
     socket.on('play_audio', handlePlayAudio);
     socket.on('pause_audio', handlePauseAudio);
     socket.on('continue_audio', handleContinueAudio);
     socket.on('player_photo_question', handlePlayerPhotoQuestion);
+    socket.on('card_game_state_update', handleCardGameStateUpdate);
     
     return () => {
       socket.off('play_audio', handlePlayAudio);
       socket.off('pause_audio', handlePauseAudio);
       socket.off('continue_audio', handleContinueAudio);
       socket.off('player_photo_question', handlePlayerPhotoQuestion);
+      socket.off('card_game_state_update', handleCardGameStateUpdate);
     };
   }, [socket, activePlayer, currentQuestion, shouldShowImage, playerId, setCurrentQuestion, setActivePlayer, setBuzzerLocked, setGameStatus, isReverseQuestion]);
   
@@ -91,6 +108,41 @@ const PlayerScreen = ({
       setPausedTime(0);
     }
   }, [currentQuestion, shouldShowImage, isReverseQuestion]);
+
+  // Render CardGame when in card game mode
+  if (currentQuestion?.category === 'card-game' || cardGameState?.gameStarted) {
+    const currentPlayer = players.find(p => p.id === playerId);
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-right">لاعب لعبة البطاقات</h1>
+            <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
+          </div>
+          
+          <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
+          </div>
+        </div>
+
+        <CardGame 
+          socket={socket}
+          roomCode={roomCode}
+          players={players}
+          currentPlayer={currentPlayer}
+          isAdmin={false}
+        />
+
+        <button
+          onClick={onLeaveRoom}
+          className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2"
+        >
+          <FaSignOutAlt /> مغادرة الغرفة
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -317,6 +369,49 @@ const PlayerScreen = ({
           >
             <FaSignOutAlt /> مغادرة الغرفة
           </button>
+        </div>
+
+        <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">اللاعبون</h2>
+            <span className="bg-indigo-700 px-3 py-1 rounded-full">
+              {players.length} {players.length === 1 ? 'لاعب' : 'لاعبين'}
+            </span>
+          </div>
+          
+          <div className="space-y-3">
+            {sortedPlayers.map((player, index) => (
+              <div 
+                key={player.id} 
+                className={`flex items-center justify-between p-3 rounded-lg ${
+                  activePlayer === player.id 
+                    ? 'bg-gradient-to-r from-amber-700 to-amber-600' 
+                    : 'bg-indigo-700'
+                } ${player.isAdmin ? 'border-2 border-yellow-400' : ''}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    player.isAdmin ? 'bg-yellow-500' : 'bg-indigo-600'
+                  }`}>
+                    {player.isAdmin ? '👑' : <span className="font-bold">{player.name.charAt(0)}</span>}
+                  </div>
+                  <span className="font-medium">
+                    {player.name} 
+                    {player.isAdmin && ' (مسؤول)'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-lg">
+                    {player.score}
+                  </span>
+                  {index === 0 && players.length > 1 && (
+                    <span className="text-yellow-400">👑</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

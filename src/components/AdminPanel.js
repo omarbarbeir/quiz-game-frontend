@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaCrown, FaRedo, FaSignOutAlt, FaTimes, FaTrophy, FaVolumeUp, FaRandom, FaBell, FaPlay, FaImage, FaArrowLeft } from 'react-icons/fa';
 import CategorySelector from './CategorySelector';
 import Whiteboard from './Whiteboard';
+import CardGame from './CardGame';
 
 const AdminPanel = ({ 
   roomCode, 
@@ -12,7 +13,7 @@ const AdminPanel = ({
   onPlayQuestion,
   onPlayRandomQuestion,
   onResetBuzzer, 
- onEndGame, 
+  onEndGame, 
   onLeaveRoom,
   onAdminBuzzer,
   gameStatus,
@@ -25,7 +26,8 @@ const AdminPanel = ({
   questions,
   buzzerLocked,
   isAdmin,
-  randomPhotosCategory
+  randomPhotosCategory,
+  cardGameState
 }) => {
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [showReloadWarning, setShowReloadWarning] = useState(false);
@@ -133,6 +135,13 @@ const AdminPanel = ({
     setTimeout(() => setLoadingNext(false), 1000);
   };
 
+  // FIXED: Proper back to categories function
+  const handleBackToCategories = () => {
+    console.log('Back to categories clicked');
+    onCategorySelect(null);
+    onSubcategorySelect(null);
+  };
+
   useEffect(() => {
     const handlePauseAudioEvent = () => {
       if (audioRef.current) {
@@ -201,7 +210,51 @@ const AdminPanel = ({
     }
   }, [currentQuestion]);
 
+  // Render CardGame when selected
+  if (selectedCategory === 'card-game' || cardGameState?.gameStarted) {
+    const adminPlayer = players.find(p => p.isAdmin);
+    
     return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div className="flex items-center gap-3">
+            <FaCrown className="text-yellow-400 text-2xl" />
+            <h1 className="text-2xl font-bold">لوحة المسؤول - لعبة البطاقات</h1>
+          </div>
+          
+          <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
+          </div>
+        </div>
+
+        {/* FIXED: Back button now working properly */}
+        <button
+          onClick={handleBackToCategories}
+          className="mb-4 bg-indigo-700 hover:bg-indigo-800 py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+        >
+          <FaArrowLeft /> العودة للفئات
+        </button>
+
+        {adminPlayer ? (
+          <CardGame 
+            socket={socket}
+            roomCode={roomCode}
+            players={players}
+            currentPlayer={adminPlayer}
+            isAdmin={true}
+          />
+        ) : (
+          <div className="bg-red-600 rounded-xl p-6 text-center">
+            <h2 className="text-xl font-bold mb-2">خطأ في تحميل اللعبة</h2>
+            <p>لم يتم العثور على بيانات المسؤول. يرجى إعادة تحميل الصفحة.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
     <div className="w-full">
       {showReloadWarning && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -243,12 +296,10 @@ const AdminPanel = ({
         </div>
       </div>
 
-      {selectedCategory && (
+      {/* FIXED: Back button for other categories */}
+      {selectedCategory && selectedCategory !== 'card-game' && (
         <button
-          onClick={() => {
-            onCategorySelect(null);
-            onSubcategorySelect(null);
-          }}
+          onClick={handleBackToCategories}
           className="mb-4 bg-indigo-700 hover:bg-indigo-800 py-2 px-4 rounded-lg flex items-center justify-center gap-2"
         >
           <FaArrowLeft /> العودة للفئات
@@ -373,10 +424,9 @@ const AdminPanel = ({
           
           {selectedCategory === 'random-photos' && !selectedSubcategory && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+              {/* FIXED: Back button for subcategories */}
               <button
-                onClick={() => {
-                  onCategorySelect(null);
-                }}
+                onClick={handleBackToCategories}
                 className="mb-4 flex items-center gap-2 text-indigo-300 hover:text-white"
               >
                 <FaArrowLeft /> العودة للفئات
@@ -447,7 +497,7 @@ const AdminPanel = ({
             </div>
           )}
           
-          {selectedCategory && selectedCategory !== 'random-photos' && selectedCategory !== 'photos' && selectedCategory !== 'whiteboard' && (
+          {selectedCategory && selectedCategory !== 'random-photos' && selectedCategory !== 'photos' && selectedCategory !== 'whiteboard' && selectedCategory !== 'card-game' && (
             <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
               <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">

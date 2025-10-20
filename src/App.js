@@ -40,6 +40,7 @@ function App() {
   const [showJoinScreen, setShowJoinScreen] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
+  const [cardGameState, setCardGameState] = useState(null);
 
   useEffect(() => {
     const savedState = sessionStorage.getItem('quizGameState');
@@ -161,12 +162,26 @@ function App() {
       alert(`${data.playerName} disconnected from the game`);
     };
 
-    // Handle individual photo questions
     const handlePlayerPhotoQuestion = (photoData) => {
       if (photoData.playerId === playerId) {
         setCurrentQuestion(photoData);
         setActivePlayer(null);
         setBuzzerLocked(false);
+        setGameStatus('playing');
+      }
+    };
+
+    const handleCardGameStateUpdate = (gameState) => {
+      console.log('🃏 Card game state updated in App:', gameState);
+      setCardGameState(gameState);
+      
+      if (gameState && gameState.gameStarted) {
+        setCurrentQuestion({
+          id: 'card-game',
+          category: 'card-game',
+          text: 'لعبة البطاقات',
+          answer: ''
+        });
         setGameStatus('playing');
       }
     };
@@ -182,6 +197,7 @@ function App() {
     socket.on('room_closed', handleRoomClosed);
     socket.on('player_disconnected', handlePlayerDisconnected);
     socket.on('player_photo_question', handlePlayerPhotoQuestion);
+    socket.on('card_game_state_update', handleCardGameStateUpdate);
 
     return () => {
       socket.off('connect');
@@ -198,6 +214,7 @@ function App() {
       socket.off('room_closed', handleRoomClosed);
       socket.off('player_disconnected', handlePlayerDisconnected);
       socket.off('player_photo_question', handlePlayerPhotoQuestion);
+      socket.off('card_game_state_update', handleCardGameStateUpdate);
     };
   }, [activePlayer, roomCode, playerId]);
 
@@ -259,6 +276,15 @@ function App() {
         id: 'whiteboard',
         category: 'whiteboard',
         text: 'السبورة التعاونية',
+        answer: ''
+      });
+    }
+    else if (selectedCategory === 'card-game') {
+      socket.emit('card_game_initialize', { roomCode });
+      playQuestion({
+        id: 'card-game',
+        category: 'card-game',
+        text: 'لعبة البطاقات',
         answer: ''
       });
     }
@@ -330,12 +356,19 @@ function App() {
     setShowJoinScreen(true);
     setSelectedCategory(null);
     setSelectedSubcategory(null);
+    setCardGameState(null);
     sessionStorage.removeItem('quizGameState');
   };
 
   const handleCategorySelect = (categoryId) => {
     setSelectedCategory(categoryId);
     setSelectedSubcategory(null);
+    
+    // If clicking the same category again, deselect it
+    if (selectedCategory === categoryId) {
+      setSelectedCategory(null);
+      setSelectedSubcategory(null);
+    }
   };
 
   const handleSubcategorySelect = (subcategoryId) => {
@@ -371,6 +404,7 @@ function App() {
             buzzerLocked={buzzerLocked}
             isAdmin={true}
             randomPhotosCategory={categories.find(c => c.id === 'random-photos')}
+            cardGameState={cardGameState}
           />
         </div>
       ) : (
@@ -392,6 +426,7 @@ function App() {
             setActivePlayer={setActivePlayer}
             setBuzzerLocked={setBuzzerLocked}
             setGameStatus={setGameStatus}
+            cardGameState={cardGameState}
           />
         </div>
       )}
