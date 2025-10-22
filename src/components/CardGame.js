@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle } from 'react-icons/fa';
+import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle, FaUserSlash } from 'react-icons/fa';
 
 const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit }) => {
   const [gameState, setGameState] = useState(null);
@@ -13,6 +13,17 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [selectedCardForCircle, setSelectedCardForCircle] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showRules, setShowRules] = useState(false);
+
+  // NEW: Check if card can be taken from table (action cards cannot be taken)
+  const canTakeCardFromTable = (card) => {
+    if (!card) return false;
+    // Action cards cannot be taken from table
+    if (card.type === 'action') {
+      return false;
+    }
+    // All other card types (actor, movie, series) can be taken
+    return true;
+  };
 
   // Detect mobile devices
   useEffect(() => {
@@ -93,7 +104,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   // Drag and drop handlers
   const handleDragStart = (e, card) => {
-    if (card.type !== 'action' || (card.type === 'action' && card.subtype === 'joker')) {
+    if (card.type !== 'action' || (card.type === 'action' && (card.subtype === 'joker' || card.subtype === 'skip'))) {
       setDraggedCard(card);
       e.dataTransfer.setData('text/plain', card.id.toString());
     }
@@ -156,6 +167,17 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const handlePlayToTable = (cardId) => {
     if (gameState.currentTurn === currentPlayer?.id) {
       socket.emit('card_game_play_table', { roomCode, playerId: currentPlayer.id, cardId });
+    }
+  };
+
+  // SIMPLIFIED: Use skip card - automatically skips next player
+  const handleUseSkipCard = (cardId) => {
+    if (gameState.currentTurn === currentPlayer?.id) {
+      socket.emit('card_game_use_skip', { 
+        roomCode, 
+        playerId: currentPlayer.id, 
+        cardId 
+      });
     }
   };
 
@@ -268,6 +290,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               </div>
               
               <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">البطاقات الخاصة</h3>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li><strong>بطاقة الجوكر:</strong> يمكن استخدامها كأي نوع من البطاقات</li>
+                  <li><strong>بطاقة التخطي:</strong> تتيح لك تخطي دور اللاعب التالي تلقائياً</li>
+                </ul>
+              </div>
+              
+              <div className="bg-indigo-700 p-4 rounded-lg">
                 <h3 className="text-xl font-bold text-yellow-300 mb-2">الفئات والتحدي</h3>
                 <ul className="list-disc list-inside space-y-2 text-sm">
                   <li>عند الإعلان: يدخل اللاعبون الآخرون في تحدي</li>
@@ -283,6 +313,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   <li>بطاقات الممثلين (أصفر)</li>
                   <li>بطاقات الأفلام (أخضر)</li>
                   <li>بطاقات الجوكر (تركواز) - يمكن استخدامها كأي نوع</li>
+                  <li>بطاقات التخطي (أحمر) - لتخطي دور اللاعب التالي تلقائياً</li>
                 </ul>
               </div>
               
@@ -547,11 +578,13 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div 
                 key={card.id} 
                 className={`p-4 rounded-lg flex justify-between items-center ${
-                  card.type === 'action' ? 'bg-cyan-600' :
-                  card.type === 'actor' ? 'bg-yellow-600' :
+                  card.type === 'action' && card.subtype === 'skip' ? 'bg-red-600' :
+                  card.type === 'action' && card.subtype === 'joker' ? 'bg-cyan-600' :
+                  card.type === 'actor' ? 'bg-yellow-500' :
+                  card.type === 'series' ? 'bg-pink-600' :
                   card.type === 'movie' ? 'bg-green-600' : 'bg-indigo-600'
                 } text-white`}
-                draggable={!isMobile && isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] && (card.type !== 'action' || card.subtype === 'joker')}
+                draggable={!isMobile && isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
                 onDragStart={(e) => handleDragStart(e, card)}
               >
                 <div className="flex justify-center items-center flex-col gap-4">
@@ -567,11 +600,15 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <div className="font-bold flex justify-center items-center text-lg">{card.name}</div>
                     <div className="text-base opacity-90">
                       {card.type === 'action' ? `إجراء: ${card.subtype}` : 
-                       card.type === 'actor' ? 'ممثل' : 
+                       card.type === 'actor' ? 'ممثل' :
+                      //  card.type === 'series' ? 'مسلسل' :
                        card.type === 'movie' ? 'فيلم' : 'مخرج'}
                     </div>
                     {card.type === 'action' && card.subtype === 'joker' && (
                       <div className="text-sm opacity-75 mt-1">يمكن استخدامها كأي بطاقة</div>
+                    )}
+                    {card.type === 'action' && card.subtype === 'skip' && (
+                      <div className="text-sm opacity-75 mt-1">تخطي اللاعب التالي تلقائياً</div>
                     )}
                   </div>
                 </div>
@@ -593,6 +630,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <span className="px-4 py-2 rounded bg-yellow-500 text-yellow-900 font-bold">
                       جوكر - اسحب للدائرة
                     </span>
+                  ) : card.type === 'action' && card.subtype === 'skip' ? (
+                    <button
+                      onClick={() => handleUseSkipCard(card.id)}
+                      disabled={!isMyTurn || !gameState.playerHasDrawn?.[currentPlayer.id]}
+                      className={`px-4 py-2 rounded ${
+                        isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <FaUserSlash /> تخطي التالي
+                    </button>
                   ) : (
                     <button
                       onClick={() => handlePlayToTable(card.id)}
@@ -777,7 +824,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   {topTableCard && (
                     <div 
                       className={`relative text-white rounded-lg w-24 h-32 shadow-lg transform hover:scale-105 transition-transform z-50 ${
-                        topTableCard.type === 'action' ? 'bg-cyan-600' :
+                        topTableCard.type === 'action' && topTableCard.subtype === 'skip' ? 'bg-red-600' :
+                        topTableCard.type === 'action' && topTableCard.subtype === 'joker' ? 'bg-cyan-600' :
                         topTableCard.type === 'actor' ? 'bg-yellow-600' :
                         topTableCard.type === 'movie' ? 'bg-green-600' : 'bg-indigo-600'
                       }`}
@@ -817,9 +865,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             {topTableCard && (
               <button
                 onClick={() => socket.emit('card_game_take_table', { roomCode, playerId: currentPlayer.id, cardId: topTableCard.id })}
-                disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id]}
+                disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || !canTakeCardFromTable(topTableCard)}
                 className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 ${
-                  isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'
+                  isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && canTakeCardFromTable(topTableCard) ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'
                 }`}
               >
                 <FaTable /> أخذ البطاقة العلوية
