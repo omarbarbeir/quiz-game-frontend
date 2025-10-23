@@ -249,6 +249,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const topTableCard = getTopTableCard();
   const myLevel = gameState.playerLevels?.[currentPlayer.id] || 1;
 
+  // NEW: Check if player just completed a category and needs to discard
+  const justCompletedCategory = isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] && 
+                               myHand.length > 6; // More than normal hand size
+
   return (
     <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
       {error && (
@@ -286,6 +290,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   <li>بعد السحب: تخلص من بطاقة بوضعها على الطاولة</li>
                   <li>يمكنك وضع البطاقات في دوائرك الأربعة لتحضير الفئة</li>
                   <li>عند اكتمال 3 دوائر: أعلن اكتمال الفئة</li>
+                  <li>بعد اكتمال الفئة: تسحب 3 بطاقات جديدة ثم تتخلص من بطاقة</li>
                 </ul>
               </div>
               
@@ -471,7 +476,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           </p>
           {isMyTurn && (
             <p className="text-sm text-yellow-300 mt-1">
-              {!gameState.playerHasDrawn?.[currentPlayer.id] ? 'يجب عليك سحب بطاقة أولاً' : 'يجب عليك التخلص من بطاقة الآن'}
+              {justCompletedCategory ? 'يجب عليك التخلص من بطاقة بعد اكتمال الفئة' :
+               !gameState.playerHasDrawn?.[currentPlayer.id] ? 'يجب عليك سحب بطاقة أولاً' : 'يجب عليك التخلص من بطاقة الآن'}
             </p>
           )}
         </div>
@@ -511,9 +517,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           
           <button
             onClick={handleDrawCard}
-            disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || gameState.drawPile.length === 0}
+            disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || gameState.drawPile.length === 0 || justCompletedCategory}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-              isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && gameState.drawPile.length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'
+              isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && gameState.drawPile.length > 0 && !justCompletedCategory ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'
             }`}
           >
             <FaHandPaper /> سحب بطاقة ({gameState.drawPile.length})
@@ -569,6 +575,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
+      {/* NEW: Warning for discarding after category completion */}
+      {justCompletedCategory && (
+        <div className="bg-yellow-600 rounded-lg p-4 mb-6 text-center animate-pulse">
+          <h3 className="text-xl font-bold">مبروك! أكملت الفئة 🎉</h3>
+          <p className="mt-2">لقد حصلت على 3 بطاقات جديدة. يجب عليك الآن التخلص من بطاقة واحدة.</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Player Hand */}
         <div className="bg-indigo-700 rounded-xl p-4">
@@ -584,7 +598,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   card.type === 'series' ? 'bg-pink-600' :
                   card.type === 'movie' ? 'bg-green-600' : 'bg-indigo-600'
                 } text-white`}
-                draggable={!isMobile && isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
+                draggable={!isMobile && isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
                 onDragStart={(e) => handleDragStart(e, card)}
               >
                 <div className="flex justify-center items-center flex-col gap-4">
@@ -617,9 +631,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   {(isMobile || true) && (card.type !== 'action' || card.subtype === 'joker') && (
                     <button
                       onClick={() => handleSelectCardForCircle(card)}
-                      disabled={!isMyTurn || !gameState.playerHasDrawn?.[currentPlayer.id]}
+                      disabled={!isMyTurn || (!gameState.playerHasDrawn?.[currentPlayer.id] && !justCompletedCategory)}
                       className={`px-4 py-2 rounded text-base flex items-center gap-1 ${
-                        isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       وضع في الدائرة
@@ -633,9 +647,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   ) : card.type === 'action' && card.subtype === 'skip' ? (
                     <button
                       onClick={() => handleUseSkipCard(card.id)}
-                      disabled={!isMyTurn || !gameState.playerHasDrawn?.[currentPlayer.id]}
+                      disabled={!isMyTurn || (!gameState.playerHasDrawn?.[currentPlayer.id] && !justCompletedCategory)}
                       className={`px-4 py-2 rounded ${
-                        isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       <FaUserSlash /> تخطي التالي
@@ -643,9 +657,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   ) : (
                     <button
                       onClick={() => handlePlayToTable(card.id)}
-                      disabled={!isMyTurn || !gameState.playerHasDrawn?.[currentPlayer.id]}
+                      disabled={!isMyTurn || (!gameState.playerHasDrawn?.[currentPlayer.id] && !justCompletedCategory)}
                       className={`px-4 py-2 rounded ${
-                        isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       لعب للطاولة
@@ -762,7 +776,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               ))}
             </div>
 
-            {filledCircles >= 3 && isMyTurn && (
+            {filledCircles >= 3 && isMyTurn && !justCompletedCategory && (
               <button
                 onClick={() => socket.emit('card_game_declare', { roomCode, playerId: currentPlayer.id })}
                 className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 py-3 rounded-lg font-bold flex items-center justify-center gap-2"
@@ -865,9 +879,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             {topTableCard && (
               <button
                 onClick={() => socket.emit('card_game_take_table', { roomCode, playerId: currentPlayer.id, cardId: topTableCard.id })}
-                disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || !canTakeCardFromTable(topTableCard)}
+                disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || !canTakeCardFromTable(topTableCard) || justCompletedCategory}
                 className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 ${
-                  isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && canTakeCardFromTable(topTableCard) ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'
+                  isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && canTakeCardFromTable(topTableCard) && !justCompletedCategory ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'
                 }`}
               >
                 <FaTable /> أخذ البطاقة العلوية
