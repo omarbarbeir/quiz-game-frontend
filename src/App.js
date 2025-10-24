@@ -12,12 +12,16 @@ const SOCKET_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3001' 
   : 'https://ancient-prawn-omarelbarbeir-9282bb8f.koyeb.app';
 
+// FIXED: Improved socket configuration with better reconnection
 const socket = io(SOCKET_URL, {
-  transports: ['websocket'],
+  transports: ['websocket', 'polling'], // Allow both transports
   reconnection: true,
-  reconnectionAttempts: 5,
+  reconnectionAttempts: Infinity, // Keep trying to reconnect
   reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
   secure: true,
+  forceNew: true,
 });
 
 function App() {
@@ -41,6 +45,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [cardGameState, setCardGameState] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('connecting'); // NEW: Connection status
 
   useEffect(() => {
     const savedState = sessionStorage.getItem('quizGameState');
@@ -86,14 +91,17 @@ function App() {
   }, [showJoinScreen]);
 
   useEffect(() => {
-    socket.on('connect', () => {
-      console.log('Connected to backend server');
+    // NEW: Connection status handlers
+    const handleConnect = () => {
+      console.log('✅ Connected to backend server');
+      setConnectionStatus('connected');
       
       // Rejoin room if we have saved state
       const savedState = sessionStorage.getItem('quizGameState');
       if (savedState) {
         const state = JSON.parse(savedState);
         if (state.roomCode && state.playerId && state.playerName) {
+          console.log('🔄 Attempting to rejoin room:', state.roomCode);
           socket.emit('rejoin_room', { 
             roomCode: state.roomCode, 
             player: { 
@@ -104,19 +112,39 @@ function App() {
           });
         }
       }
-    });
+    };
 
-    socket.on('disconnect', () => {
-      console.log('Disconnected from backend server');
-    });
+    const handleDisconnect = (reason) => {
+      console.log('❌ Disconnected from backend server:', reason);
+      setConnectionStatus('disconnected');
+    };
 
-    socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
-    });
+    const handleConnectError = (error) => {
+      console.error('🔌 Connection error:', error);
+      setConnectionStatus('error');
+    };
 
-    socket.on('reconnect', () => {
-      console.log('Reconnected to server');
-    });
+    const handleReconnect = (attemptNumber) => {
+      console.log(`🔄 Reconnected to server (attempt ${attemptNumber})`);
+      setConnectionStatus('connected');
+    };
+
+    const handleReconnectAttempt = (attemptNumber) => {
+      console.log(`🔄 Reconnection attempt ${attemptNumber}`);
+      setConnectionStatus('reconnecting');
+    };
+
+    const handleReconnectFailed = () => {
+      console.error('❌ Reconnection failed');
+      setConnectionStatus('failed');
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
+    socket.on('reconnect', handleReconnect);
+    socket.on('reconnect_attempt', handleReconnectAttempt);
+    socket.on('reconnect_failed', handleReconnectFailed);
 
     const handleRoomCreated = (code) => {
       setRoomCode(code);
@@ -216,15 +244,16 @@ function App() {
     };
 
     const handleRejoinSuccess = (roomData) => {
-      console.log('Successfully rejoined room:', roomData);
+      console.log('✅ Successfully rejoined room:', roomData);
       setPlayers(roomData.players || []);
       if (roomData.cardGame) {
         setCardGameState(roomData.cardGame);
       }
+      setConnectionStatus('connected');
     };
 
     const handleRejoinFailed = () => {
-      console.log('Failed to rejoin room, resetting game');
+      console.log('❌ Failed to rejoin room, resetting game');
       resetGame();
     };
 
@@ -244,11 +273,19 @@ function App() {
     socket.on('rejoin_success', handleRejoinSuccess);
     socket.on('rejoin_failed', handleRejoinFailed);
 
+    // Manually connect if not already connected
+    if (!socket.connected) {
+      console.log('🔌 Manually connecting socket...');
+      socket.connect();
+    }
+
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('connect_error');
-      socket.off('reconnect');
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
+      socket.off('reconnect', handleReconnect);
+      socket.off('reconnect_attempt', handleReconnectAttempt);
+      socket.off('reconnect_failed', handleReconnectFailed);
       socket.off('room_created', handleRoomCreated);
       socket.off('player_joined', handlePlayerJoined);
       socket.off('player_left', handlePlayerLeft);
@@ -283,13 +320,13 @@ function App() {
   };
 
   const handleBuzzer = () => {
-    if (!buzzerLocked && currentQuestion) {
+    if (!buzzerLocked && currentQuestion && connectionStatus === 'connected') {
       socket.emit('buzz', { roomCode, playerId });
     }
   };
 
   const handleAdminBuzzer = () => {
-    if (!buzzerLocked && currentQuestion) {
+    if (!buzzerLocked && currentQuestion && connectionStatus === 'connected') {
       const adminPlayer = players.find(p => p.isAdmin);
       if (adminPlayer) {
         socket.emit('buzz', { roomCode, playerId: adminPlayer.id });
@@ -298,6 +335,8 @@ function App() {
   };
 
   const handleScoreChange = (playerId, change) => {
+    if (connectionStatus !== 'connected') return;
+    
     setPlayers(prev => 
       prev.map(p => 
         p.id === playerId ? {...p, score: p.score + change} : p
@@ -314,12 +353,16 @@ function App() {
   };
 
   const playQuestion = (question) => {
+    if (connectionStatus !== 'connected') return;
+    
     socket.emit('change_question', { roomCode, question });
     setActivePlayer(null);
     setBuzzerLocked(false);
   };
 
   const playRandomQuestion = () => {
+    if (connectionStatus !== 'connected') return;
+    
     if (selectedCategory === 'whiteboard') {
       playQuestion({
         id: 'whiteboard',
@@ -378,17 +421,23 @@ function App() {
   };
 
   const resetBuzzer = () => {
+    if (connectionStatus !== 'connected') return;
+    
     setActivePlayer(null);
     setBuzzerLocked(false);
     socket.emit('reset_buzzer', roomCode);
   };
 
   const endGame = () => {
+    if (connectionStatus !== 'connected') return;
+    
     socket.emit('end_game', roomCode);
   };
 
   const leaveRoom = () => {
-    socket.emit('leave_room', { roomCode, playerId });
+    if (connectionStatus === 'connected') {
+      socket.emit('leave_room', { roomCode, playerId });
+    }
     resetGame();
   };
 
@@ -424,10 +473,41 @@ function App() {
     setSelectedSubcategory(subcategoryId);
   };
 
+  // NEW: Manual reconnection function
+  const handleReconnect = () => {
+    console.log('🔄 Manual reconnection attempt');
+    setConnectionStatus('reconnecting');
+    socket.connect();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-800 text-white p-4">
+      {/* Connection Status Banner */}
+      {connectionStatus !== 'connected' && (
+        <div className={`fixed top-0 left-0 right-0 z-50 p-2 text-center font-bold ${
+          connectionStatus === 'reconnecting' ? 'bg-yellow-600' : 
+          connectionStatus === 'disconnected' ? 'bg-orange-600' : 
+          connectionStatus === 'error' ? 'bg-red-600' : 'bg-gray-600'
+        }`}>
+          {connectionStatus === 'reconnecting' && '🔄 جاري إعادة الاتصال...'}
+          {connectionStatus === 'disconnected' && '❌ الاتصال مقطوع - جاري إعادة المحاولة...'}
+          {connectionStatus === 'error' && '❌ خطأ في الاتصال'}
+          {connectionStatus === 'failed' && (
+            <div className="flex justify-center items-center gap-4">
+              <span>❌ فشل الاتصال</span>
+              <button 
+                onClick={handleReconnect}
+                className="bg-white text-red-600 px-3 py-1 rounded text-sm"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {showJoinScreen ? (
-        <RoomJoin onCreateRoom={createRoom} onJoinRoom={joinRoom} />
+        <RoomJoin onCreateRoom={createRoom} onJoinRoom={joinRoom} connectionStatus={connectionStatus} />
       ) : isAdmin ? (
         <div className="max-w-6xl mx-auto">
           <AdminPanel 
@@ -454,6 +534,7 @@ function App() {
             isAdmin={true}
             randomPhotosCategory={categories.find(c => c.id === 'random-photos')}
             cardGameState={cardGameState}
+            connectionStatus={connectionStatus}
           />
         </div>
       ) : (
@@ -476,6 +557,7 @@ function App() {
             setBuzzerLocked={setBuzzerLocked}
             setGameStatus={setGameStatus}
             cardGameState={cardGameState}
+            connectionStatus={connectionStatus}
           />
         </div>
       )}
