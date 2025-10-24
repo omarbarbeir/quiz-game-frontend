@@ -309,6 +309,7 @@ const AdminPanel = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">اللاعبون</h2>
               <span className="bg-indigo-700 px-3 py-1 rounded-full">

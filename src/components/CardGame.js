@@ -163,9 +163,15 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Play card to table handler
+  // Play card to table handler - WITH ERROR HANDLING
   const handlePlayToTable = (cardId) => {
     if (gameState.currentTurn === currentPlayer?.id) {
+      // Validate game state before sending
+      if (!gameState || !roomCode || !currentPlayer?.id) {
+        setError('Game state is not ready. Please wait...');
+        return;
+      }
+      
       socket.emit('card_game_play_table', { roomCode, playerId: currentPlayer.id, cardId });
     }
   };
@@ -198,6 +204,18 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const handleExitToCategories = () => {
     if (isAdmin) {
       socket.emit('card_game_exit', { roomCode });
+    }
+  };
+
+  // Take card from table handler
+  const handleTakeFromTable = () => {
+    const topCard = getTopTableCard();
+    if (topCard && gameState.currentTurn === currentPlayer?.id) {
+      socket.emit('card_game_take_table', { 
+        roomCode, 
+        playerId: currentPlayer.id, 
+        cardId: topCard.id 
+      });
     }
   };
 
@@ -241,6 +259,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   }
 
+  // FIXED: Properly get current turn player
   const currentTurnPlayer = players.find(p => p.id === gameState.currentTurn);
   const isMyTurn = gameState.currentTurn === currentPlayer?.id;
   const myHand = gameState.playerHands[currentPlayer.id] || [];
@@ -259,6 +278,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         <div className="bg-red-600 rounded-lg p-3 mb-4">
           <p className="font-bold">خطأ:</p>
           <p>{error}</p>
+          <button
+            onClick={() => setError('')}
+            className="mt-2 bg-red-700 hover:bg-red-800 py-1 px-3 rounded"
+          >
+            إغلاق
+          </button>
         </div>
       )}
 
@@ -464,13 +489,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* Game Header */}
+      {/* FIXED: Game Header - Now properly shows player names */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <div>
           <h2 className="text-2xl font-bold">لعبة البطاقات - جاهزة! ✅</h2>
-          <p className={`text-lg ${isMyTurn ? 'text-green-400' : 'text-indigo-200'}`}>
-            الدور: {currentTurnPlayer?.name} {isMyTurn && '(أنت)'}
-          </p>
+          
+          {/* FIXED: Always show current player's name with proper fallback */}
+          <div className={`text-lg font-bold ${isMyTurn ? 'text-green-400 animate-pulse' : 'text-indigo-200'}`}>
+            🎯 الدور: {currentTurnPlayer ? currentTurnPlayer.name : 'جاري التحديد...'} {isMyTurn ? '(أنت)' : ''}
+          </div>
+          
           <p className="text-sm text-yellow-300">
             مستواك الحالي: {myLevel} / 4
           </p>
@@ -878,7 +906,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             {/* Take from table button */}
             {topTableCard && (
               <button
-                onClick={() => socket.emit('card_game_take_table', { roomCode, playerId: currentPlayer.id, cardId: topTableCard.id })}
+                onClick={handleTakeFromTable}
                 disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || !canTakeCardFromTable(topTableCard) || justCompletedCategory}
                 className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 ${
                   isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && canTakeCardFromTable(topTableCard) && !justCompletedCategory ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'
@@ -888,6 +916,47 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               </button>
             )}
           </div>
+
+          {/* Players List */}
+          {/* <div className="bg-indigo-700 rounded-xl p-4">
+            <h3 className="text-lg font-semibold mb-4">اللاعبون</h3>
+            <div className="space-y-3">
+              {players.map((player, index) => (
+                <div 
+                  key={player.id}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    gameState.currentTurn === player.id 
+                      ? 'bg-gradient-to-r from-green-600 to-green-500' 
+                      : 'bg-indigo-600'
+                  } ${player.id === currentPlayer.id ? 'border-2 border-yellow-400' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      gameState.currentTurn === player.id ? 'bg-green-700' : 'bg-indigo-500'
+                    }`}>
+                      <span className="text-sm font-bold">
+                        {player.name.charAt(0)}
+                      </span>
+                    </div>
+                    <span className="font-medium">
+                      {player.name} 
+                      {player.id === currentPlayer.id && ' (أنت)'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm bg-indigo-800 px-2 py-1 rounded">
+                      المستوى: {gameState.playerLevels?.[player.id] || 1}
+                    </span>
+                    {gameState.currentTurn === player.id && (
+                      <span className="text-green-300">👑</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div> */}
+          
         </div>
       </div>
     </div>

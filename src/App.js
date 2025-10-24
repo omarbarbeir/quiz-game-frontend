@@ -88,6 +88,22 @@ function App() {
   useEffect(() => {
     socket.on('connect', () => {
       console.log('Connected to backend server');
+      
+      // Rejoin room if we have saved state
+      const savedState = sessionStorage.getItem('quizGameState');
+      if (savedState) {
+        const state = JSON.parse(savedState);
+        if (state.roomCode && state.playerId && state.playerName) {
+          socket.emit('rejoin_room', { 
+            roomCode: state.roomCode, 
+            player: { 
+              id: state.playerId, 
+              name: state.playerName, 
+              score: 0 
+            } 
+          });
+        }
+      }
     });
 
     socket.on('disconnect', () => {
@@ -96,6 +112,10 @@ function App() {
 
     socket.on('connect_error', (error) => {
       console.error('Connection error:', error);
+    });
+
+    socket.on('reconnect', () => {
+      console.log('Reconnected to server');
     });
 
     const handleRoomCreated = (code) => {
@@ -186,6 +206,28 @@ function App() {
       }
     };
 
+    const handleCardGameError = (errorData) => {
+      console.error('Card game error:', errorData);
+      if (errorData.message.includes('Game not found') || errorData.message.includes('Room not found')) {
+        // Reset card game state if game/room not found
+        setCardGameState(null);
+        alert('Game session was lost. Please rejoin the room.');
+      }
+    };
+
+    const handleRejoinSuccess = (roomData) => {
+      console.log('Successfully rejoined room:', roomData);
+      setPlayers(roomData.players || []);
+      if (roomData.cardGame) {
+        setCardGameState(roomData.cardGame);
+      }
+    };
+
+    const handleRejoinFailed = () => {
+      console.log('Failed to rejoin room, resetting game');
+      resetGame();
+    };
+
     socket.on('room_created', handleRoomCreated);
     socket.on('player_joined', handlePlayerJoined);
     socket.on('player_left', handlePlayerLeft);
@@ -198,11 +240,15 @@ function App() {
     socket.on('player_disconnected', handlePlayerDisconnected);
     socket.on('player_photo_question', handlePlayerPhotoQuestion);
     socket.on('card_game_state_update', handleCardGameStateUpdate);
+    socket.on('card_game_error', handleCardGameError);
+    socket.on('rejoin_success', handleRejoinSuccess);
+    socket.on('rejoin_failed', handleRejoinFailed);
 
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('connect_error');
+      socket.off('reconnect');
       socket.off('room_created', handleRoomCreated);
       socket.off('player_joined', handlePlayerJoined);
       socket.off('player_left', handlePlayerLeft);
@@ -215,6 +261,9 @@ function App() {
       socket.off('player_disconnected', handlePlayerDisconnected);
       socket.off('player_photo_question', handlePlayerPhotoQuestion);
       socket.off('card_game_state_update', handleCardGameStateUpdate);
+      socket.off('card_game_error', handleCardGameError);
+      socket.off('rejoin_success', handleRejoinSuccess);
+      socket.off('rejoin_failed', handleRejoinFailed);
     };
   }, [activePlayer, roomCode, playerId]);
 
