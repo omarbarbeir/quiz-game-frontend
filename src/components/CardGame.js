@@ -660,8 +660,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <button
                       onClick={() => handleSelectCardForCircle(card)}
                       disabled={!isMyTurn || (!gameState.playerHasDrawn?.[currentPlayer.id] && !justCompletedCategory)}
-                      className={`px-4 py-2 rounded text-base flex items-center gap-1 ${
-                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 py-2 rounded text-md font-semibold bg-white/70 text-black flex items-center gap-1 ${
+                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-purple-600 hover:bg-white' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       وضع في الدائرة
@@ -686,8 +686,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <button
                       onClick={() => handlePlayToTable(card.id)}
                       disabled={!isMyTurn || (!gameState.playerHasDrawn?.[currentPlayer.id] && !justCompletedCategory)}
-                      className={`px-4 py-2 rounded ${
-                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 bg-emerald-700 py-2 rounded ${
+                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-green-600 hover:bg-emerald-800' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       لعب للطاولة
@@ -956,7 +956,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               ))}
             </div>
           </div> */}
-          
+
         </div>
       </div>
     </div>
