@@ -20,15 +20,13 @@ const PlayerScreen = ({
   setActivePlayer,
   setBuzzerLocked,
   setGameStatus,
-  cardGameState,
-  connectionStatus
+  cardGameState
 }) => {
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [showReloadWarning, setShowReloadWarning] = useState(false);
   const audioRef = useRef(null);
   const isActivePlayer = activePlayer === playerId;
   const [pausedTime, setPausedTime] = useState(0);
-  const [cardGameError, setCardGameError] = useState('');
 
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
   
@@ -75,7 +73,6 @@ const PlayerScreen = ({
 
     const handleCardGameStateUpdate = (gameState) => {
       console.log('🃏 Player received card game state:', gameState);
-      setCardGameError('');
       if (gameState && gameState.gameStarted) {
         setCurrentQuestion({
           id: 'card-game',
@@ -86,24 +83,12 @@ const PlayerScreen = ({
         setGameStatus('playing');
       }
     };
-
-    const handleCardGameError = (errorData) => {
-      console.error('Card game error in player:', errorData);
-      setCardGameError(errorData.message);
-      
-      if (errorData.message.includes('Game not found') || errorData.message.includes('Room not found')) {
-        // Reset the game state
-        setCurrentQuestion(null);
-        setGameStatus('lobby');
-      }
-    };
     
     socket.on('play_audio', handlePlayAudio);
     socket.on('pause_audio', handlePauseAudio);
     socket.on('continue_audio', handleContinueAudio);
     socket.on('player_photo_question', handlePlayerPhotoQuestion);
     socket.on('card_game_state_update', handleCardGameStateUpdate);
-    socket.on('card_game_error', handleCardGameError);
     
     return () => {
       socket.off('play_audio', handlePlayAudio);
@@ -111,7 +96,6 @@ const PlayerScreen = ({
       socket.off('continue_audio', handleContinueAudio);
       socket.off('player_photo_question', handlePlayerPhotoQuestion);
       socket.off('card_game_state_update', handleCardGameStateUpdate);
-      socket.off('card_game_error', handleCardGameError);
     };
   }, [socket, activePlayer, currentQuestion, shouldShowImage, playerId, setCurrentQuestion, setActivePlayer, setBuzzerLocked, setGameStatus, isReverseQuestion]);
   
@@ -128,22 +112,6 @@ const PlayerScreen = ({
   // Render CardGame when in card game mode
   if (currentQuestion?.category === 'card-game' || cardGameState?.gameStarted) {
     const currentPlayer = players.find(p => p.id === playerId);
-    
-    if (!currentPlayer) {
-      return (
-        <div className="bg-red-600 rounded-xl p-6 text-center">
-          <h2 className="text-xl font-bold">خطأ: لم يتم العثور على بيانات اللاعب</h2>
-          <p>يرجى إعادة تحميل الصفحة أو مغادرة الغرفة والعودة مرة أخرى</p>
-          <button
-            onClick={onLeaveRoom}
-            className="mt-4 bg-indigo-700 hover:bg-indigo-900 py-2 px-4 rounded-lg"
-          >
-            مغادرة الغرفة
-          </button>
-        </div>
-      );
-    }
-
     return (
       <div className="w-full">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
@@ -157,19 +125,6 @@ const PlayerScreen = ({
             <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
           </div>
         </div>
-
-        {cardGameError && (
-          <div className="bg-red-600 rounded-lg p-3 mb-4">
-            <p className="font-bold">خطأ في لعبة البطاقات:</p>
-            <p>{cardGameError}</p>
-            <button
-              onClick={() => setCardGameError('')}
-              className="mt-2 bg-red-700 hover:bg-red-800 py-1 px-3 rounded"
-            >
-              إغلاق
-            </button>
-          </div>
-        )}
 
         <CardGame 
           socket={socket}
@@ -364,13 +319,13 @@ const PlayerScreen = ({
               <div className="bg-gradient-to-br from-rose-800 to-pink-800 rounded-xl p-6 shadow-lg">
                 <button
                   onClick={onBuzzerPress}
-                  disabled={buzzerLocked || !currentQuestion || gameStatus !== 'playing' || activePlayer || connectionStatus !== 'connected'}
+                  disabled={buzzerLocked || !currentQuestion || gameStatus !== 'playing' || activePlayer}
                   className={`w-full py-8 rounded-xl text-3xl font-bold flex flex-col items-center justify-center transform transition-all ${
                     isActivePlayer
                       ? 'bg-green-500'
                       : activePlayer
                         ? 'bg-gray-700 cursor-not-allowed'
-                        : buzzerLocked || !currentQuestion || gameStatus !== 'playing' || connectionStatus !== 'connected'
+                        : buzzerLocked || !currentQuestion || gameStatus !== 'playing'
                           ? 'bg-gray-700 cursor-not-allowed'
                           : 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:scale-95'
                   }`}
@@ -387,8 +342,6 @@ const PlayerScreen = ({
                       <FaLock className="text-2xl mb-2" />
                       <span>تم قفل الزر</span>
                     </>
-                  ) : connectionStatus !== 'connected' ? (
-                    <span>الاتصال مقطوع</span>
                   ) : (
                     <span>اضغط للجواب!</span>
                   )}

@@ -27,8 +27,7 @@ const AdminPanel = ({
   buzzerLocked,
   isAdmin,
   randomPhotosCategory,
-  cardGameState,
-  connectionStatus
+  cardGameState
 }) => {
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [showReloadWarning, setShowReloadWarning] = useState(false);
@@ -45,7 +44,7 @@ const AdminPanel = ({
   const adminPlayer = players.find(p => p.isAdmin);
 
   const handlePlayAudio = () => {
-    if (audioRef.current && !currentQuestion?.image && connectionStatus === 'connected') {
+    if (audioRef.current && !currentQuestion?.image) {
       audioRef.current.play()
         .then(() => setAudioPlaying(true))
         .catch(error => console.error("Audio play failed:", error));
@@ -54,7 +53,7 @@ const AdminPanel = ({
   };
   
   const handleContinueAudio = () => {
-    if (audioRef.current && pausedTime > 0 && !currentQuestion?.image && connectionStatus === 'connected') {
+    if (audioRef.current && pausedTime > 0 && !currentQuestion?.image) {
       audioRef.current.currentTime = pausedTime;
       audioRef.current.play()
         .then(() => setAudioPlaying(true))
@@ -64,7 +63,7 @@ const AdminPanel = ({
   };
 
   const handlePauseAudio = () => {
-    if (audioRef.current && connectionStatus === 'connected') {
+    if (audioRef.current) {
       setPausedTime(audioRef.current.currentTime);
       audioRef.current.pause();
       setAudioPlaying(false);
@@ -73,7 +72,7 @@ const AdminPanel = ({
   };
 
   const handleStopAudio = () => {
-    if (audioRef.current && connectionStatus === 'connected') {
+    if (audioRef.current) {
       setPausedTime(0);
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -88,7 +87,7 @@ const AdminPanel = ({
   };
 
   const handlePlayAudio2 = () => {
-    if (audioRef2.current && connectionStatus === 'connected') {
+    if (audioRef2.current) {
       audioRef2.current.play()
         .then(() => setAudio2Playing(true))
         .catch(error => console.error("Audio2 play failed:", error));
@@ -97,7 +96,7 @@ const AdminPanel = ({
   };
   
   const handleContinueAudio2 = () => {
-    if (audioRef2.current && pausedTime2 > 0 && connectionStatus === 'connected') {
+    if (audioRef2.current && pausedTime2 > 0) {
       audioRef2.current.currentTime = pausedTime2;
       audioRef2.current.play()
         .then(() => setAudio2Playing(true))
@@ -107,7 +106,7 @@ const AdminPanel = ({
   };
 
   const handlePauseAudio2 = () => {
-    if (audioRef2.current && connectionStatus === 'connected') {
+    if (audioRef2.current) {
       setPausedTime2(audioRef2.current.currentTime);
       audioRef2.current.pause();
       setAudio2Playing(false);
@@ -116,7 +115,7 @@ const AdminPanel = ({
   };
 
   const handleStopAudio2 = () => {
-    if (audioRef2.current && connectionStatus === 'connected') {
+    if (audioRef2.current) {
       setPausedTime2(0);
       audioRef2.current.pause();
       audioRef2.current.currentTime = 0;
@@ -131,8 +130,6 @@ const AdminPanel = ({
   };
 
   const handleNextQuestion = () => {
-    if (connectionStatus !== 'connected') return;
-    
     setLoadingNext(true);
     onPlayRandomQuestion();
     setTimeout(() => setLoadingNext(false), 1000);
@@ -343,11 +340,8 @@ const AdminPanel = ({
                   
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={() => connectionStatus === 'connected' && onScoreChange(player.id, -1)}
-                      disabled={connectionStatus !== 'connected'}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        connectionStatus === 'connected' ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-500 cursor-not-allowed'
-                      }`}
+                      onClick={() => onScoreChange(player.id, -1)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600"
                     >
                       <FaTimes />
                     </button>
@@ -357,11 +351,8 @@ const AdminPanel = ({
                     </span>
                     
                     <button 
-                      onClick={() => connectionStatus === 'connected' && onScoreChange(player.id, 1)}
-                      disabled={connectionStatus !== 'connected'}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        connectionStatus === 'connected' ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 cursor-not-allowed'
-                      }`}
+                      onClick={() => onScoreChange(player.id, 1)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500 hover:bg-green-600"
                     >
                       ✓
                     </button>
@@ -385,11 +376,8 @@ const AdminPanel = ({
                 </div>
                 
                 <button 
-                  onClick={connectionStatus === 'connected' ? onResetBuzzer : undefined}
-                  disabled={connectionStatus !== 'connected'}
-                  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                    connectionStatus === 'connected' ? 'bg-amber-700 hover:bg-amber-800' : 'bg-gray-600 cursor-not-allowed'
-                  }`}
+                  onClick={onResetBuzzer}
+                  className="bg-amber-700 hover:bg-amber-800 px-4 py-2 rounded-lg flex items-center gap-2"
                 >
                   <FaRedo /> إعادة الزر
                 </button>
@@ -409,10 +397,10 @@ const AdminPanel = ({
                 </div>
                 
                 <button 
-                  onClick={connectionStatus === 'connected' ? onAdminBuzzer : undefined}
-                  disabled={buzzerLocked || !currentQuestion || connectionStatus !== 'connected'}
+                  onClick={onAdminBuzzer}
+                  disabled={buzzerLocked || !currentQuestion}
                   className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                    buzzerLocked || !currentQuestion || connectionStatus !== 'connected'
+                    buzzerLocked || !currentQuestion
                       ? 'bg-gray-600 cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
@@ -482,9 +470,9 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handleNextQuestion}
-                  disabled={loadingNext || connectionStatus !== 'connected'}
+                  disabled={loadingNext}
                   className={`mt-3 sm:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1 ${
-                    loadingNext || connectionStatus !== 'connected' ? 'opacity-50 cursor-not-allowed' : ''
+                    loadingNext ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
                   <FaRandom /> {loadingNext ? 'جاري التحميل...' : 'السؤال التالي'}
@@ -517,10 +505,7 @@ const AdminPanel = ({
                 </h2>
                 <button
                   onClick={handleNextQuestion}
-                  disabled={connectionStatus !== 'connected'}
-                  className={`mt-2 sm:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1 ${
-                    connectionStatus !== 'connected' ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className="mt-2 sm:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
                 >
                   <FaRandom /> السؤال التالي
                 </button>
@@ -581,10 +566,7 @@ const AdminPanel = ({
                 </h2>
                 <button
                   onClick={handleNextQuestion}
-                  disabled={connectionStatus !== 'connected'}
-                  className={`mt-2 sm:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1 ${
-                    connectionStatus !== 'connected' ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className="mt-2 sm:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
                 >
                   <FaRandom /> السؤال التالي
                 </button>
@@ -628,10 +610,7 @@ const AdminPanel = ({
                 <h2 className="text-xl font-semibold">السبورة التعاونية</h2>
                 <button
                   onClick={handleNextQuestion}
-                  disabled={connectionStatus !== 'connected'}
-                  className={`bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1 ${
-                    connectionStatus !== 'connected' ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded flex items-center gap-1"
                 >
                   <FaRandom /> إظهار السبورة
                 </button>
@@ -653,9 +632,9 @@ const AdminPanel = ({
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <button
                   onClick={handlePlayAudio}
-                  disabled={audioPlaying || connectionStatus !== 'connected'}
+                  disabled={audioPlaying}
                   className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    audioPlaying || connectionStatus !== 'connected'
+                    audioPlaying 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-green-600 hover:bg-green-700'
                   }`}
@@ -666,9 +645,9 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handleContinueAudio}
-                  disabled={audioPlaying || pausedTime === 0 || connectionStatus !== 'connected'}
+                  disabled={audioPlaying || pausedTime === 0}
                   className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    audioPlaying || pausedTime === 0 || connectionStatus !== 'connected'
+                    audioPlaying || pausedTime === 0
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
@@ -679,9 +658,9 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handlePauseAudio}
-                  disabled={!audioPlaying || connectionStatus !== 'connected'}
+                  disabled={!audioPlaying}
                   className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    !audioPlaying || connectionStatus !== 'connected'
+                    !audioPlaying 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-yellow-600 hover:bg-yellow-700'
                   }`}
@@ -692,10 +671,7 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handleStopAudio}
-                  disabled={connectionStatus !== 'connected'}
-                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    connectionStatus === 'connected' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 cursor-not-allowed'
-                  }`}
+                  className="py-2 rounded-lg bg-red-600 hover:bg-red-700 flex flex-col items-center justify-center gap-1"
                 >
                   <FaVolumeUp className="text-lg" />
                   <span className="text-sm">إيقاف</span>
@@ -703,10 +679,7 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handleReplayAudio}
-                  disabled={connectionStatus !== 'connected'}
-                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    connectionStatus === 'connected' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-600 cursor-not-allowed'
-                  }`}
+                  className="py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex flex-col items-center justify-center gap-1"
                 >
                   <FaVolumeUp className="text-lg" />
                   <span className="text-sm">إعادة تشغيل</span>
@@ -734,9 +707,9 @@ const AdminPanel = ({
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <button
                   onClick={handlePlayAudio2}
-                  disabled={audio2Playing || connectionStatus !== 'connected'}
+                  disabled={audio2Playing}
                   className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    audio2Playing || connectionStatus !== 'connected'
+                    audio2Playing 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-green-600 hover:bg-green-700'
                   }`}
@@ -747,9 +720,9 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handleContinueAudio2}
-                  disabled={audio2Playing || pausedTime2 === 0 || connectionStatus !== 'connected'}
+                  disabled={audio2Playing || pausedTime2 === 0}
                   className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    audio2Playing || pausedTime2 === 0 || connectionStatus !== 'connected'
+                    audio2Playing || pausedTime2 === 0
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
@@ -760,9 +733,9 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handlePauseAudio2}
-                  disabled={!audio2Playing || connectionStatus !== 'connected'}
+                  disabled={!audio2Playing}
                   className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    !audio2Playing || connectionStatus !== 'connected'
+                    !audio2Playing 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-yellow-600 hover:bg-yellow-700'
                   }`}
@@ -773,10 +746,7 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handleStopAudio2}
-                  disabled={connectionStatus !== 'connected'}
-                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    connectionStatus === 'connected' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 cursor-not-allowed'
-                  }`}
+                  className="py-2 rounded-lg bg-red-600 hover:bg-red-700 flex flex-col items-center justify-center gap-1"
                 >
                   <FaVolumeUp className="text-lg" />
                   <span className="text-sm">إيقاف</span>
@@ -784,10 +754,7 @@ const AdminPanel = ({
                 
                 <button
                   onClick={handleReplayAudio2}
-                  disabled={connectionStatus !== 'connected'}
-                  className={`py-2 rounded-lg flex flex-col items-center justify-center gap-1 ${
-                    connectionStatus === 'connected' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-600 cursor-not-allowed'
-                  }`}
+                  className="py-2 rounded-lg bg-purple-600 hover:bg-purple-700 flex flex-col items-center justify-center gap-1"
                 >
                   <FaVolumeUp className="text-lg" />
                   <span className="text-sm">إعادة تشغيل</span>
@@ -810,22 +777,16 @@ const AdminPanel = ({
             
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={connectionStatus === 'connected' ? onResetBuzzer : undefined}
-                disabled={connectionStatus !== 'connected'}
-                className={`py-3 rounded-lg flex flex-col items-center justify-center ${
-                  connectionStatus === 'connected' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-gray-600 cursor-not-allowed'
-                }`}
+                onClick={onResetBuzzer}
+                className="bg-amber-600 hover:bg-amber-700 py-3 rounded-lg flex flex-col items-center justify-center"
               >
                 <FaRedo className="text-xl mb-1" />
                 إعادة الزر
               </button>
               
               <button
-                onClick={connectionStatus === 'connected' ? onEndGame : undefined}
-                disabled={connectionStatus !== 'connected'}
-                className={`py-3 rounded-lg flex flex-col items-center justify-center ${
-                  connectionStatus === 'connected' ? 'bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700' : 'bg-gray-600 cursor-not-allowed'
-                }`}
+                onClick={onEndGame}
+                className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 py-3 rounded-lg flex flex-col items-center justify-center"
               >
                 <FaTrophy className="text-xl mb-1" />
                 إنهاء اللعبة
