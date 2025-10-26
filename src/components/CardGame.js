@@ -13,6 +13,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [selectedCardForCircle, setSelectedCardForCircle] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [rolledCategory, setRolledCategory] = useState(null); // Store rolled category
 
   // NEW: Check if card can be taken from table (action cards cannot be taken)
   const canTakeCardFromTable = (card) => {
@@ -82,6 +83,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setError(errorData.message);
     };
 
+    // UPDATED: Dice rolled event - only for the player who rolled
     const handleDiceRolled = (data) => {
       setDiceValue(data.diceValue);
       setShowDice(true);
@@ -89,6 +91,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setTimeout(() => {
         setShowDice(false);
       }, 3000);
+    };
+
+    // NEW: Handle dice category event - only shown to the player who rolled
+    const handleDiceCategory = (data) => {
+      console.log('🎲 Dice category received:', data);
+      setRolledCategory(data.category);
     };
 
     const handleGameExited = () => {
@@ -100,12 +108,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     socket.on('card_game_state_update', handleGameUpdate);
     socket.on('card_game_error', handleGameError);
     socket.on('card_game_dice_rolled', handleDiceRolled);
+    socket.on('card_game_dice_category', handleDiceCategory);
     socket.on('card_game_exited', handleGameExited);
 
     return () => {
       socket.off('card_game_state_update', handleGameUpdate);
       socket.off('card_game_error', handleGameError);
       socket.off('card_game_dice_rolled', handleDiceRolled);
+      socket.off('card_game_dice_category', handleDiceCategory);
       socket.off('card_game_exited', handleGameExited);
     };
   }, [socket, currentPlayer?.id, onExit]);
@@ -164,6 +174,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const handleRollDice = () => {
     setShowDice(true);
     socket.emit('card_game_roll_dice', { roomCode, playerId: currentPlayer.id });
+  };
+
+  // Close category banner
+  const handleCloseCategoryBanner = () => {
+    setRolledCategory(null);
   };
 
   // Draw card handler
@@ -306,6 +321,25 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
+      {/* NEW: Category Banner - Only shown to player who rolled dice */}
+      {rolledCategory && (
+        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-4 mb-6 text-center animate-pulse">
+          <div className="flex justify-between items-center">
+            <div className="flex-1 text-right">
+              <h3 className="text-xl font-bold text-white">الفئة الخاصة بك!</h3>
+              <p className="text-white text-lg">الفئة {rolledCategory.id}: {rolledCategory.name}</p>
+              <p className="text-white text-sm">{rolledCategory.description}</p>
+            </div>
+            <button
+              onClick={handleCloseCategoryBanner}
+              className="bg-white text-orange-500 hover:bg-gray-100 px-4 py-2 rounded-lg font-bold ml-4"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Rules Modal */}
       {showRules && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -420,7 +454,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* Dice Modal */}
+      {/* Dice Modal - Only shown to player who rolled */}
       {showDice && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-indigo-800 rounded-xl p-8 max-w-sm w-full mx-4 text-center">
