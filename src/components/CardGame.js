@@ -25,6 +25,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     return true;
   };
 
+  // NEW: Check if buttons should be enabled
+  const areButtonsEnabled = () => {
+    if (!gameState || !currentPlayer) return false;
+    
+    // Buttons are enabled only if player has drawn a card this turn
+    return gameState.playerHasDrawn?.[currentPlayer.id] === true;
+  };
+
   // Detect mobile devices
   useEffect(() => {
     const checkMobile = () => {
@@ -116,7 +124,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   const handleDropOnCircle = (e, circleIndex) => {
     e.preventDefault();
-    if (draggedCard && gameState.currentTurn === currentPlayer?.id) {
+    if (draggedCard && gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
       socket.emit('card_game_move_to_circle', { 
         roomCode, 
         playerId: currentPlayer.id, 
@@ -129,7 +137,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   // Handle circle placement via button (for mobile)
   const handlePlaceInCircle = (circleIndex) => {
-    if (selectedCardForCircle && gameState.currentTurn === currentPlayer?.id) {
+    if (selectedCardForCircle && gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
       socket.emit('card_game_move_to_circle', { 
         roomCode, 
         playerId: currentPlayer.id, 
@@ -142,7 +150,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   // Select card for circle placement
   const handleSelectCardForCircle = (card) => {
-    setSelectedCardForCircle(card);
+    if (areButtonsEnabled()) {
+      setSelectedCardForCircle(card);
+    }
   };
 
   // Cancel circle placement
@@ -158,14 +168,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   // Draw card handler
   const handleDrawCard = () => {
-    if (gameState.currentTurn === currentPlayer?.id) {
+    if (gameState.currentTurn === currentPlayer?.id && !gameState.playerHasDrawn?.[currentPlayer.id]) {
       socket.emit('card_game_draw', { roomCode, playerId: currentPlayer.id });
     }
   };
 
   // Play card to table handler - WITH ERROR HANDLING
   const handlePlayToTable = (cardId) => {
-    if (gameState.currentTurn === currentPlayer?.id) {
+    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
       // Validate game state before sending
       if (!gameState || !roomCode || !currentPlayer?.id) {
         setError('Game state is not ready. Please wait...');
@@ -178,7 +188,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   // SIMPLIFIED: Use skip card - automatically skips next player
   const handleUseSkipCard = (cardId) => {
-    if (gameState.currentTurn === currentPlayer?.id) {
+    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
       socket.emit('card_game_use_skip', { 
         roomCode, 
         playerId: currentPlayer.id, 
@@ -210,11 +220,23 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   // Take card from table handler
   const handleTakeFromTable = () => {
     const topCard = getTopTableCard();
-    if (topCard && gameState.currentTurn === currentPlayer?.id) {
+    if (topCard && gameState.currentTurn === currentPlayer?.id && 
+        !gameState.playerHasDrawn?.[currentPlayer.id] && canTakeCardFromTable(topCard)) {
       socket.emit('card_game_take_table', { 
         roomCode, 
         playerId: currentPlayer.id, 
         cardId: topCard.id 
+      });
+    }
+  };
+
+  // Use joker card handler - NEW: Allow multiple jokers in same turn
+  const handleUseJokerCard = (cardId) => {
+    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
+      socket.emit('card_game_use_joker', { 
+        roomCode, 
+        playerId: currentPlayer.id, 
+        cardId 
       });
     }
   };
@@ -267,10 +289,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const filledCircles = myCircles.filter(card => card !== null).length;
   const topTableCard = getTopTableCard();
   const myLevel = gameState.playerLevels?.[currentPlayer.id] || 1;
-
-  // NEW: Check if player just completed a category and needs to discard
-  const justCompletedCategory = isMyTurn && gameState.playerHasDrawn?.[currentPlayer.id] && 
-                               myHand.length > 6; // More than normal hand size
+  const buttonsEnabled = areButtonsEnabled();
 
   return (
     <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
@@ -375,9 +394,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 <button
                   key={circleIndex}
                   onClick={() => handlePlaceInCircle(circleIndex)}
-                  disabled={myCircles[circleIndex] !== null || !isMyTurn}
+                  disabled={myCircles[circleIndex] !== null || !isMyTurn || !buttonsEnabled}
                   className={`p-4 rounded-lg text-center flex flex-col items-center justify-center ${
-                    myCircles[circleIndex] === null && isMyTurn
+                    myCircles[circleIndex] === null && isMyTurn && buttonsEnabled
                       ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-gray-600 cursor-not-allowed'
                   }`}
@@ -504,8 +523,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           </p>
           {isMyTurn && (
             <p className="text-sm text-yellow-300 mt-1">
-              {justCompletedCategory ? 'يجب عليك التخلص من بطاقة بعد اكتمال الفئة' :
-               !gameState.playerHasDrawn?.[currentPlayer.id] ? 'يجب عليك سحب بطاقة أولاً' : 'يجب عليك التخلص من بطاقة الآن'}
+              {!gameState.playerHasDrawn?.[currentPlayer.id] ? 'يجب عليك سحب بطاقة أولاً' : 'يجب عليك التخلص من بطاقة الآن'}
             </p>
           )}
         </div>
@@ -545,9 +563,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           
           <button
             onClick={handleDrawCard}
-            disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || gameState.drawPile.length === 0 || justCompletedCategory}
+            disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || gameState.drawPile.length === 0}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-              isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && gameState.drawPile.length > 0 && !justCompletedCategory ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'
+              isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && gameState.drawPile.length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'
             }`}
           >
             <FaHandPaper /> سحب بطاقة ({gameState.drawPile.length})
@@ -603,14 +621,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* NEW: Warning for discarding after category completion */}
-      {justCompletedCategory && (
-        <div className="bg-yellow-600 rounded-lg p-4 mb-6 text-center animate-pulse">
-          <h3 className="text-xl font-bold">مبروك! أكملت الفئة 🎉</h3>
-          <p className="mt-2">لقد حصلت على 3 بطاقات جديدة. يجب عليك الآن التخلص من بطاقة واحدة.</p>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Player Hand */}
         <div className="bg-indigo-700 rounded-xl p-4">
@@ -626,7 +636,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   card.type === 'series' ? 'bg-pink-600' :
                   card.type === 'movie' ? 'bg-green-600' : 'bg-indigo-600'
                 } text-white`}
-                draggable={!isMobile && isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
+                draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
                 onDragStart={(e) => handleDragStart(e, card)}
               >
                 <div className="flex justify-center items-center flex-col gap-4">
@@ -643,7 +653,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <div className="text-base opacity-90">
                       {card.type === 'action' ? `إجراء: ${card.subtype}` : 
                        card.type === 'actor' ? 'ممثل' :
-                      //  card.type === 'series' ? 'مسلسل' :
                        card.type === 'movie' ? 'فيلم' : 'مخرج'}
                     </div>
                     {card.type === 'action' && card.subtype === 'joker' && (
@@ -659,9 +668,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   {(isMobile || true) && (card.type !== 'action' || card.subtype === 'joker') && (
                     <button
                       onClick={() => handleSelectCardForCircle(card)}
-                      disabled={!isMyTurn || (!gameState.playerHasDrawn?.[currentPlayer.id] && !justCompletedCategory)}
-                      className={`px-4 py-2 rounded text-md font-semibold bg-white/70 text-black flex items-center gap-1 ${
-                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-purple-600 hover:bg-white' : 'bg-gray-400 cursor-not-allowed'
+                      disabled={!isMyTurn || !buttonsEnabled}
+                      className={`px-4 py-2 rounded text-md font-semibold flex items-center gap-1 ${
+                        isMyTurn && buttonsEnabled ? 'bg-purple-600 hover:bg-white text-white hover:text-black' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       وضع في الدائرة
@@ -669,15 +678,21 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   )}
                   
                   {card.type === 'action' && card.subtype === 'joker' ? (
-                    <span className="px-4 py-2 rounded bg-yellow-500 text-yellow-900 font-bold">
-                      جوكر - اسحب للدائرة
-                    </span>
+                    <button
+                      onClick={() => handleUseJokerCard(card.id)}
+                      disabled={!isMyTurn || !buttonsEnabled}
+                      className={`px-4 py-2 rounded ${
+                        isMyTurn && buttonsEnabled ? 'bg-yellow-500 hover:bg-yellow-600 text-yellow-900' : 'bg-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      استخدام الجوكر
+                    </button>
                   ) : card.type === 'action' && card.subtype === 'skip' ? (
                     <button
                       onClick={() => handleUseSkipCard(card.id)}
-                      disabled={!isMyTurn || (!gameState.playerHasDrawn?.[currentPlayer.id] && !justCompletedCategory)}
+                      disabled={!isMyTurn || !buttonsEnabled}
                       className={`px-4 py-2 rounded ${
-                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && buttonsEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       <FaUserSlash /> تخطي التالي
@@ -685,9 +700,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   ) : (
                     <button
                       onClick={() => handlePlayToTable(card.id)}
-                      disabled={!isMyTurn || (!gameState.playerHasDrawn?.[currentPlayer.id] && !justCompletedCategory)}
-                      className={`px-4 bg-emerald-700 py-2 rounded ${
-                        isMyTurn && (gameState.playerHasDrawn?.[currentPlayer.id] || justCompletedCategory) ? 'bg-green-600 hover:bg-emerald-800' : 'bg-gray-400 cursor-not-allowed'
+                      disabled={!isMyTurn || !buttonsEnabled}
+                      className={`px-4 py-2 rounded ${
+                        isMyTurn && buttonsEnabled ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       لعب للطاولة
@@ -789,7 +804,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                           playerId: currentPlayer.id, 
                           circleIndex 
                         })}
-                        disabled={!isMyTurn}
+                        disabled={!isMyTurn || !buttonsEnabled}
                         className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
                       >
                         إزالة
@@ -804,7 +819,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               ))}
             </div>
 
-            {filledCircles >= 3 && isMyTurn && !justCompletedCategory && (
+            {filledCircles >= 3 && isMyTurn && buttonsEnabled && (
               <button
                 onClick={() => socket.emit('card_game_declare', { roomCode, playerId: currentPlayer.id })}
                 className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 py-3 rounded-lg font-bold flex items-center justify-center gap-2"
@@ -907,56 +922,15 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             {topTableCard && (
               <button
                 onClick={handleTakeFromTable}
-                disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || !canTakeCardFromTable(topTableCard) || justCompletedCategory}
+                disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || !canTakeCardFromTable(topTableCard)}
                 className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 ${
-                  isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && canTakeCardFromTable(topTableCard) && !justCompletedCategory ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'
+                  isMyTurn && !gameState.playerHasDrawn?.[currentPlayer.id] && canTakeCardFromTable(topTableCard) ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-400 cursor-not-allowed'
                 }`}
               >
                 <FaTable /> أخذ البطاقة العلوية
               </button>
             )}
           </div>
-
-          {/* Players List */}
-          {/* <div className="bg-indigo-700 rounded-xl p-4">
-            <h3 className="text-lg font-semibold mb-4">اللاعبون</h3>
-            <div className="space-y-3">
-              {players.map((player, index) => (
-                <div 
-                  key={player.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    gameState.currentTurn === player.id 
-                      ? 'bg-gradient-to-r from-green-600 to-green-500' 
-                      : 'bg-indigo-600'
-                  } ${player.id === currentPlayer.id ? 'border-2 border-yellow-400' : ''}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      gameState.currentTurn === player.id ? 'bg-green-700' : 'bg-indigo-500'
-                    }`}>
-                      <span className="text-sm font-bold">
-                        {player.name.charAt(0)}
-                      </span>
-                    </div>
-                    <span className="font-medium">
-                      {player.name} 
-                      {player.id === currentPlayer.id && ' (أنت)'}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm bg-indigo-800 px-2 py-1 rounded">
-                      المستوى: {gameState.playerLevels?.[player.id] || 1}
-                    </span>
-                    {gameState.currentTurn === player.id && (
-                      <span className="text-green-300">👑</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div> */}
-
         </div>
       </div>
     </div>
