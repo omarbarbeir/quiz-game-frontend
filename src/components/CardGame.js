@@ -327,7 +327,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           <div className="flex justify-between items-center">
             <div className="flex-1 text-right">
               <h3 className="text-xl font-bold text-white">الفئة الخاصة بك!</h3>
-              <p className="text-white text-lg">الفئة {rolledCategory.id}: {rolledCategory.name}</p>
+              <p className="text-white text-lg">{rolledCategory.name}</p>
               <p className="text-white text-sm">{rolledCategory.description}</p>
             </div>
             <button
@@ -667,9 +667,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   card.type === 'action' && card.subtype === 'skip' ? 'bg-red-600' :
                   card.type === 'action' && card.subtype === 'joker' ? 'bg-cyan-600' :
                   card.type === 'actor' ? 'bg-yellow-500' :
-                  card.type === 'series' ? 'bg-pink-600' :
-                  card.type === 'movie' ? 'bg-green-600' : 'bg-indigo-600'
-                } text-white`}
+                  // card.type === 'series' ? 'bg-pink-600' :
+                  card.type === 'movie' ? 'bg-emerald-600' : 'bg-indigo-600'
+                } text-black`}
                 draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
                 onDragStart={(e) => handleDragStart(e, card)}
               >
@@ -715,11 +715,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <button
                       onClick={() => handleUseJokerCard(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded ${
-                        isMyTurn && buttonsEnabled ? 'bg-yellow-500 hover:bg-yellow-600 text-yellow-900' : 'bg-gray-400 cursor-not-allowed'
-                      }`}
                     >
-                      استخدام الجوكر
                     </button>
                   ) : card.type === 'action' && card.subtype === 'skip' ? (
                     <button
@@ -736,7 +732,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       onClick={() => handlePlayToTable(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
                       className={`px-4 py-2 rounded ${
-                        isMyTurn && buttonsEnabled ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && buttonsEnabled ? 'bg-orange-600 hover:bg-white text-white hover:text-black font-semibold' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       لعب للطاولة
