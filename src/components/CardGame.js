@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle, FaUserSlash } from 'react-icons/fa';
+import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle, FaUserSlash, FaExpand } from 'react-icons/fa';
 
 const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit }) => {
   const [gameState, setGameState] = useState(null);
@@ -14,6 +14,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [isMobile, setIsMobile] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [rolledCategory, setRolledCategory] = useState(null); // Store rolled category
+  const [selectedCardForView, setSelectedCardForView] = useState(null); // NEW: For photo viewing modal
 
   // NEW: Check if card can be taken from table (action cards cannot be taken)
   const canTakeCardFromTable = (card) => {
@@ -32,6 +33,101 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     
     // Buttons are enabled only if player has drawn a card this turn
     return gameState.playerHasDrawn?.[currentPlayer.id] === true;
+  };
+
+  // NEW: Handle card image click to open photo viewer
+  const handleCardImageClick = (card) => {
+    setSelectedCardForView(card);
+  };
+
+  // NEW: Close photo viewer
+  const handleClosePhotoViewer = () => {
+    setSelectedCardForView(null);
+  };
+
+  // NEW: Render card image with rectangular shape for all cards in thumbnail
+  const renderCardImage = (card, sizeClass = "w-24 h-24") => {
+    if (!card.image) {
+      return (
+        <div className={`${sizeClass} bg-gray-200 rounded-lg flex items-center justify-center border-1 border-white`}>
+          <div className="text-gray-400 text-xs text-center">No Image</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative">
+        {/* All cards show as rectangles in thumbnail view */}
+        <img 
+          src={`${process.env.PUBLIC_URL}${card.image}`}
+          alt={card.name}
+          className={`${sizeClass} object-cover rounded-lg border-1 border-white cursor-pointer hover:opacity-80 transition-opacity`}
+          onClick={() => handleCardImageClick(card)}
+        />
+        <button 
+          className="absolute top-1 right-1 bg-black bg-opacity-50 text-white p-1 rounded-full text-xs hover:bg-opacity-70 transition-all"
+          onClick={() => handleCardImageClick(card)}
+          title="تكبير الصورة"
+        >
+          <FaExpand />
+        </button>
+      </div>
+    );
+  };
+
+  // NEW: Render circle image with rectangular shape for all cards in thumbnail
+  const renderCircleImage = (card, sizeClass = "w-24 h-24") => {
+    if (!card.image) {
+      return (
+        <div className={`${sizeClass} bg-gray-200 rounded-lg flex items-center justify-center border-2 border-white mx-auto mb-2`}>
+          <div className="text-gray-400 text-xs text-center">No Image</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative">
+        {/* All cards show as rectangles in circle thumbnail view */}
+        <img 
+          src={`${process.env.PUBLIC_URL}${card.image}`}
+          alt={card.name}
+          className={`${sizeClass} object-cover rounded-lg border-2 border-white mx-auto mb-2 cursor-pointer hover:opacity-80 transition-opacity`}
+          onClick={() => handleCardImageClick(card)}
+        />
+        <button 
+          className="absolute top-1 right-1 bg-black bg-opacity-50 text-white p-1 rounded-full text-xs hover:bg-opacity-70 transition-all"
+          onClick={() => handleCardImageClick(card)}
+          title="تكبير الصورة"
+        >
+          <FaExpand />
+        </button>
+      </div>
+    );
+  };
+
+  // NEW: Render table card image with rectangular shape for all cards
+  const renderTableCardImage = (card, sizeClass = "w-full h-20") => {
+    if (!card.image) {
+      return (
+        <div className={`${sizeClass} bg-gray-200 rounded-md flex items-center justify-center`}>
+          <div className="text-gray-400 text-xs text-center">No Image</div>
+        </div>
+      );
+    }
+
+    return (
+      <div 
+        className={`${sizeClass} bg-black bg-opacity-20 rounded-md flex items-center justify-center overflow-hidden mb-2 cursor-pointer hover:opacity-80 transition-opacity`}
+        onClick={() => handleCardImageClick(card)}
+      >
+        {/* All cards show as rectangles on table */}
+        <img 
+          src={`${process.env.PUBLIC_URL}${card.image}`} 
+          alt={card.name} 
+          className="w-full h-full object-cover rounded-md"
+        />
+      </div>
+    );
   };
 
   // Detect mobile devices
@@ -321,20 +417,92 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
+      {/* NEW: Photo Viewer Modal */}
+      {selectedCardForView && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-xl font-bold text-gray-800">{selectedCardForView.name}</h2>
+              <button
+                onClick={handleClosePhotoViewer}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                <FaTimesCircle />
+              </button>
+            </div>
+            
+            <div className="p-6 flex flex-col items-center">
+              {selectedCardForView.image && (
+                <div className="flex justify-center">
+                  {selectedCardForView.type === 'movie' ? (
+                    // Circular display for movie cards in modal
+                    <div className="w-80 h-80 rounded-full overflow-hidden border-4 border-indigo-500 shadow-2xl">
+                      <img 
+                        src={`${process.env.PUBLIC_URL}${selectedCardForView.image}`}
+                        alt={selectedCardForView.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    // Rectangular display for non-movie cards in modal
+                    <img 
+                      src={`${process.env.PUBLIC_URL}${selectedCardForView.image}`}
+                      alt={selectedCardForView.name}
+                      className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                    />
+                  )}
+                </div>
+              )}
+              
+              <div className="mt-4 text-center text-gray-700">
+                <p className="text-lg font-semibold">{selectedCardForView.name}</p>
+                <p className="text-sm text-gray-600">
+                  {selectedCardForView.type === 'actor' ? 'ممثل' : 
+                   selectedCardForView.type === 'movie' ? 'فيلم' : 
+                   selectedCardForView.type === 'action' ? 'بطاقة إجراء' : 'مخرج'}
+                  {selectedCardForView.type === 'action' && selectedCardForView.subtype && (
+                    <span> - {selectedCardForView.subtype === 'joker' ? 'جوكر' : 'تخطي'}</span>
+                  )}
+                </p>
+                {selectedCardForView.type === 'movie' && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    🎬 عرض دائري: يمكنك رؤية الفيلم بشكل دائري
+                  </p>
+                )}
+                {selectedCardForView.type !== 'movie' && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    {selectedCardForView.type === 'actor' ? '👨‍🎤 عرض مستطيل: يمكنك رؤية الممثل بوضوح' : '🃏 بطاقة خاصة'}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="p-4 border-t text-center">
+              <button
+                onClick={handleClosePhotoViewer}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* NEW: Category Banner - Only shown to player who rolled dice */}
       {rolledCategory && (
-        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-4 mb-6 text-center animate-pulse">
+        <div className="bg-gradient-to-r from-emerald-500 to-sky-500 rounded-lg p-4 mb-6 text-center">
           <div className="flex justify-between items-center">
             <div className="flex-1 text-right">
-              <h3 className="text-xl font-bold text-white">الفئة الخاصة بك!</h3>
-              <p className="text-white text-lg">{rolledCategory.name}</p>
-              <p className="text-white text-sm">{rolledCategory.description}</p>
+              <h3 className="text-xl font-bold text-black">الفئة الخاصة بك!</h3>
+              <p className="text-black font-semibold text-lg">{rolledCategory.name}</p>
+              <p className="text-black font-semibold text-md">{rolledCategory.description}</p>
             </div>
             <button
               onClick={handleCloseCategoryBanner}
-              className="bg-white text-orange-500 hover:bg-gray-100 px-4 py-2 rounded-lg font-bold ml-4"
+              className="bg-blue-900 text-white-500 font-extrabold hover:bg-gray-100 px-4 py-2 rounded-lg ml-4"
             >
-              ✕
+              X
             </button>
           </div>
         </div>
@@ -393,10 +561,20 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div className="bg-indigo-700 p-4 rounded-lg">
                 <h3 className="text-xl font-bold text-yellow-300 mb-2">أنواع البطاقات</h3>
                 <ul className="list-disc list-inside space-y-2 text-sm">
-                  <li>بطاقات الممثلين (أصفر)</li>
-                  <li>بطاقات الأفلام (أخضر)</li>
+                  <li>بطاقات الممثلين (أصفر) - عرض مستطيل</li>
+                  <li>بطاقات الأفلام (أخضر) - عرض دائري في المشاهدة</li>
                   <li>بطاقات الجوكر (تركواز) - يمكن استخدامها كأي نوع</li>
                   <li>بطاقات التخطي (أحمر) - لتخطي دور اللاعب التالي تلقائياً</li>
+                </ul>
+              </div>
+              
+              <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">ميزات العرض</h3>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>انقر على أي صورة لعرضها بحجم كبير</li>
+                  <li>أفلام: عرض مصغر مستطيل، عرض كامل بدائرة</li>
+                  <li>ممثلون: عرض مستطيل في جميع الأحجام</li>
+                  <li>يمكن رؤية الصورة الكاملة عند النقر عليها</li>
                 </ul>
               </div>
               
@@ -490,13 +668,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div className="space-y-2">
                 {gameState.declaredCategory.cards.map((card, index) => (
                   <div key={index} className="bg-white text-gray-800 p-2 rounded flex items-center gap-3">
-                    {card.image && (
-                      <img 
-                        src={`${process.env.PUBLIC_URL}${card.image}`}
-                        alt={card.name}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                    )}
+                    {renderCardImage(card, "w-16 h-16")}
                     <div>
                       <div className="font-bold">{card.name}</div>
                       <div className="text-sm text-gray-600">
@@ -674,14 +846,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 onDragStart={(e) => handleDragStart(e, card)}
               >
                 <div className="flex justify-center items-center flex-col gap-4">
-                  {/* Card Image - Increased size */}
-                  {card.image && (
-                    <img 
-                      src={`${process.env.PUBLIC_URL}${card.image}`}
-                      alt={card.name}
-                      className="w-24 h-24 object-fill rounded-lg border-1 border-white"
-                    />
-                  )}
+                  {/* Card Image - Using the new render function */}
+                  {renderCardImage(card, "w-24 h-24")}
                   <div>
                     <div className="font-bold flex justify-center items-center text-lg">{card.name}</div>
                     <div className="text-base opacity-90">
@@ -694,6 +860,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     )}
                     {card.type === 'action' && card.subtype === 'skip' && (
                       <div className="text-sm opacity-75 mt-1">تخطي اللاعب التالي تلقائياً</div>
+                    )}
+                    {card.type === 'movie' && (
+                      <div className="text-sm opacity-75 mt-1">🎬 انقر لمشاهدة دائرية</div>
                     )}
                   </div>
                 </div>
@@ -815,13 +984,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 >
                   {myCircles[circleIndex] ? (
                     <div className="text-center">
-                      {myCircles[circleIndex].image && (
-                        <img 
-                          src={`${process.env.PUBLIC_URL}${myCircles[circleIndex].image}`}
-                          alt={myCircles[circleIndex].name}
-                          className="w-24 h-24 object-cover rounded-lg mx-auto mb-2 border-2 border-white"
-                        />
-                      )}
+                      {/* Circle Image - Using the new render function */}
+                      {renderCircleImage(myCircles[circleIndex], "w-24 h-24")}
                       <div className="font-bold text-white text-base">{myCircles[circleIndex].name}</div>
                       <div className="text-sm text-gray-300">
                         {myCircles[circleIndex].type === 'actor' ? 'ممثل' : 
@@ -922,15 +1086,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       }}
                     >
                       <div className="w-full h-full rounded-lg p-2">
-                        {topTableCard.image && (
-                          <div className="w-full h-20 bg-black bg-opacity-20 rounded-md flex items-center justify-center overflow-hidden mb-2">
-                            <img 
-                              src={`${process.env.PUBLIC_URL}${topTableCard.image}`} 
-                              alt={topTableCard.name} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
+                        {/* Table Card Image - Using the new render function */}
+                        {renderTableCardImage(topTableCard, "w-full h-20")}
                         <div className="text-center">
                           <h3 className="text-sm font-bold text-white leading-tight">
                             {topTableCard.name}
