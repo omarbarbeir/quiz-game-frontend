@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle, FaUserSlash, FaExpand } from 'react-icons/fa';
+import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle, FaUserSlash, FaExpand, FaCrown } from 'react-icons/fa';
 
 const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit }) => {
   const [gameState, setGameState] = useState(null);
@@ -148,7 +148,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   useEffect(() => {
     if (gameState && currentPlayer) {
       const playerLevel = gameState.playerLevels?.[currentPlayer.id] || 1;
-      // Convert level (1-4) to token position (0-3)
+      // Convert level (1-5) to token position (0-4)
+      // Level 5 is the WIN position
       setPlayerToken(playerLevel - 1);
     }
   }, [gameState, currentPlayer]);
@@ -352,6 +353,20 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
+  // Check if any player has won (reached level 5)
+  const checkWinner = () => {
+    if (!gameState || !players) return null;
+    
+    const winner = players.find(player => {
+      const playerLevel = gameState.playerLevels?.[player.id] || 1;
+      return playerLevel >= 5; // Level 5 is the win condition
+    });
+    
+    return winner;
+  };
+
+  const winner = checkWinner();
+
   if (!currentPlayer) {
     return (
       <div className="bg-red-600 rounded-xl p-6 text-center">
@@ -414,6 +429,46 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           >
             إغلاق
           </button>
+        </div>
+      )}
+
+      {/* WINNER MODAL */}
+      {winner && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl max-w-2xl w-full text-center p-8">
+            <div className="mb-6">
+              <FaCrown className="text-6xl text-white mx-auto mb-4" />
+              <h2 className="text-4xl font-bold text-white mb-4">🎉 تهانينا! 🎉</h2>
+              <p className="text-2xl font-bold text-white mb-2">{winner.name}</p>
+              <p className="text-xl text-white">فاز باللعبة!</p>
+            </div>
+            
+            <div className="bg-white bg-opacity-20 rounded-lg p-4 mb-6">
+              <p className="text-lg font-semibold text-white">لقد أكمل 4 فئات ووصل لدائرة الفوز!</p>
+              <p className="text-white mt-2">🎊 أحسنت! 🎊</p>
+            </div>
+
+            {isAdmin && (
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={handleResetGame}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2"
+                >
+                  <FaRedo /> لعبة جديدة
+                </button>
+                <button
+                  onClick={handleExitToCategories}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2"
+                >
+                  <FaHome /> العودة للفئات
+                </button>
+              </div>
+            )}
+            
+            {!isAdmin && (
+              <p className="text-white text-lg">بانتظار المسؤول لبدء لعبة جديدة...</p>
+            )}
+          </div>
         </div>
       )}
 
@@ -526,6 +581,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div className="bg-indigo-700 p-4 rounded-lg">
                 <h3 className="text-xl font-bold text-yellow-300 mb-2">هدف اللعبة</h3>
                 <p>اكتمال 4 مستويات عن طريق جمع 3 بطاقات في الدوائر لكل فئة</p>
+                <p className="text-yellow-200 mt-2">🎯 المستوى 5: دائرة الفوز - أول لاعب يصل للمستوى 5 يفوز!</p>
               </div>
               
               <div className="bg-indigo-700 p-4 rounded-lg">
@@ -580,7 +636,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               
               <div className="bg-indigo-700 p-4 rounded-lg">
                 <h3 className="text-xl font-bold text-yellow-300 mb-2">الفوز</h3>
-                <p>أول لاعب يصل للمستوى الرابع (يكمل 4 فئات) يفوز باللعبة!</p>
+                <p>أول لاعب يصل للمستوى الخامس (يكمل 4 فئات) يفوز باللعبة!</p>
+                <p className="text-green-300 mt-2">🎊 عند الوصول للمستوى 5: تظهر دائرة الفوز وتنتهي اللعبة! 🎊</p>
               </div>
             </div>
             
@@ -725,7 +782,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           </div>
           
           <p className="text-sm text-yellow-300">
-            مستواك الحالي: {myLevel} / 4
+            مستواك الحالي: {myLevel} / 5
           </p>
           {isMyTurn && (
             <p className="text-sm text-yellow-300 mt-1">
@@ -915,7 +972,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
         {/* Player Circles & Progress Track */}
         <div className="space-y-6">
-          {/* Progress Track with Circles */}
+          {/* Progress Track with Circles - NOW WITH 5 CIRCLES (INCLUDING WIN) */}
           <div className="bg-indigo-700 rounded-xl p-4">
             <h3 className="text-lg font-semibold mb-4">مسار التقدم - المستوى {myLevel}</h3>
             
@@ -926,24 +983,31 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 <span className="text-sm">المستوى 2</span>
                 <span className="text-sm">المستوى 3</span>
                 <span className="text-sm">المستوى 4</span>
+                <span className="text-sm text-yellow-300 font-bold">🎊 الفوز 🎊</span>
               </div>
               <div className="flex justify-between items-center relative">
                 {/* Progress Line */}
                 <div className="absolute top-4 left-0 right-0 h-1 bg-gray-600 z-0"></div>
                 <div 
                   className="absolute top-4 left-0 h-1 bg-green-500 z-0 transition-all duration-500"
-                  style={{ width: `${(playerToken / 3) * 100}%` }}
+                  style={{ width: `${(playerToken / 4) * 100}%` }}
                 ></div>
                 
-                {/* Circles */}
-                {[0, 1, 2, 3].map(level => (
+                {/* Circles - Now 5 circles including WIN */}
+                {[0, 1, 2, 3, 4].map(level => (
                   <div 
                     key={level}
                     className={`w-10 h-10 rounded-full flex items-center justify-center relative z-10 ${
-                      level <= playerToken ? 'bg-green-500' : 'bg-gray-600'
+                      level <= playerToken ? 
+                        (level === 4 ? 'bg-yellow-500' : 'bg-green-500') : 
+                        'bg-gray-600'
                     }`}
                   >
-                    <span className="text-white font-bold">{level + 1}</span>
+                    {level === 4 ? (
+                      <FaCrown className="text-black text-lg" />
+                    ) : (
+                      <span className="text-white font-bold">{level + 1}</span>
+                    )}
                   </div>
                 ))}
                 
@@ -952,7 +1016,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   className={`absolute top-2 w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center transition-all duration-300 ${
                     isMyTurn ? 'animate-pulse' : ''
                   }`}
-                  style={{ left: `${(playerToken / 3) * 100}%`, transform: 'translateX(-50%)' }}
+                  style={{ left: `${(playerToken / 4) * 100}%`, transform: 'translateX(-50%)' }}
                 >
                   <span className="text-black font-bold">أنت</span>
                 </div>
@@ -961,13 +1025,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
             {/* Level Progress Info */}
             <div className="bg-indigo-600 rounded-lg p-3 mb-4 text-center">
-              <p className="text-sm">
-                {myLevel < 4 ? (
-                  <>اكمل <span className="text-yellow-300 font-bold">{3 - filledCircles}</span> بطاقات أخرى للفئة للوصول للمستوى {myLevel + 1}</>
-                ) : (
-                  <span className="text-green-300 font-bold">🎉 لقد وصلت لأعلى مستوى! 🎉</span>
-                )}
-              </p>
+              {myLevel < 5 ? (
+                <p className="text-sm">
+                  اكمل <span className="text-yellow-300 font-bold">{3 - filledCircles}</span> بطاقات أخرى للفئة للوصول للمستوى {myLevel + 1}
+                  {myLevel === 4 && (
+                    <span className="block text-yellow-300 font-bold mt-1">🎯 المستوى القادم: الفوز! 🎯</span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-green-300 font-bold text-lg">🎉 لقد فزت باللعبة! 🎉</p>
+              )}
             </div>
 
             {/* Card Circles for Category */}
