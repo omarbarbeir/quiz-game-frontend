@@ -495,7 +495,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       <img 
                         src={`${process.env.PUBLIC_URL}${selectedCardForView.image}`}
                         alt={selectedCardForView.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-fill"
                       />
                     </div>
                   ) : (
@@ -503,7 +503,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <img 
                       src={`${process.env.PUBLIC_URL}${selectedCardForView.image}`}
                       alt={selectedCardForView.name}
-                      className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                      className="max-w-full max-h-[45vh] object-contain rounded-lg shadow-lg"
                     />
                   )}
                 </div>
@@ -1141,7 +1141,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   {/* Top card (visible) */}
                   {topTableCard && (
                     <div 
-                      className={`relative text-white rounded-lg w-24 h-32 shadow-lg transform hover:scale-105 transition-transform z-50 ${
+                      className={`relative text-white rounded-lg w-24 h-32 shadow-lg transform hover:scale-105 transition-transform z-40 ${
                         topTableCard.type === 'action' && topTableCard.subtype === 'skip' ? 'bg-red-600' :
                         topTableCard.type === 'action' && topTableCard.subtype === 'joker' ? 'bg-cyan-600' :
                         topTableCard.type === 'actor' ? 'bg-yellow-600' :
