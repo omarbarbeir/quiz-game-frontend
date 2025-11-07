@@ -33,7 +33,7 @@ const Card = ({ card, onCardClick, canDrag = false, isDragging = false, onDragSt
       
       {/* Card Image */}
       <div className="absolute inset-0 p-2">
-        <div className="w-full h-20 bg-gray-200 rounded-md flex items-center justify-center overflow-hidden">
+        <div className="w-full h-20 bg-gray-200 rounded-md  flex items-center justify-center overflow-hidden">
           {card.image ? (
             <>
               <img 
@@ -55,10 +55,10 @@ const Card = ({ card, onCardClick, canDrag = false, isDragging = false, onDragSt
         
         {/* Card Name */}
         <div className="mt-2 text-center">
-          <h3 className="text-xs font-bold text-gray-800 leading-tight">
+          <h3 className="text-xs font-bold text-white leading-tight">
             {card.name}
           </h3>
-          <span className="text-xs text-gray-600 mt-1 block">
+          <span className="text-xs text-white mt-1 block">
             {card.type === 'actor' ? 'ممثل' : 
              card.type === 'movie' ? 'فيلم' : 'مخرج'}
           </span>

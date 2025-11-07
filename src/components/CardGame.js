@@ -892,12 +892,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             {myHand.map((card, index) => (
               <div 
                 key={card.id} 
-                className={`p-4 rounded-lg flex justify-between items-center ${
+                className={`p-4 text-white font-semibold rounded-lg flex justify-between items-center ${
                   card.type === 'action' && card.subtype === 'skip' ? 'bg-red-600' :
                   card.type === 'action' && card.subtype === 'joker' ? 'bg-cyan-600' :
-                  card.type === 'actor' ? 'bg-yellow-500' :
+                  card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
                   // card.type === 'series' ? 'bg-pink-600' :
-                  card.type === 'movie' ? 'bg-emerald-600' : 'bg-indigo-600'
+                  card.type === 'movie' ? ' bg-gradient-to-r ' : 'bg-indigo-600'
                 } text-black`}
                 draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
                 onDragStart={(e) => handleDragStart(e, card)}
