@@ -43,6 +43,22 @@ const AdminPanel = ({
   const activePlayerData = players.find(p => p.id === activePlayer);
   const adminPlayer = players.find(p => p.isAdmin);
 
+  // NEW: Card game reset handler
+  const handleCardGameReset = () => {
+    if (isAdmin && socket) {
+      console.log('🔄 Admin resetting card game...');
+      socket.emit('card_game_reset', { roomCode });
+    }
+  };
+
+  // NEW: Card game exit handler
+  const handleCardGameExit = () => {
+    if (isAdmin && socket) {
+      console.log('🚪 Admin exiting card game...');
+      socket.emit('card_game_exit', { roomCode });
+    }
+  };
+
   const handlePlayAudio = () => {
     if (audioRef.current && !currentQuestion?.image) {
       audioRef.current.play()
@@ -516,7 +532,7 @@ const AdminPanel = ({
                   <>
                     {selectedCategory === 'reverse' ? (
                       <div className="bg-gradient-to-r from-orange-700 to-amber-700 p-6 rounded-lg">
-                        <h3 className="font-semibold mb-2 text-center">الكلمة المعكوسة:</h3>
+                        <h3 className="font-semibold mb-2 text-center">الكلمة معكوسة:</h3>
                         <p className="text-2xl font-bold text-center mb-4">{currentQuestion.text}</p>
                       </div>
                     ) : currentQuestion.image ? (
@@ -792,6 +808,27 @@ const AdminPanel = ({
                 إنهاء اللعبة
               </button>
             </div>
+
+            {/* NEW: Card Game Controls - Only show when not in card game mode */}
+            {!cardGameState?.gameStarted && (
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <button
+                  onClick={handleCardGameReset}
+                  className="bg-green-600 hover:bg-green-700 py-3 rounded-lg flex flex-col items-center justify-center"
+                >
+                  <FaRedo className="text-xl mb-1" />
+                  إعادة تعيين لعبة البطاقات
+                </button>
+                
+                <button
+                  onClick={handleCardGameExit}
+                  className="bg-blue-600 hover:bg-blue-700 py-3 rounded-lg flex flex-col items-center justify-center"
+                >
+                  <FaTrophy className="text-xl mb-1" />
+                  خروج من لعبة البطاقات
+                </button>
+              </div>
+            )}
             
             <button
               onClick={() => setShowReloadWarning(true)}
@@ -814,8 +851,3 @@ const AdminPanel = ({
 };
 
 export default AdminPanel;
-
-
-
-
-
