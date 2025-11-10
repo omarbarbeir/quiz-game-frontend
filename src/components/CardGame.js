@@ -13,39 +13,36 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [selectedCardForCircle, setSelectedCardForCircle] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showRules, setShowRules] = useState(false);
-  const [rolledCategory, setRolledCategory] = useState(null); // Store rolled category
-  const [selectedCardForView, setSelectedCardForView] = useState(null); // NEW: For photo viewing modal
+  const [rolledCategory, setRolledCategory] = useState(null);
+  const [selectedCardForView, setSelectedCardForView] = useState(null);
+  const [winner, setWinner] = useState(null);
 
-  // NEW: Check if card can be taken from table (action cards cannot be taken)
+  // Check if card can be taken from table (action cards cannot be taken)
   const canTakeCardFromTable = (card) => {
     if (!card) return false;
-    // Action cards cannot be taken from table
     if (card.type === 'action') {
       return false;
     }
-    // All other card types (actor, movie, series) can be taken
     return true;
   };
 
-  // NEW: Check if buttons should be enabled
+  // Check if buttons should be enabled
   const areButtonsEnabled = () => {
     if (!gameState || !currentPlayer) return false;
-    
-    // Buttons are enabled only if player has drawn a card this turn
     return gameState.playerHasDrawn?.[currentPlayer.id] === true;
   };
 
-  // NEW: Handle card image click to open photo viewer
+  // Handle card image click to open photo viewer
   const handleCardImageClick = (card) => {
     setSelectedCardForView(card);
   };
 
-  // NEW: Close photo viewer
+  // Close photo viewer
   const handleClosePhotoViewer = () => {
     setSelectedCardForView(null);
   };
 
-  // NEW: Render card image with rectangular shape for all cards in thumbnail
+  // Render card image with rectangular shape for all cards in thumbnail
   const renderCardImage = (card, sizeClass = "w-24 h-24") => {
     if (!card.image) {
       return (
@@ -57,7 +54,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
     return (
       <div className="relative">
-        {/* All cards show as rectangles in thumbnail view */}
         <img 
           src={`${process.env.PUBLIC_URL}${card.image}`}
           alt={card.name}
@@ -75,7 +71,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   };
 
-  // NEW: Render circle image with rectangular shape for all cards in thumbnail
+  // Render circle image with rectangular shape for all cards in thumbnail
   const renderCircleImage = (card, sizeClass = "w-24 h-24") => {
     if (!card.image) {
       return (
@@ -87,7 +83,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
     return (
       <div className="relative">
-        {/* All cards show as rectangles in circle thumbnail view */}
         <img 
           src={`${process.env.PUBLIC_URL}${card.image}`}
           alt={card.name}
@@ -105,7 +100,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   };
 
-  // NEW: Render table card image with rectangular shape for all cards
+  // Render table card image with rectangular shape for all cards
   const renderTableCardImage = (card, sizeClass = "w-full h-20") => {
     if (!card.image) {
       return (
@@ -120,7 +115,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         className={`${sizeClass} bg-black bg-opacity-20 rounded-md flex items-center justify-center overflow-hidden mb-2 cursor-pointer hover:opacity-80 transition-opacity`}
         onClick={() => handleCardImageClick(card)}
       >
-        {/* All cards show as rectangles on table */}
         <img 
           src={`${process.env.PUBLIC_URL}${card.image}`} 
           alt={card.name} 
@@ -148,11 +142,27 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   useEffect(() => {
     if (gameState && currentPlayer) {
       const playerLevel = gameState.playerLevels?.[currentPlayer.id] || 1;
-      // Convert level (1-5) to token position (0-4)
-      // Level 5 is the WIN position
       setPlayerToken(playerLevel - 1);
     }
   }, [gameState, currentPlayer]);
+
+  // Check for winner when game state updates
+  useEffect(() => {
+    if (gameState && players) {
+      if (gameState.winner) {
+        const winnerPlayer = players.find(player => player.id === gameState.winner);
+        setWinner(winnerPlayer);
+      } else {
+        const gameWinner = players.find(player => {
+          const playerLevel = gameState.playerLevels?.[player.id] || 1;
+          return playerLevel >= 5;
+        });
+        setWinner(gameWinner);
+      }
+    } else {
+      setWinner(null);
+    }
+  }, [gameState, players]);
 
   // Initialize game
   const initializeGame = () => {
@@ -180,7 +190,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setError(errorData.message);
     };
 
-    // UPDATED: Dice rolled event - only for the player who rolled
     const handleDiceRolled = (data) => {
       setDiceValue(data.diceValue);
       setShowDice(true);
@@ -190,7 +199,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       }, 3000);
     };
 
-    // NEW: Handle dice category event - only shown to the player who rolled
     const handleDiceCategory = (data) => {
       console.log('🎲 Dice category received:', data);
       setRolledCategory(data.category);
@@ -202,11 +210,24 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       }
     };
 
+    const handleGameReset = () => {
+      console.log('🔄 Game reset received');
+      setWinner(null);
+    };
+
+    const handleGameWinner = (data) => {
+      console.log('🏆 Winner announced:', data);
+      const winnerPlayer = players.find(player => player.id === data.playerId);
+      setWinner(winnerPlayer);
+    };
+
     socket.on('card_game_state_update', handleGameUpdate);
     socket.on('card_game_error', handleGameError);
     socket.on('card_game_dice_rolled', handleDiceRolled);
     socket.on('card_game_dice_category', handleDiceCategory);
     socket.on('card_game_exited', handleGameExited);
+    socket.on('card_game_reset', handleGameReset);
+    socket.on('card_game_winner', handleGameWinner);
 
     return () => {
       socket.off('card_game_state_update', handleGameUpdate);
@@ -214,8 +235,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_dice_rolled', handleDiceRolled);
       socket.off('card_game_dice_category', handleDiceCategory);
       socket.off('card_game_exited', handleGameExited);
+      socket.off('card_game_reset', handleGameReset);
+      socket.off('card_game_winner', handleGameWinner);
     };
-  }, [socket, currentPlayer?.id, onExit]);
+  }, [socket, currentPlayer?.id, onExit, players]);
 
   // Drag and drop handlers
   const handleDragStart = (e, card) => {
@@ -285,10 +308,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Play card to table handler - WITH ERROR HANDLING
+  // Play card to table handler
   const handlePlayToTable = (cardId) => {
     if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
-      // Validate game state before sending
       if (!gameState || !roomCode || !currentPlayer?.id) {
         setError('Game state is not ready. Please wait...');
         return;
@@ -298,7 +320,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // SIMPLIFIED: Use skip card - automatically skips next player
+  // Use skip card
   const handleUseSkipCard = (cardId) => {
     if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
       socket.emit('card_game_use_skip', { 
@@ -318,6 +340,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   // Reset game handler
   const handleResetGame = () => {
     if (isAdmin) {
+      console.log('🔄 Admin requesting game reset');
+      setWinner(null);
       socket.emit('card_game_reset', { roomCode });
     }
   };
@@ -342,7 +366,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Use joker card handler - NEW: Allow multiple jokers in same turn
+  // Use joker card handler
   const handleUseJokerCard = (cardId) => {
     if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
       socket.emit('card_game_use_joker', { 
@@ -353,25 +377,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Check if any player has won (reached level 5)
-  const checkWinner = () => {
-    if (!gameState || !players) return null;
-    
-    const winner = players.find(player => {
-      const playerLevel = gameState.playerLevels?.[player.id] || 1;
-      return playerLevel >= 5; // Level 5 is the win condition
-    });
-    
-    return winner;
-  };
-
-  const winner = checkWinner();
-
   if (!currentPlayer) {
     return (
       <div className="bg-red-600 rounded-xl p-6 text-center">
         <h2 className="text-xl font-bold">خطأ: لم يتم تحميل بيانات اللاعب</h2>
-        <p>يرجى إعادة تحميل الصفحة</p>
+        <p>يرجاء إعادة تحميل الصفحة</p>
       </div>
     );
   }
@@ -407,7 +417,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   }
 
-  // FIXED: Properly get current turn player
   const currentTurnPlayer = players.find(p => p.id === gameState.currentTurn);
   const isMyTurn = gameState.currentTurn === currentPlayer?.id;
   const myHand = gameState.playerHands[currentPlayer.id] || [];
@@ -432,7 +441,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* WINNER MODAL */}
+      {/* WINNER MODAL - Now shows for all players */}
       {winner && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl max-w-2xl w-full text-center p-8">
@@ -472,7 +481,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* NEW: Photo Viewer Modal */}
+      {/* Photo Viewer Modal */}
       {selectedCardForView && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
@@ -490,8 +499,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               {selectedCardForView.image && (
                 <div className="flex justify-center">
                   {selectedCardForView.type === 'movie' ? (
-                    // Circular display for movie cards in modal
-                    <div className="w-80 h-80 rounded-full overflow-hidden border-4 border-indigo-500 shadow-2xl">
+                    <div className="w-80 h-80 rounded-xl overflow-hidden  shadow-2xl">
                       <img 
                         src={`${process.env.PUBLIC_URL}${selectedCardForView.image}`}
                         alt={selectedCardForView.name}
@@ -499,7 +507,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       />
                     </div>
                   ) : (
-                    // Rectangular display for non-movie cards in modal
                     <img 
                       src={`${process.env.PUBLIC_URL}${selectedCardForView.image}`}
                       alt={selectedCardForView.name}
@@ -544,7 +551,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* NEW: Category Banner - Only shown to player who rolled dice */}
+      {/* Category Banner */}
       {rolledCategory && (
         <div className="bg-gradient-to-r from-emerald-500 to-sky-500 rounded-lg p-4 mb-6 text-center">
           <div className="flex justify-between items-center">
@@ -689,7 +696,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* Dice Modal - Only shown to player who rolled */}
+      {/* Dice Modal */}
       {showDice && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-indigo-800 rounded-xl p-8 max-w-sm w-full mx-4 text-center">
@@ -771,16 +778,13 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* FIXED: Game Header - Now properly shows player names */}
+      {/* Game Header */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <div>
           <h2 className="text-2xl font-bold">لعبة البطاقات - جاهزة! ✅</h2>
-          
-          {/* FIXED: Always show current player's name with proper fallback */}
           <div className={`text-lg font-bold ${isMyTurn ? 'text-green-400 animate-pulse' : 'text-indigo-200'}`}>
             🎯 الدور: {currentTurnPlayer ? currentTurnPlayer.name : 'جاري التحديد...'} {isMyTurn ? '(أنت)' : ''}
           </div>
-          
           <p className="text-sm text-yellow-300">
             مستواك الحالي: {myLevel} / 5
           </p>
@@ -792,7 +796,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
         
         <div className="flex flex-wrap gap-2">
-          {/* Admin Controls */}
           {isAdmin && (
             <>
               <button
@@ -816,7 +819,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             </>
           )}
           
-          {/* INDEPENDENT DICE BUTTON - Always available */}
           <button
             onClick={handleRollDice}
             className="px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 flex items-center gap-2"
@@ -896,14 +898,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   card.type === 'action' && card.subtype === 'skip' ? 'bg-red-600' :
                   card.type === 'action' && card.subtype === 'joker' ? 'bg-cyan-600' :
                   card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
-                  // card.type === 'series' ? 'bg-pink-600' :
                   card.type === 'movie' ? ' bg-gradient-to-r ' : 'bg-indigo-600'
                 } text-black`}
                 draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
                 onDragStart={(e) => handleDragStart(e, card)}
               >
                 <div className="flex justify-center items-center flex-col gap-4">
-                  {/* Card Image - Using the new render function */}
                   {renderCardImage(card, "w-24 h-24")}
                   <div>
                     <div className="font-bold flex justify-center items-center text-lg">{card.name}</div>
@@ -924,7 +924,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   </div>
                 </div>
                 <div className="flex gap-2 flex-col">
-                  {/* Place in Circle Button - Show on mobile or always as alternative */}
                   {(isMobile || true) && (card.type !== 'action' || card.subtype === 'joker') && (
                     <button
                       onClick={() => handleSelectCardForCircle(card)}
@@ -972,7 +971,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
         {/* Player Circles & Progress Track */}
         <div className="space-y-6">
-          {/* Progress Track with Circles - NOW WITH 5 CIRCLES (INCLUDING WIN) */}
+          {/* Progress Track with Circles */}
           <div className="bg-indigo-700 rounded-xl p-4">
             <h3 className="text-lg font-semibold mb-4">مسار التقدم - المستوى {myLevel}</h3>
             
@@ -993,7 +992,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   style={{ width: `${(playerToken / 4) * 100}%` }}
                 ></div>
                 
-                {/* Circles - Now 5 circles including WIN */}
+                {/* Circles */}
                 {[0, 1, 2, 3, 4].map(level => (
                   <div 
                     key={level}
@@ -1011,7 +1010,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   </div>
                 ))}
                 
-                {/* Automatic Token - No longer draggable */}
+                {/* Automatic Token */}
                 <div 
                   className={`absolute top-2 w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center transition-all duration-300 ${
                     isMyTurn ? 'animate-pulse' : ''
@@ -1051,7 +1050,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 >
                   {myCircles[circleIndex] ? (
                     <div className="text-center">
-                      {/* Circle Image - Using the new render function */}
                       {renderCircleImage(myCircles[circleIndex], "w-24 h-24")}
                       <div className="font-bold text-white text-base">{myCircles[circleIndex].name}</div>
                       <div className="text-sm text-gray-300">
@@ -1097,7 +1095,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           <div className="bg-indigo-700 rounded-xl p-4">
             <h3 className="text-lg font-semibold mb-4">طاولة اللعب ({gameState.tableCards.length})</h3>
             
-            {/* Stacked Cards Display - Fixed container height */}
+            {/* Stacked Cards Display */}
             <div className="relative h-40 mb-4 flex items-center justify-center overflow-hidden">
               {gameState.tableCards.length === 0 ? (
                 <div className="text-gray-400 text-center">
@@ -1105,7 +1103,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 </div>
               ) : (
                 <div className="relative" style={{ maxWidth: '120px' }}>
-                  {/* Background stacked cards - Limited to show only 5 cards maximum */}
+                  {/* Background stacked cards */}
                   {gameState.tableCards.slice(-6, -1).map((card, index) => (
                     <div 
                       key={card.id}
@@ -1153,7 +1151,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       }}
                     >
                       <div className="w-full h-full rounded-lg p-2">
-                        {/* Table Card Image - Using the new render function */}
                         {renderTableCardImage(topTableCard, "w-full h-20")}
                         <div className="text-center">
                           <h3 className="text-sm font-bold text-white leading-tight">
