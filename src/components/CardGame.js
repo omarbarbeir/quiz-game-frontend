@@ -553,12 +553,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
       {/* Category Banner */}
       {rolledCategory && (
-        <div className="bg-gradient-to-r from-emerald-500 to-sky-500 rounded-lg p-4 mb-6 text-center">
+        <div className=" bg-gradient-to-r from-[#00b4db] via-[#0083b0] to-[#006688]  rounded-lg p-4 mb-6 text-center">
           <div className="flex justify-between items-center">
             <div className="flex-1 text-right">
-              <h3 className="text-xl font-bold text-black">الفئة الخاصة بك!</h3>
-              <p className="text-black font-semibold text-lg">{rolledCategory.name}</p>
-              <p className="text-black font-semibold text-md">{rolledCategory.description}</p>
+              <h3 className="text-xl font-bold text-white">الفئة الخاصة بك</h3>
+              <p className="text-white font-semibold text-xl">{rolledCategory.name}</p>
+              <p className="text-white font-semibold text-xl">{rolledCategory.description}</p>
             </div>
             <button
               onClick={handleCloseCategoryBanner}
@@ -1011,14 +1011,15 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 ))}
                 
                 {/* Automatic Token */}
-                <div 
+                {/* <div 
                   className={`absolute top-2 w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center transition-all duration-300 ${
                     isMyTurn ? 'animate-pulse' : ''
                   }`}
                   style={{ left: `${(playerToken / 4) * 100}%`, transform: 'translateX(-50%)' }}
                 >
                   <span className="text-black font-bold">أنت</span>
-                </div>
+                </div> */}
+
               </div>
             </div>
 
