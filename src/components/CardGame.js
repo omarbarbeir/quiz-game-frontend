@@ -42,6 +42,13 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setSelectedCardForView(null);
   };
 
+  // NEW: Reset game handler for any player
+  const handleResetGameAnyPlayer = () => {
+    console.log('🔄 Any player requesting game reset');
+    setWinner(null);
+    socket.emit('card_game_reset_any_player', { roomCode });
+  };
+
   // Render card image with rectangular shape for all cards in thumbnail
   const renderCardImage = (card, sizeClass = "w-24 h-24") => {
     if (!card.image) {
@@ -146,18 +153,24 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   }, [gameState, currentPlayer]);
 
-  // Check for winner when game state updates
+  // NEW: Improved winner detection - listen for winner announcement from server
   useEffect(() => {
     if (gameState && players) {
+      // Check for winner in game state
       if (gameState.winner) {
         const winnerPlayer = players.find(player => player.id === gameState.winner);
         setWinner(winnerPlayer);
       } else {
+        // Also check if any player reached level 5
         const gameWinner = players.find(player => {
           const playerLevel = gameState.playerLevels?.[player.id] || 1;
           return playerLevel >= 5;
         });
-        setWinner(gameWinner);
+        if (gameWinner) {
+          setWinner(gameWinner);
+        } else {
+          setWinner(null);
+        }
       }
     } else {
       setWinner(null);
@@ -221,6 +234,13 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setWinner(winnerPlayer);
     };
 
+    // NEW: Listen for winner announcement from server
+    const handleWinnerAnnounced = (data) => {
+      console.log('🏆 Winner announced to all players:', data);
+      const winnerPlayer = players.find(player => player.id === data.playerId);
+      setWinner(winnerPlayer);
+    };
+
     socket.on('card_game_state_update', handleGameUpdate);
     socket.on('card_game_error', handleGameError);
     socket.on('card_game_dice_rolled', handleDiceRolled);
@@ -228,6 +248,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     socket.on('card_game_exited', handleGameExited);
     socket.on('card_game_reset', handleGameReset);
     socket.on('card_game_winner', handleGameWinner);
+    socket.on('card_game_winner_announced', handleWinnerAnnounced); // NEW
 
     return () => {
       socket.off('card_game_state_update', handleGameUpdate);
@@ -237,6 +258,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_exited', handleGameExited);
       socket.off('card_game_reset', handleGameReset);
       socket.off('card_game_winner', handleGameWinner);
+      socket.off('card_game_winner_announced', handleWinnerAnnounced); // NEW
     };
   }, [socket, currentPlayer?.id, onExit, players]);
 
@@ -337,7 +359,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     return gameState.tableCards[gameState.tableCards.length - 1];
   };
 
-  // Reset game handler
+  // Reset game handler (admin only)
   const handleResetGame = () => {
     if (isAdmin) {
       console.log('🔄 Admin requesting game reset');
@@ -441,7 +463,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* WINNER MODAL - Now shows for all players */}
+      {/* WINNER MODAL - Now shows for ALL players with reset button for ALL players */}
       {winner && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl max-w-2xl w-full text-center p-8">
@@ -457,26 +479,25 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <p className="text-white mt-2">🎊 أحسنت! 🎊</p>
             </div>
 
-            {isAdmin && (
-              <div className="flex gap-4 justify-center">
-                <button
-                  onClick={handleResetGame}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2"
-                >
-                  <FaRedo /> لعبة جديدة
-                </button>
+            {/* NEW: Reset button available for ALL players */}
+            <div className="flex gap-4 justify-center flex-wrap">
+              <button
+                onClick={handleResetGameAnyPlayer}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2"
+              >
+                <FaRedo /> لعبة جديدة
+              </button>
+              
+              {/* Exit to categories button still only for admin */}
+              {isAdmin && (
                 <button
                   onClick={handleExitToCategories}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2"
                 >
                   <FaHome /> العودة للفئات
                 </button>
-              </div>
-            )}
-            
-            {!isAdmin && (
-              <p className="text-white text-lg">بانتظار المسؤول لبدء لعبة جديدة...</p>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1009,17 +1030,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     )}
                   </div>
                 ))}
-                
-                {/* Automatic Token */}
-                {/* <div 
-                  className={`absolute top-2 w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    isMyTurn ? 'animate-pulse' : ''
-                  }`}
-                  style={{ left: `${(playerToken / 4) * 100}%`, transform: 'translateX(-50%)' }}
-                >
-                  <span className="text-black font-bold">أنت</span>
-                </div> */}
-
               </div>
             </div>
 
