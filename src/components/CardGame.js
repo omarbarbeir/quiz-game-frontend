@@ -915,7 +915,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             {myHand.map((card, index) => (
               <div 
                 key={card.id} 
-                className={`p-4 text-white font-semibold rounded-lg flex justify-between items-center ${
+                className={`p-4 text-white font-semibold rounded-lg flex flex-col ${
                   card.type === 'action' && card.subtype === 'skip' ? 'bg-red-600' :
                   card.type === 'action' && card.subtype === 'joker' ? 'bg-cyan-600' :
                   card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
@@ -924,33 +924,36 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
                 onDragStart={(e) => handleDragStart(e, card)}
               >
-                <div className="flex justify-center items-center flex-col gap-4">
+                {/* Top section: Image and card info */}
+                <div className="flex items-center gap-4 mb-3">
                   {renderCardImage(card, "w-24 h-24")}
-                  <div>
-                    <div className="font-bold flex justify-center items-center text-lg">{card.name}</div>
-                    <div className="text-base opacity-90">
+                  <div className="flex-1">
+                    <div className="font-bold text-lg text-center">{card.name}</div>
+                    <div className="text-base opacity-90 text-center mt-1">
                       {card.type === 'action' ? `إجراء: ${card.subtype}` : 
                        card.type === 'actor' ? 'ممثل' :
                        card.type === 'movie' ? 'فيلم' : 'مخرج'}
                     </div>
                     {card.type === 'action' && card.subtype === 'joker' && (
-                      <div className="text-sm opacity-75 mt-1">يمكن استخدامها كأي بطاقة</div>
+                      <div className="text-sm opacity-75 mt-1 text-center">يمكن استخدامها كأي بطاقة</div>
                     )}
                     {card.type === 'action' && card.subtype === 'skip' && (
-                      <div className="text-sm opacity-75 mt-1">تخطي اللاعب التالي تلقائياً</div>
+                      <div className="text-sm opacity-75 mt-1 text-center">تخطي اللاعب التالي تلقائياً</div>
                     )}
                     {card.type === 'movie' && (
-                      <div className="text-sm opacity-75 mt-1">🎬 انقر لمشاهدة دائرية</div>
+                      <div className="text-sm opacity-75 mt-1 text-center">🎬 انقر للمشاهدة</div>
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2 flex-col">
+
+                {/* Bottom section: Buttons */}
+                <div className="flex gap-2 justify-center">
                   {(isMobile || true) && (card.type !== 'action' || card.subtype === 'joker') && (
                     <button
                       onClick={() => handleSelectCardForCircle(card)}
                       disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded text-md font-semibold flex items-center gap-1 ${
-                        isMyTurn && buttonsEnabled ? 'bg-purple-600 hover:bg-white text-white hover:text-black' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 py-2 rounded text-lg font-semibold flex items-center gap-1 flex-1 justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#0575e6] to-[#021b79] text-white hover:text-black' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       وضع في الدائرة
@@ -961,24 +964,28 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <button
                       onClick={() => handleUseJokerCard(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
+                      className={`px-4 py-2 rounded flex-1 justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-cyan-600 hover:bg-cyan-700' : 'bg-gray-400 cursor-not-allowed'
+                      }`}
                     >
+                      استخدام الجوكر
                     </button>
                   ) : card.type === 'action' && card.subtype === 'skip' ? (
                     <button
                       onClick={() => handleUseSkipCard(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded ${
-                        isMyTurn && buttonsEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 py-2 rounded flex w-full text-lg h-[50px] font-bold items-center justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#200122] to-[#6f0000] hover:text-emerald-600' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
-                      <FaUserSlash /> تخطي التالي
+                      <FaUserSlash /> تخطي التالي 
                     </button>
                   ) : (
                     <button
                       onClick={() => handlePlayToTable(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded ${
-                        isMyTurn && buttonsEnabled ? 'bg-orange-600 hover:bg-white text-white hover:text-black font-semibold' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 py-2 text-lg rounded flex-1 justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#799f0c] to-[#acbb78] text-white hover:text-black font-semibold' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       لعب للطاولة
