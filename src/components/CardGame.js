@@ -964,12 +964,13 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <button
                       onClick={() => handleUseJokerCard(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded flex-1 justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-cyan-600 hover:bg-cyan-700' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 py-2 rounded flex-1 hidden justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-cyan-600 hidden hover:bg-cyan-700' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       استخدام الجوكر
                     </button>
+
                   ) : card.type === 'action' && card.subtype === 'skip' ? (
                     <button
                       onClick={() => handleUseSkipCard(card.id)}
