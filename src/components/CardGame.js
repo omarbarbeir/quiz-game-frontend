@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle, FaUserSlash, FaExpand, FaCrown, FaExchangeAlt, FaUsers, FaTrash, FaUndo, FaUser } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle, FaUserSlash, FaExpand, FaCrown } from 'react-icons/fa';
 
 const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit }) => {
   const [gameState, setGameState] = useState(null);
@@ -16,29 +16,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [rolledCategory, setRolledCategory] = useState(null);
   const [selectedCardForView, setSelectedCardForView] = useState(null);
   const [winner, setWinner] = useState(null);
-  
-  // Exchange square states
-  const [showExchangeSquare, setShowExchangeSquare] = useState(false);
-  const [currentExchangeType, setCurrentExchangeType] = useState(null);
-  const [exchangeInitiator, setExchangeInitiator] = useState(null);
-  const [actionCard, setActionCard] = useState(null);
-  const [placedCards, setPlacedCards] = useState({});
-  
-  // Shake card states
-  const [showShakeSquare, setShowShakeSquare] = useState(false);
-  const [shakeInitiator, setShakeInitiator] = useState(null);
-  const [shakeActionCard, setShakeActionCard] = useState(null);
-  const [shakePlacedCards, setShakePlacedCards] = useState({});
-
-  // Circle selection modal state
-  const [showCircleSelection, setShowCircleSelection] = useState(false);
-  
-  // Dice modal state
-  const [showDiceModal, setShowDiceModal] = useState(false);
-  const diceTimerRef = useRef(null);
-
-  // Player's current category from dice roll
-  const [playerCategory, setPlayerCategory] = useState(null);
 
   // Check if card can be taken from table (action cards cannot be taken)
   const canTakeCardFromTable = (card) => {
@@ -65,129 +42,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setSelectedCardForView(null);
   };
 
-  // FIXED: Reset game handler for any player - PROPERLY RESET EXCHANGE STATES
+  // NEW: Reset game handler for any player
   const handleResetGameAnyPlayer = () => {
     console.log('🔄 Any player requesting game reset');
     setWinner(null);
-    setShowExchangeSquare(false);
-    setShowShakeSquare(false);
-    setPlacedCards({});
-    setShakePlacedCards({});
-    setCurrentExchangeType(null);
-    setExchangeInitiator(null);
-    setActionCard(null);
-    setShakeInitiator(null);
-    setShakeActionCard(null);
-    setPlayerCategory(null);
     socket.emit('card_game_reset_any_player', { roomCode });
-  };
-
-  // Open exchange square for ALL players (called from socket event)
-  const handleOpenExchangeSquare = (data) => {
-    console.log('🔄 Opening exchange square:', data);
-    setShowExchangeSquare(true);
-    setCurrentExchangeType(data.exchangeType);
-    setExchangeInitiator(data.playerId);
-    setActionCard(data.actionCard);
-    setPlacedCards({});
-  };
-
-  // Open shake square for ALL players
-  const handleOpenShakeSquare = (data) => {
-    console.log('🔄 Opening shake square:', data);
-    setShowShakeSquare(true);
-    setShakeInitiator(data.playerId);
-    setShakeActionCard(data.actionCard);
-    setShakePlacedCards({});
-  };
-
-  // Place card in exchange
-  const handlePlaceCardInExchange = (cardId) => {
-    socket.emit('card_game_exchange_place_card', {
-      roomCode,
-      playerId: currentPlayer.id,
-      cardId
-    });
-  };
-
-  // Remove card from exchange
-  const handleRemoveCardFromExchange = (cardId) => {
-    socket.emit('card_game_exchange_remove_card', {
-      roomCode,
-      playerId: currentPlayer.id,
-      cardId
-    });
-  };
-
-  // Complete exchange
-  const handleCompleteExchange = () => {
-    socket.emit('card_game_complete_exchange', {
-      roomCode,
-      playerId: currentPlayer.id
-    });
-  };
-
-  // Place ALL cards in shake
-  const handlePlaceAllCardsInShake = () => {
-    socket.emit('card_game_shake_place_all', {
-      roomCode,
-      playerId: currentPlayer.id
-    });
-  };
-
-  // Complete shake
-  const handleCompleteShake = () => {
-    socket.emit('card_game_complete_shake', {
-      roomCode,
-      playerId: currentPlayer.id
-    });
-  };
-
-  // Use take-give card
-  const handleUseTakeGiveCard = (cardId) => {
-    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
-      console.log('🔄 Using take-give card:', cardId);
-      socket.emit('card_game_use_take_give', {
-        roomCode,
-        playerId: currentPlayer.id,
-        cardId
-      });
-    }
-  };
-
-  // Use show-all card
-  const handleUseShowAllCard = (cardId) => {
-    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
-      console.log('🔄 Using show-all card:', cardId);
-      socket.emit('card_game_use_show_all', {
-        roomCode,
-        playerId: currentPlayer.id,
-        cardId
-      });
-    }
-  };
-
-  // Use shake card
-  const handleUseShakeCard = (cardId) => {
-    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
-      console.log('🔄 Using shake card:', cardId);
-      socket.emit('card_game_use_shake', {
-        roomCode,
-        playerId: currentPlayer.id,
-        cardId
-      });
-    }
-  };
-
-  // Use skip card
-  const handleUseSkipCard = (cardId) => {
-    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
-      socket.emit('card_game_use_skip', { 
-        roomCode, 
-        playerId: currentPlayer.id, 
-        cardId 
-      });
-    }
   };
 
   // Render card image with rectangular shape for all cards in thumbnail
@@ -272,122 +131,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   };
 
-  // Render card for exchange square - shows "Card" and card name below
-  const renderExchangeCard = (card, onClick = null, showRemove = false) => {
-    return (
-      <div className="relative">
-        <div 
-          className={`p-3 rounded-lg mb-2 transition-all cursor-pointer bg-indigo-600 hover:bg-indigo-500 flex flex-col items-center`}
-          onClick={onClick}
-        >
-          <div className="font-bold text-center text-lg mb-2">Card</div>
-          <div className="text-xs text-center opacity-75">
-            {card.type === 'actor' ? 'ممثل' : 
-             card.type === 'movie' ? 'فيلم' : 
-             card.type === 'action' ? 'إجراء' : 'مخرج'}
-          </div>
-          <div className="text-sm font-semibold text-center mt-2 text-white">
-            {card.name}
-          </div>
-        </div>
-        {showRemove && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRemoveCardFromExchange(card.id);
-            }}
-            className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white p-1 rounded-full text-xs"
-            title="إزالة البطاقة"
-          >
-            <FaTimes />
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  // Handle circle selection for mobile
-  const handleSelectCardForCircle = (card) => {
-    if (areButtonsEnabled()) {
-      setSelectedCardForCircle(card);
-      setShowCircleSelection(true);
-    }
-  };
-
-  // Handle placing card in selected circle
-  const handlePlaceInSelectedCircle = (circleIndex) => {
-    if (selectedCardForCircle && gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
-      socket.emit('card_game_move_to_circle', { 
-        roomCode, 
-        playerId: currentPlayer.id, 
-        circleIndex, 
-        cardId: selectedCardForCircle.id 
-      });
-      setSelectedCardForCircle(null);
-      setShowCircleSelection(false);
-    }
-  };
-
-  // Cancel circle placement
-  const handleCancelCirclePlacement = () => {
-    setSelectedCardForCircle(null);
-    setShowCircleSelection(false);
-  };
-
-  // Dice roll handler with modal
-  const handleRollDice = () => {
-    setShowDiceModal(true);
-    // Reset previous category when rolling again
-    setPlayerCategory(null);
-    socket.emit('card_game_roll_dice', { roomCode, playerId: currentPlayer.id });
-    
-    // Auto-close after 7 seconds
-    if (diceTimerRef.current) {
-      clearTimeout(diceTimerRef.current);
-    }
-    diceTimerRef.current = setTimeout(() => {
-      setShowDiceModal(false);
-    }, 7000);
-  };
-
-  // Close dice modal manually
-  const handleCloseDiceModal = () => {
-    if (diceTimerRef.current) {
-      clearTimeout(diceTimerRef.current);
-    }
-    setShowDiceModal(false);
-  };
-
-  // Close category banner
-  const handleCloseCategoryBanner = () => {
-    setPlayerCategory(null);
-  };
-
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      if (diceTimerRef.current) {
-        clearTimeout(diceTimerRef.current);
-      }
-    };
-  }, []);
-
-  // FIXED: Game reset handler - PROPERLY RESET EXCHANGE STATES
-  const handleGameReset = () => {
-    console.log('🔄 Game reset received');
-    setWinner(null);
-    setShowExchangeSquare(false);
-    setShowShakeSquare(false);
-    setPlacedCards({});
-    setShakePlacedCards({});
-    setCurrentExchangeType(null);
-    setExchangeInitiator(null);
-    setActionCard(null);
-    setShakeInitiator(null);
-    setShakeActionCard(null);
-    setPlayerCategory(null);
-  };
-
   // Detect mobile devices
   useEffect(() => {
     const checkMobile = () => {
@@ -410,7 +153,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   }, [gameState, currentPlayer]);
 
-  // Improved winner detection - listen for winner announcement from server
+  // NEW: Improved winner detection - listen for winner announcement from server
   useEffect(() => {
     if (gameState && players) {
       // Check for winner in game state
@@ -462,12 +205,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
     const handleDiceRolled = (data) => {
       setDiceValue(data.diceValue);
+      setShowDice(true);
+      
+      setTimeout(() => {
+        setShowDice(false);
+      }, 3000);
     };
 
     const handleDiceCategory = (data) => {
       console.log('🎲 Dice category received:', data);
-      // Set the player's category when dice category is received
-      setPlayerCategory(data.category);
+      setRolledCategory(data.category);
     };
 
     const handleGameExited = () => {
@@ -476,9 +223,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       }
     };
 
-    // FIXED: Use the new reset handler
-    const handleGameResetEvent = () => {
-      handleGameReset();
+    const handleGameReset = () => {
+      console.log('🔄 Game reset received');
+      setWinner(null);
     };
 
     const handleGameWinner = (data) => {
@@ -487,94 +234,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setWinner(winnerPlayer);
     };
 
-    // Listen for winner announcement from server
+    // NEW: Listen for winner announcement from server
     const handleWinnerAnnounced = (data) => {
       console.log('🏆 Winner announced to all players:', data);
       const winnerPlayer = players.find(player => player.id === data.playerId);
       setWinner(winnerPlayer);
-    };
-
-    // Listen for exchange completion
-    const handleExchangeCompleted = (data) => {
-      console.log('🔄 Exchange completed:', data);
-      setShowExchangeSquare(false);
-      setCurrentExchangeType(null);
-      setExchangeInitiator(null);
-      setActionCard(null);
-      setPlacedCards({});
-    };
-
-    // Listen for exchange square open event from server
-    const handleOpenExchangeSquareEvent = (data) => {
-      console.log('🔄 Opening exchange square for ALL players:', data);
-      handleOpenExchangeSquare(data);
-    };
-
-    // Listen for card placed in exchange
-    const handleExchangeCardPlaced = (data) => {
-      console.log('🔄 Card placed in exchange:', data);
-      setPlacedCards(prev => ({
-        ...prev,
-        [data.playerId]: {
-          cards: data.cards,
-          count: data.cardCount
-        }
-      }));
-    };
-
-    // Listen for card removed from exchange
-    const handleExchangeCardRemoved = (data) => {
-      console.log('🔄 Card removed from exchange:', data);
-      setPlacedCards(prev => {
-        const newPlacedCards = { ...prev };
-        if (newPlacedCards[data.playerId]) {
-          newPlacedCards[data.playerId] = {
-            cards: data.cards,
-            count: data.cardCount
-          };
-          if (newPlacedCards[data.playerId].count === 0) {
-            delete newPlacedCards[data.playerId];
-          }
-        }
-        return newPlacedCards;
-      });
-    };
-
-    // Listen for shake square open event
-    const handleOpenShakeSquareEvent = (data) => {
-      console.log('🔄 Opening shake square for ALL players:', data);
-      handleOpenShakeSquare(data);
-    };
-
-    // Listen for shake all cards placed
-    const handleShakeAllCardsPlaced = (data) => {
-      console.log('🔄 All cards placed in shake:', data);
-      setShakePlacedCards(prev => ({
-        ...prev,
-        [data.playerId]: {
-          cards: data.cards,
-          count: data.cardCount
-        }
-      }));
-    };
-
-    // Listen for shake completion
-    const handleShakeCompleted = (data) => {
-      console.log('🔄 Shake completed:', data);
-      setShowShakeSquare(false);
-      setShakeInitiator(null);
-      setShakeActionCard(null);
-      setShakePlacedCards({});
-    };
-
-    // FIXED: Listen for exchange closed event
-    const handleExchangeClosed = () => {
-      console.log('🔄 Exchange closed event received');
-      setShowExchangeSquare(false);
-      setCurrentExchangeType(null);
-      setExchangeInitiator(null);
-      setActionCard(null);
-      setPlacedCards({});
     };
 
     socket.on('card_game_state_update', handleGameUpdate);
@@ -582,17 +246,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     socket.on('card_game_dice_rolled', handleDiceRolled);
     socket.on('card_game_dice_category', handleDiceCategory);
     socket.on('card_game_exited', handleGameExited);
-    socket.on('card_game_reset', handleGameResetEvent); // FIXED: Use the new handler
+    socket.on('card_game_reset', handleGameReset);
     socket.on('card_game_winner', handleGameWinner);
-    socket.on('card_game_winner_announced', handleWinnerAnnounced);
-    socket.on('card_game_exchange_completed', handleExchangeCompleted);
-    socket.on('card_game_open_exchange_square', handleOpenExchangeSquareEvent);
-    socket.on('card_game_exchange_card_placed', handleExchangeCardPlaced);
-    socket.on('card_game_exchange_card_removed', handleExchangeCardRemoved);
-    socket.on('card_game_open_shake_square', handleOpenShakeSquareEvent);
-    socket.on('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
-    socket.on('card_game_shake_completed', handleShakeCompleted);
-    socket.on('card_game_exchange_closed', handleExchangeClosed); // FIXED: Add this listener
+    socket.on('card_game_winner_announced', handleWinnerAnnounced); // NEW
 
     return () => {
       socket.off('card_game_state_update', handleGameUpdate);
@@ -600,23 +256,15 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_dice_rolled', handleDiceRolled);
       socket.off('card_game_dice_category', handleDiceCategory);
       socket.off('card_game_exited', handleGameExited);
-      socket.off('card_game_reset', handleGameResetEvent);
+      socket.off('card_game_reset', handleGameReset);
       socket.off('card_game_winner', handleGameWinner);
-      socket.off('card_game_winner_announced', handleWinnerAnnounced);
-      socket.off('card_game_exchange_completed', handleExchangeCompleted);
-      socket.off('card_game_open_exchange_square', handleOpenExchangeSquareEvent);
-      socket.off('card_game_exchange_card_placed', handleExchangeCardPlaced);
-      socket.off('card_game_exchange_card_removed', handleExchangeCardRemoved);
-      socket.off('card_game_open_shake_square', handleOpenShakeSquareEvent);
-      socket.off('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
-      socket.off('card_game_shake_completed', handleShakeCompleted);
-      socket.off('card_game_exchange_closed', handleExchangeClosed);
+      socket.off('card_game_winner_announced', handleWinnerAnnounced); // NEW
     };
   }, [socket, currentPlayer?.id, onExit, players]);
 
   // Drag and drop handlers
   const handleDragStart = (e, card) => {
-    if (card.type !== 'action' || (card.type === 'action' && (card.subtype === 'joker' || card.subtype === 'skip' || card.subtype === 'take-give' || card.subtype === 'show-all' || card.subtype === 'shake'))) {
+    if (card.type !== 'action' || (card.type === 'action' && (card.subtype === 'joker' || card.subtype === 'skip'))) {
       setDraggedCard(card);
       e.dataTransfer.setData('text/plain', card.id.toString());
     }
@@ -639,6 +287,42 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
+  // Handle circle placement via button (for mobile)
+  const handlePlaceInCircle = (circleIndex) => {
+    if (selectedCardForCircle && gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
+      socket.emit('card_game_move_to_circle', { 
+        roomCode, 
+        playerId: currentPlayer.id, 
+        circleIndex, 
+        cardId: selectedCardForCircle.id 
+      });
+      setSelectedCardForCircle(null);
+    }
+  };
+
+  // Select card for circle placement
+  const handleSelectCardForCircle = (card) => {
+    if (areButtonsEnabled()) {
+      setSelectedCardForCircle(card);
+    }
+  };
+
+  // Cancel circle placement
+  const handleCancelCirclePlacement = () => {
+    setSelectedCardForCircle(null);
+  };
+
+  // Dice roll handler
+  const handleRollDice = () => {
+    setShowDice(true);
+    socket.emit('card_game_roll_dice', { roomCode, playerId: currentPlayer.id });
+  };
+
+  // Close category banner
+  const handleCloseCategoryBanner = () => {
+    setRolledCategory(null);
+  };
+
   // Draw card handler
   const handleDrawCard = () => {
     if (gameState.currentTurn === currentPlayer?.id && !gameState.playerHasDrawn?.[currentPlayer.id]) {
@@ -658,6 +342,17 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
+  // Use skip card
+  const handleUseSkipCard = (cardId) => {
+    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
+      socket.emit('card_game_use_skip', { 
+        roomCode, 
+        playerId: currentPlayer.id, 
+        cardId 
+      });
+    }
+  };
+
   // Get top card from table (for display)
   const getTopTableCard = () => {
     if (!gameState.tableCards || gameState.tableCards.length === 0) return null;
@@ -668,7 +363,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const handleResetGame = () => {
     if (isAdmin) {
       console.log('🔄 Admin requesting game reset');
-      handleResetGameAnyPlayer();
+      setWinner(null);
+      socket.emit('card_game_reset', { roomCode });
     }
   };
 
@@ -688,6 +384,17 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         roomCode, 
         playerId: currentPlayer.id, 
         cardId: topCard.id 
+      });
+    }
+  };
+
+  // Use joker card handler
+  const handleUseJokerCard = (cardId) => {
+    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
+      socket.emit('card_game_use_joker', { 
+        roomCode, 
+        playerId: currentPlayer.id, 
+        cardId 
       });
     }
   };
@@ -741,10 +448,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const myLevel = gameState.playerLevels?.[currentPlayer.id] || 1;
   const buttonsEnabled = areButtonsEnabled();
 
-  // Get exchange initiator name
-  const exchangeInitiatorPlayer = players.find(p => p.id === exchangeInitiator);
-  const shakeInitiatorPlayer = players.find(p => p.id === shakeInitiator);
-
   return (
     <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
       {error && (
@@ -760,7 +463,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* WINNER MODAL */}
+      {/* WINNER MODAL - Now shows for ALL players with reset button for ALL players */}
       {winner && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl max-w-2xl w-full text-center p-8">
@@ -776,7 +479,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <p className="text-white mt-2">🎊 أحسنت! 🎊</p>
             </div>
 
-            {/* Reset button available for ALL players */}
+            {/* NEW: Reset button available for ALL players */}
             <div className="flex gap-4 justify-center flex-wrap">
               <button
                 onClick={handleResetGameAnyPlayer}
@@ -794,381 +497,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   <FaHome /> العودة للفئات
                 </button>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Player Category Banner - Shows above the game header */}
-      {playerCategory && (
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 mb-6 text-center">
-          <div className="flex justify-between items-center">
-            <div className="flex-1 text-right">
-              <h3 className="text-xl font-bold text-white">الفئة الخاصة بك</h3>
-              <p className="text-white font-semibold text-lg">الفئة {playerCategory.id}: {playerCategory.name}</p>
-              <p className="text-white text-md mt-1">{playerCategory.description}</p>
-              <p className="text-yellow-200 font-semibold mt-2">{playerCategory.rules}</p>
-            </div>
-            <button
-              onClick={handleCloseCategoryBanner}
-              className="bg-white text-blue-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-bold ml-4"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Circle Selection Modal */}
-      {showCircleSelection && selectedCardForCircle && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold mb-2">اختر الدائرة لوضع البطاقة</h2>
-              <p className="text-indigo-200">اختر أي دائرة لوضع البطاقة فيها</p>
-            </div>
-
-            {/* Selected Card Preview */}
-            <div className="bg-indigo-700 rounded-lg p-4 mb-6 text-center">
-              <h3 className="font-bold mb-2">البطاقة المختارة:</h3>
-              <div className="flex justify-center items-center gap-4">
-                {renderCardImage(selectedCardForCircle, "w-20 h-20")}
-                <div>
-                  <div className="font-bold text-lg">{selectedCardForCircle.name}</div>
-                  <div className="text-sm text-indigo-200">
-                    {selectedCardForCircle.type === 'actor' ? 'ممثل' : 
-                     selectedCardForCircle.type === 'movie' ? 'فيلم' : 
-                     selectedCardForCircle.type === 'action' ? 'جوكر' : 'مخرج'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Circle Selection Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              {[0, 1, 2, 3].map(circleIndex => (
-                <div 
-                  key={circleIndex}
-                  className={`border-2 border-dashed rounded-lg p-4 text-center min-h-32 flex flex-col items-center justify-center cursor-pointer transition-all ${
-                    myCircles[circleIndex] 
-                      ? 'border-green-500 bg-green-900 bg-opacity-20' 
-                      : 'border-gray-500 hover:border-yellow-500 hover:bg-yellow-900 hover:bg-opacity-10'
-                  }`}
-                  onClick={() => handlePlaceInSelectedCircle(circleIndex)}
-                >
-                  {myCircles[circleIndex] ? (
-                    <div className="text-center">
-                      {renderCircleImage(myCircles[circleIndex], "w-16 h-16")}
-                      <div className="text-xs text-gray-300 mt-1">دائرة {circleIndex + 1} (مشغولة)</div>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <FaCircle className="text-4xl text-gray-400 mx-auto mb-2" />
-                      <div className="text-sm text-gray-300">دائرة {circleIndex + 1}</div>
-                      <div className="text-xs text-gray-400 mt-1">(فارغة)</div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancelCirclePlacement}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-bold"
-              >
-                إلغاء
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Dice Roll Modal */}
-      {showDiceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl max-w-md w-full text-center p-8">
-            <div className="mb-6">
-              <div className="text-6xl mb-4">🎲</div>
-              <h2 className="text-3xl font-bold text-white mb-2">رمي النرد</h2>
-              
-              {diceValue > 0 && (
-                <>
-                  <div className="text-6xl font-bold text-yellow-300 my-4 animate-bounce">
-                    {diceValue}
-                  </div>
-                  
-                  {playerCategory && (
-                    <div className="bg-white bg-opacity-20 rounded-lg p-4 mt-4">
-                      <h3 className="text-xl font-bold text-white mb-2">الفئة: {playerCategory.name}</h3>
-                      <p className="text-white text-lg">{playerCategory.description}</p>
-                      <p className="text-yellow-200 mt-2 font-semibold">{playerCategory.rules}</p>
-                    </div>
-                  )}
-                </>
-              )}
-              
-              {diceValue === 0 && (
-                <div className="text-xl text-white animate-pulse">
-                  جاري رمي النرد...
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={handleCloseDiceModal}
-              className="bg-white text-blue-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold text-lg"
-            >
-              إغلاق
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Exchange Square Modal */}
-      {showExchangeSquare && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="bg-indigo-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-center">
-                  {currentExchangeType === 'take-give' ? 'خد و هات' : 'كل واحد يطلع اللي معاه'}
-                </h2>
-                <p className="text-indigo-200 text-center">
-                  بدأ بواسطة: {exchangeInitiatorPlayer?.name || 'لاعب'}
-                </p>
-                <p className="text-yellow-300 text-center mt-2">
-                  ⚠️ يجب إكمال التبادل لإنهاء دور {exchangeInitiatorPlayer?.name || 'اللاعب'}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-6">
-              {/* Left Section: My Cards */}
-              <div className="bg-indigo-700 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي</h3>
-                <div className="overflow-y-auto h-64">
-                  {myHand.map(card => (
-                    <div key={card.id}>
-                      {renderExchangeCard(
-                        card,
-                        () => handlePlaceCardInExchange(card.id),
-                        false
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 text-center text-sm text-indigo-200">
-                  انقر على أي بطاقة لوضعها في التبادل
-                </div>
-              </div>
-
-              {/* Middle Section: Exchange Area */}
-              <div className="bg-indigo-700 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-4 text-center">منطقة التبادل</h3>
-                
-                <div className="bg-indigo-600 rounded p-4 min-h-64">
-                  <h5 className="text-sm font-semibold mb-2 text-center">البطاقات الموضوعة</h5>
-                  
-                  {Object.keys(placedCards).length === 0 ? (
-                    <div className="text-gray-400 text-center py-8">لم يتم وضع أي بطاقات بعد</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {Object.entries(placedCards).map(([playerId, data]) => (
-                        <div key={playerId} className="space-y-2">
-                          {/* Show individual cards with remove buttons */}
-                          {data.cards && data.cards.map(card => (
-                            <div key={card.id} className="relative">
-                              {renderExchangeCard(
-                                card,
-                                playerId === currentPlayer.id ? () => handleRemoveCardFromExchange(card.id) : null,
-                                playerId === currentPlayer.id
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Complete Exchange Button - ALWAYS ACTIVE */}
-                <button
-                  onClick={handleCompleteExchange}
-                  className="w-full mt-4 py-3 rounded-lg font-bold bg-green-600 hover:bg-green-700"
-                >
-                  إتمام التبادل
-                </button>
-              </div>
-
-              {/* Right Section: Action Card */}
-              <div className="bg-indigo-700 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-4 text-center">بطاقة الإجراء</h3>
-                {actionCard && (
-                  <div className="text-center">
-                    <div className={`p-4 rounded-lg mb-4 ${
-                      actionCard.subtype === 'take-give' ? 'bg-purple-600' : 'bg-orange-600'
-                    }`}>
-                      <div className="font-bold text-xl">
-                        {actionCard.subtype === 'take-give' ? 'خد و هات' : 'كل واحد يطلع اللي معاه'}
-                      </div>
-                      <div className="text-sm opacity-75 mt-2">
-                        {actionCard.subtype === 'take-give' 
-                          ? 'تبادل البطاقات بين اللاعبين' 
-                          : 'تبادل البطاقات بين اللاعبين'
-                        }
-                      </div>
-                    </div>
-                    <div className="text-sm text-indigo-200">
-                      {actionCard.subtype === 'take-give' 
-                        ? 'سيتم تبادل البطاقات عشوائياً بين اللاعبين'
-                        : 'سيتم تبادل البطاقات عشوائياً بين اللاعبين'
-                      }
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="mt-6 bg-indigo-900 rounded-lg p-4">
-              <h4 className="font-semibold mb-2">تعليمات:</h4>
-              <p className="text-sm">
-                {currentExchangeType === 'take-give' 
-                  ? 'ضع بطاقات من يدك للتبادل العشوائي مع اللاعبين الآخرين'
-                  : 'ضع بطاقات من يدك للتبادل العشوائي مع اللاعبين الآخرين'
-                }
-              </p>
-              <p className="text-sm mt-2">
-                يمكن لأي لاعب وضع بطاقات في التبادل
-              </p>
-              <p className="text-sm mt-2 text-green-300">
-                يمكن إزالة البطاقات التي وضعتها بالنقر عليها
-              </p>
-              <p className="text-sm mt-2 text-green-300">
-                يمكن إتمام التبادل في أي وقت بالنقر على زر "إتمام التبادل"
-              </p>
-              <p className="text-sm mt-2 text-yellow-300 font-bold">
-                ⚠️ لن ينتقل الدور للاعب التالي حتى يتم إكمال التبادل
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Shake Square Modal */}
-      {showShakeSquare && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="bg-indigo-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-center">نفض نفسك</h2>
-              <p className="text-indigo-200 text-center">
-                بدأ بواسطة: {shakeInitiatorPlayer?.name || 'لاعب'}
-              </p>
-              <p className="text-yellow-300 text-center mt-2">
-                ⚠️ يمكن للجميع وضع كل بطاقاتهم والحصول على 5 بطاقات جديدة
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              {/* Left Section: My Cards and Shake Button */}
-              <div className="bg-indigo-700 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي</h3>
-                
-                <div className="mb-4">
-                  <h4 className="font-semibold mb-2">بطاقاتك الحالية ({myHand.length}):</h4>
-                  <div className="overflow-y-auto h-48">
-                    {myHand.map(card => (
-                      <div key={card.id} className="mb-2">
-                        {renderExchangeCard(card)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {!shakePlacedCards[currentPlayer.id] ? (
-                  <button
-                    onClick={handlePlaceAllCardsInShake}
-                    className="w-full py-3 rounded-lg font-bold bg-red-600 hover:bg-red-700"
-                  >
-                    🎯 وضع كل البطاقات ({myHand.length}) وسحب 5 بطاقات جديدة
-                  </button>
-                ) : (
-                  <div className="text-center text-green-400 font-bold">
-                    ✓ لقد وضعت كل بطاقاتك
-                  </div>
-                )}
-              </div>
-
-              {/* Right Section: Action Card and Players */}
-              <div className="space-y-6">
-                {/* Action Card */}
-                <div className="bg-indigo-700 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold mb-4 text-center">بطاقة الإجراء</h3>
-                  {shakeActionCard && (
-                    <div className="text-center">
-                      <div className="p-4 rounded-lg mb-4 bg-red-600">
-                        <div className="font-bold text-xl">نفض نفسك</div>
-                        <div className="text-sm opacity-75 mt-2">
-                          كل لاعب يمكنه وضع كل بطاقاته والحصول على 5 بطاقات جديدة
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Players List */}
-                <div className="bg-indigo-700 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold mb-4 text-center">اللاعبون</h3>
-                  <div className="space-y-2">
-                    {players.map(player => (
-                      <div 
-                        key={player.id}
-                        className={`p-3 rounded-lg text-center ${
-                          shakePlacedCards[player.id] ? 'bg-green-600' : 'bg-indigo-600'
-                        }`}
-                      >
-                        <div className="font-bold">{player.name}</div>
-                        <div className="text-sm opacity-75">
-                          {shakePlacedCards[player.id] 
-                            ? `✓ وضع ${shakePlacedCards[player.id].count} بطاقة` 
-                            : 'لم يضع بطاقات بعد'
-                          }
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Complete Shake Button (only for initiator) */}
-            {currentPlayer.id === shakeInitiator && (
-              <div className="mt-6 text-center">
-                <button
-                  onClick={handleCompleteShake}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
-                >
-                  إنهاء النفض
-                </button>
-              </div>
-            )}
-
-            {/* Instructions */}
-            <div className="mt-6 bg-indigo-900 rounded-lg p-4">
-              <h4 className="font-semibold mb-2">تعليمات:</h4>
-              <p className="text-sm">
-                يمكنك وضع كل بطاقاتك على الطاولة والحصول على 5 بطاقات جديدة من المجموعة.
-              </p>
-              <p className="text-sm mt-2 text-yellow-300">
-                ⚠️ يمكنك فعل هذا مرة واحدة فقط خلال هذا النفض.
-              </p>
-              <p className="text-sm mt-2 text-green-300">
-                اللاعب الذي بدأ النفض يمكنه إنهاء النفض بعد انتهاء الجميع.
-              </p>
-              <p className="text-sm mt-2 text-yellow-300 font-bold">
-                ⚠️ لن ينتقل الدور للاعب التالي حتى يتم إكمال النفض
-              </p>
             </div>
           </div>
         </div>
@@ -1216,13 +544,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                    selectedCardForView.type === 'movie' ? 'فيلم' : 
                    selectedCardForView.type === 'action' ? 'بطاقة إجراء' : 'مخرج'}
                   {selectedCardForView.type === 'action' && selectedCardForView.subtype && (
-                    <span> - {
-                      selectedCardForView.subtype === 'joker' ? 'جوكر' : 
-                      selectedCardForView.subtype === 'skip' ? 'تخطي' :
-                      selectedCardForView.subtype === 'take-give' ? 'خد و هات' :
-                      selectedCardForView.subtype === 'show-all' ? 'كل واحد يطلع اللي معاه' :
-                      selectedCardForView.subtype === 'shake' ? 'نفض نفسك' : 'إجراء'
-                    }</span>
+                    <span> - {selectedCardForView.subtype === 'joker' ? 'جوكر' : 'تخطي'}</span>
                   )}
                 </p>
                 {selectedCardForView.type === 'movie' && (
@@ -1246,6 +568,233 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 إغلاق
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Banner */}
+      {rolledCategory && (
+        <div className=" bg-gradient-to-r from-[#00b4db] via-[#0083b0] to-[#006688]  rounded-lg p-4 mb-6 text-center">
+          <div className="flex justify-between items-center">
+            <div className="flex-1 text-right">
+              <h3 className="text-xl font-bold text-white">الفئة الخاصة بك</h3>
+              <p className="text-white font-semibold text-xl">{rolledCategory.name}</p>
+              <p className="text-white font-semibold text-xl">{rolledCategory.description}</p>
+            </div>
+            <button
+              onClick={handleCloseCategoryBanner}
+              className="bg-blue-900 text-white-500 font-extrabold hover:bg-gray-100 px-4 py-2 rounded-lg ml-4"
+            >
+              X
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Rules Modal */}
+      {showRules && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-indigo-800 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">قواعد لعبة البطاقات</h2>
+              <button
+                onClick={() => setShowRules(false)}
+                className="text-red-500 hover:text-red-400 text-2xl"
+              >
+                <FaTimesCircle />
+              </button>
+            </div>
+            
+            <div className="space-y-4 text-right">
+              <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">هدف اللعبة</h3>
+                <p>اكتمال 4 مستويات عن طريق جمع 3 بطاقات في الدوائر لكل فئة</p>
+                <p className="text-yellow-200 mt-2">🎯 المستوى 5: دائرة الفوز - أول لاعب يصل للمستوى 5 يفوز!</p>
+              </div>
+              
+              <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">طريقة اللعب</h3>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>كل لاعب يبدأ بـ 5 بطاقات</li>
+                  <li>في دورك: اسحب بطاقة من المجموعة أو خذ البطاقة العلوية من الطاولة</li>
+                  <li>بعد السحب: تخلص من بطاقة بوضعها على الطاولة</li>
+                  <li>يمكنك وضع البطاقات في دوائرك الأربعة لتحضير الفئة</li>
+                  <li>عند اكتمال 3 دوائر: أعلن اكتمال الفئة</li>
+                  <li>بعد اكتمال الفئة: تسحب 3 بطاقات جديدة ثم تتخلص من بطاقة</li>
+                </ul>
+              </div>
+              
+              <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">البطاقات الخاصة</h3>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li><strong>بطاقة الجوكر:</strong> يمكن استخدامها كأي نوع من البطاقات</li>
+                  <li><strong>بطاقة التخطي:</strong> تتيح لك تخطي دور اللاعب التالي تلقائياً</li>
+                </ul>
+              </div>
+              
+              <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">الفئات والتحدي</h3>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>عند الإعلان: يدخل اللاعبون الآخرون في تحدي</li>
+                  <li>إذا وافق الجميع: يكمل اللاعب الفئة ويرتفع مستواه</li>
+                  <li>إذا اعترض أحد: يفشل الإعلان ويفقد اللاعب دوره</li>
+                  <li>كل فئة تحتاج 3 بطاقات من نوع معين</li>
+                </ul>
+              </div>
+              
+              <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">أنواع البطاقات</h3>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>بطاقات الممثلين (أصفر) - عرض مستطيل</li>
+                  <li>بطاقات الأفلام (أخضر) - عرض دائري في المشاهدة</li>
+                  <li>بطاقات الجوكر (تركواز) - يمكن استخدامها كأي نوع</li>
+                  <li>بطاقات التخطي (أحمر) - لتخطي دور اللاعب التالي تلقائياً</li>
+                </ul>
+              </div>
+              
+              <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">ميزات العرض</h3>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>انقر على أي صورة لعرضها بحجم كبير</li>
+                  <li>أفلام: عرض مصغر مستطيل، عرض كامل بدائرة</li>
+                  <li>ممثلون: عرض مستطيل في جميع الأحجام</li>
+                  <li>يمكن رؤية الصورة الكاملة عند النقر عليها</li>
+                </ul>
+              </div>
+              
+              <div className="bg-indigo-700 p-4 rounded-lg">
+                <h3 className="text-xl font-bold text-yellow-300 mb-2">الفوز</h3>
+                <p>أول لاعب يصل للمستوى الخامس (يكمل 4 فئات) يفوز باللعبة!</p>
+                <p className="text-green-300 mt-2">🎊 عند الوصول للمستوى 5: تظهر دائرة الفوز وتنتهي اللعبة! 🎊</p>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setShowRules(false)}
+              className="w-full mt-6 bg-red-600 hover:bg-red-700 py-3 rounded-lg font-bold"
+            >
+              إغلاق القواعد
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Circle Placement Modal for Mobile */}
+      {selectedCardForCircle && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4 text-center">اختر الدائرة</h2>
+            <p className="text-center mb-4">اختر الدائرة لوضع البطاقة: <strong>{selectedCardForCircle.name}</strong></p>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              {[0, 1, 2, 3].map(circleIndex => (
+                <button
+                  key={circleIndex}
+                  onClick={() => handlePlaceInCircle(circleIndex)}
+                  disabled={myCircles[circleIndex] !== null || !isMyTurn || !buttonsEnabled}
+                  className={`p-4 rounded-lg text-center flex flex-col items-center justify-center ${
+                    myCircles[circleIndex] === null && isMyTurn && buttonsEnabled
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-gray-600 cursor-not-allowed'
+                  }`}
+                >
+                  <FaCircle className="text-xl mb-2" />
+                  <span>دائرة {circleIndex + 1}</span>
+                  {myCircles[circleIndex] && (
+                    <span className="text-xs text-red-300 mt-1">مشغولة</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={handleCancelCirclePlacement}
+              className="w-full bg-red-600 hover:bg-red-700 py-3 rounded-lg"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Dice Modal */}
+      {showDice && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-indigo-800 rounded-xl p-8 max-w-sm w-full mx-4 text-center">
+            <h2 className="text-2xl font-bold mb-4">رمي النرد</h2>
+            <div className="text-6xl mb-6">🎲</div>
+            {diceValue > 0 && (
+              <div className="text-4xl font-bold text-yellow-400 mb-4">
+                {diceValue}
+              </div>
+            )}
+            <button
+              onClick={() => setShowDice(false)}
+              className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 py-3 rounded-lg"
+            >
+              إغلاق
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Challenge Modal */}
+      {gameState.challengeInProgress && gameState.declaredCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4 text-center">تحدي!</h2>
+            <p className="text-lg mb-4 text-center">
+              {gameState.declaredCategory.playerName} يدعي أنه أكمل الفئة: 
+              <span className="font-bold text-yellow-400"> الفئة {gameState.declaredCategory.category?.id}</span>
+            </p>
+            
+            <div className="bg-indigo-700 p-4 rounded-lg mb-4">
+              <h3 className="font-bold mb-2">البطاقات المقدمة:</h3>
+              <div className="space-y-2">
+                {gameState.declaredCategory.cards.map((card, index) => (
+                  <div key={index} className="bg-white text-gray-800 p-2 rounded flex items-center gap-3">
+                    {renderCardImage(card, "w-16 h-16")}
+                    <div>
+                      <div className="font-bold">{card.name}</div>
+                      <div className="text-sm text-gray-600">
+                        {card.type === 'actor' ? 'ممثل' : card.type === 'movie' ? 'فيلم' : card.type === 'action' ? 'إجراء' : 'مخرج'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {currentPlayer.id !== gameState.declaredCategory.playerId && (
+              <div className="flex gap-4">
+                <button
+                  onClick={() => socket.emit('card_game_challenge_response', { 
+                    roomCode, 
+                    playerId: currentPlayer.id, 
+                    accept: true, 
+                    declaredPlayerId: gameState.declaredCategory.playerId 
+                  })}
+                  className="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <FaCheck /> قبول
+                </button>
+                <button
+                  onClick={() => socket.emit('card_game_challenge_response', { 
+                    roomCode, 
+                    playerId: currentPlayer.id, 
+                    accept: false, 
+                    declaredPlayerId: gameState.declaredCategory.playerId 
+                  })}
+                  className="flex-1 bg-red-600 hover:bg-red-700 py-3 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <FaTimes /> رفض
+                </button>
+              </div>
+            )}
+
+            {currentPlayer.id === gameState.declaredCategory.playerId && (
+              <p className="text-center text-indigo-200">بانتظار رد اللاعبين الآخرين...</p>
+            )}
           </div>
         </div>
       )}
@@ -1359,7 +908,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Player Hand - UPDATED with new action cards */}
+        {/* Player Hand */}
         <div className="bg-indigo-700 rounded-xl p-4">
           <h3 className="text-lg font-semibold mb-4">بطاقاتي ({myHand.length})</h3>
           <div className="space-y-3 max-h-[540px] overflow-y-auto">
@@ -1367,15 +916,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div 
                 key={card.id} 
                 className={`p-4 text-white font-semibold rounded-lg flex flex-col ${
-                  card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#00c9ff] to-[#5691c8]' :
-                  card.type === 'action' && card.subtype === 'joker' ? 'bg-gradient-to-r from-[#00c9ff] to-[#5691c8]' :
-                  card.type === 'action' && card.subtype === 'take-give' ? 'bg-gradient-to-r from-[#00c9ff] to-[#5691c8]' :
-                  card.type === 'action' && card.subtype === 'show-all' ? 'bg-gradient-to-r from-[#00c9ff] to-[#5691c8]' :
-                  card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#00c9ff] to-[#5691c8]' :
+                  card.type === 'action' && card.subtype === 'skip' ? 'bg-red-600' :
+                  card.type === 'action' && card.subtype === 'joker' ? 'bg-cyan-600' :
                   card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
                   card.type === 'movie' ? ' bg-gradient-to-r ' : 'bg-indigo-600'
                 } text-black`}
-                draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip' || card.subtype === 'take-give' || card.subtype === 'show-all' || card.subtype === 'shake')}
+                draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip')}
                 onDragStart={(e) => handleDragStart(e, card)}
               >
                 {/* Top section: Image and card info */}
@@ -1384,13 +930,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   <div className="flex-1">
                     <div className="font-bold text-lg text-center">{card.name}</div>
                     <div className="text-base opacity-90 text-center mt-1">
-                      {card.type === 'action' ? `إجراء: ${
-                        card.subtype === 'joker' ? 'جوكر' :
-                        card.subtype === 'skip' ? 'تخطي' :
-                        card.subtype === 'take-give' ? 'خد و هات' :
-                        card.subtype === 'show-all' ? 'كل واحد يطلع اللي معاه' :
-                        card.subtype === 'shake' ? 'نفض نفسك' : card.subtype
-                      }` : 
+                      {card.type === 'action' ? `إجراء: ${card.subtype}` : 
                        card.type === 'actor' ? 'ممثل' :
                        card.type === 'movie' ? 'فيلم' : 'مخرج'}
                     </div>
@@ -1399,15 +939,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     )}
                     {card.type === 'action' && card.subtype === 'skip' && (
                       <div className="text-sm opacity-75 mt-1 text-center">تخطي اللاعب التالي تلقائياً</div>
-                    )}
-                    {card.type === 'action' && card.subtype === 'take-give' && (
-                      <div className="text-sm opacity-75 mt-1 text-center">تبادل البطاقات بين اللاعبين</div>
-                    )}
-                    {card.type === 'action' && card.subtype === 'show-all' && (
-                      <div className="text-sm opacity-75 mt-1 text-center">تبادل البطاقات بين اللاعبين</div>
-                    )}
-                    {card.type === 'action' && card.subtype === 'shake' && (
-                      <div className="text-sm opacity-75 mt-1 text-center">يمكن للجميع وضع كل بطاقاتهم</div>
                     )}
                     {card.type === 'movie' && (
                       <div className="text-sm opacity-75 mt-1 text-center">🎬 انقر للمشاهدة</div>
@@ -1422,7 +953,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       onClick={() => handleSelectCardForCircle(card)}
                       disabled={!isMyTurn || !buttonsEnabled}
                       className={`px-4 py-2 rounded text-lg font-semibold flex items-center gap-1 flex-1 justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#00c6ff] to-[#0072ff] text-white hover:text-black' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#0575e6] to-[#021b79] text-white hover:text-black' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       وضع في الدائرة
@@ -1431,53 +962,24 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   
                   {card.type === 'action' && card.subtype === 'joker' ? (
                     <button
-                      onClick={() => handlePlayToTable(card.id)}
+                      onClick={() => handleUseJokerCard(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 text-lg rounded flex-1 justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#799f0c] to-[#acbb78] text-white hover:text-black font-semibold' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 py-2 rounded flex-1  justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-cyan-600  hover:bg-cyan-700' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       لعب للطاولة
                     </button>
+
                   ) : card.type === 'action' && card.subtype === 'skip' ? (
                     <button
                       onClick={() => handleUseSkipCard(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
                       className={`px-4 py-2 rounded flex w-full text-lg h-[50px] font-bold items-center justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#8B0000] to-[#FF0000] hover:text-emerald-600' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#200122] to-[#6f0000] hover:text-emerald-600' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
-                      <FaUserSlash /> تخطي التالي  
-                    </button>
-                  ) : card.type === 'action' && card.subtype === 'take-give' ? (
-                    <button
-                      onClick={() => handleUseTakeGiveCard(card.id)}
-                      disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded flex w-full text-lg h-[50px] font-bold items-center justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#085078] to-[#85d8ce] hover:text-emerald-600' : 'bg-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      <FaExchangeAlt /> خد و هات 
-                    </button>
-                  ) : card.type === 'action' && card.subtype === 'show-all' ? (
-                    <button
-                      onClick={() => handleUseShowAllCard(card.id)}
-                      disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded flex w-full text-lg h-[50px] font-bold items-center justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#ff7e5f] to-[#feb47b] hover:text-emerald-600' : 'bg-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      <FaUsers /> كل واحد يطلع 
-                    </button>
-                  ) : card.type === 'action' && card.subtype === 'shake' ? (
-                    <button
-                      onClick={() => handleUseShakeCard(card.id)}
-                      disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded flex w-full text-lg h-[50px] font-bold items-center justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#9d50bb] to-[#6e48aa] hover:text-emerald-600' : 'bg-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      <FaUser /> نفض نفسك
+                      <FaUserSlash /> تخطي التالي 
                     </button>
                   ) : (
                     <button
@@ -1659,9 +1161,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       className={`relative text-white rounded-lg w-24 h-32 shadow-lg transform hover:scale-105 transition-transform z-40 ${
                         topTableCard.type === 'action' && topTableCard.subtype === 'skip' ? 'bg-red-600' :
                         topTableCard.type === 'action' && topTableCard.subtype === 'joker' ? 'bg-cyan-600' :
-                        topTableCard.type === 'action' && topTableCard.subtype === 'take-give' ? 'bg-purple-600' :
-                        topTableCard.type === 'action' && topTableCard.subtype === 'show-all' ? 'bg-orange-600' :
-                        topTableCard.type === 'action' && topTableCard.subtype === 'shake' ? 'bg-red-700' :
                         topTableCard.type === 'actor' ? 'bg-yellow-600' :
                         topTableCard.type === 'movie' ? 'bg-green-600' : 'bg-indigo-600'
                       }`}
@@ -1677,13 +1176,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                             {topTableCard.name}
                           </h3>
                           <span className="text-xs text-white opacity-90">
-                            {topTableCard.type === 'action' ? `إجراء: ${
-                              topTableCard.subtype === 'joker' ? 'جوكر' :
-                              topTableCard.subtype === 'skip' ? 'تخطي' :
-                              topTableCard.subtype === 'take-give' ? 'خد و هات' :
-                              topTableCard.subtype === 'show-all' ? 'كل واحد يطلع اللي معاه' :
-                              topTableCard.subtype === 'shake' ? 'نفض نفسك' : topTableCard.subtype
-                            }` : 
+                            {topTableCard.type === 'action' ? `إجراء: ${topTableCard.subtype}` : 
                              topTableCard.type === 'actor' ? 'ممثل' : 
                              topTableCard.type === 'movie' ? 'فيلم' : 'مخرج'}
                           </span>
