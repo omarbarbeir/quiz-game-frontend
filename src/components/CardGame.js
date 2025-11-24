@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes, FaTrophy, FaPlay, FaRedo, FaList, FaAngleDown, FaAngleUp, FaStar, FaCircle, FaHome, FaBook, FaTimesCircle, FaUserSlash, FaExpand, FaCrown, FaExchangeAlt, FaUsers, FaTrash, FaUndo, FaUser } from 'react-icons/fa';
 
 const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit }) => {
@@ -24,11 +24,21 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [actionCard, setActionCard] = useState(null);
   const [placedCards, setPlacedCards] = useState({});
   
-  // Shake card states - IMPROVED
+  // Shake card states
   const [showShakeSquare, setShowShakeSquare] = useState(false);
   const [shakeInitiator, setShakeInitiator] = useState(null);
   const [shakeActionCard, setShakeActionCard] = useState(null);
   const [shakePlacedCards, setShakePlacedCards] = useState({});
+
+  // Circle selection modal state
+  const [showCircleSelection, setShowCircleSelection] = useState(false);
+  
+  // Dice modal state
+  const [showDiceModal, setShowDiceModal] = useState(false);
+  const diceTimerRef = useRef(null);
+
+  // Player's current category from dice roll
+  const [playerCategory, setPlayerCategory] = useState(null);
 
   // Check if card can be taken from table (action cards cannot be taken)
   const canTakeCardFromTable = (card) => {
@@ -55,12 +65,20 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setSelectedCardForView(null);
   };
 
-  // Reset game handler for any player
+  // FIXED: Reset game handler for any player - PROPERLY RESET EXCHANGE STATES
   const handleResetGameAnyPlayer = () => {
     console.log('🔄 Any player requesting game reset');
     setWinner(null);
     setShowExchangeSquare(false);
     setShowShakeSquare(false);
+    setPlacedCards({});
+    setShakePlacedCards({});
+    setCurrentExchangeType(null);
+    setExchangeInitiator(null);
+    setActionCard(null);
+    setShakeInitiator(null);
+    setShakeActionCard(null);
+    setPlayerCategory(null);
     socket.emit('card_game_reset_any_player', { roomCode });
   };
 
@@ -74,7 +92,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setPlacedCards({});
   };
 
-  // Open shake square for ALL players - IMPROVED
+  // Open shake square for ALL players
   const handleOpenShakeSquare = (data) => {
     console.log('🔄 Opening shake square:', data);
     setShowShakeSquare(true);
@@ -109,7 +127,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     });
   };
 
-  // Place ALL cards in shake - NEW FUNCTION
+  // Place ALL cards in shake
   const handlePlaceAllCardsInShake = () => {
     socket.emit('card_game_shake_place_all', {
       roomCode,
@@ -117,7 +135,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     });
   };
 
-  // Complete shake - IMPROVED
+  // Complete shake
   const handleCompleteShake = () => {
     socket.emit('card_game_complete_shake', {
       roomCode,
@@ -288,6 +306,88 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   };
 
+  // Handle circle selection for mobile
+  const handleSelectCardForCircle = (card) => {
+    if (areButtonsEnabled()) {
+      setSelectedCardForCircle(card);
+      setShowCircleSelection(true);
+    }
+  };
+
+  // Handle placing card in selected circle
+  const handlePlaceInSelectedCircle = (circleIndex) => {
+    if (selectedCardForCircle && gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
+      socket.emit('card_game_move_to_circle', { 
+        roomCode, 
+        playerId: currentPlayer.id, 
+        circleIndex, 
+        cardId: selectedCardForCircle.id 
+      });
+      setSelectedCardForCircle(null);
+      setShowCircleSelection(false);
+    }
+  };
+
+  // Cancel circle placement
+  const handleCancelCirclePlacement = () => {
+    setSelectedCardForCircle(null);
+    setShowCircleSelection(false);
+  };
+
+  // Dice roll handler with modal
+  const handleRollDice = () => {
+    setShowDiceModal(true);
+    // Reset previous category when rolling again
+    setPlayerCategory(null);
+    socket.emit('card_game_roll_dice', { roomCode, playerId: currentPlayer.id });
+    
+    // Auto-close after 7 seconds
+    if (diceTimerRef.current) {
+      clearTimeout(diceTimerRef.current);
+    }
+    diceTimerRef.current = setTimeout(() => {
+      setShowDiceModal(false);
+    }, 7000);
+  };
+
+  // Close dice modal manually
+  const handleCloseDiceModal = () => {
+    if (diceTimerRef.current) {
+      clearTimeout(diceTimerRef.current);
+    }
+    setShowDiceModal(false);
+  };
+
+  // Close category banner
+  const handleCloseCategoryBanner = () => {
+    setPlayerCategory(null);
+  };
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (diceTimerRef.current) {
+        clearTimeout(diceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // FIXED: Game reset handler - PROPERLY RESET EXCHANGE STATES
+  const handleGameReset = () => {
+    console.log('🔄 Game reset received');
+    setWinner(null);
+    setShowExchangeSquare(false);
+    setShowShakeSquare(false);
+    setPlacedCards({});
+    setShakePlacedCards({});
+    setCurrentExchangeType(null);
+    setExchangeInitiator(null);
+    setActionCard(null);
+    setShakeInitiator(null);
+    setShakeActionCard(null);
+    setPlayerCategory(null);
+  };
+
   // Detect mobile devices
   useEffect(() => {
     const checkMobile = () => {
@@ -362,16 +462,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
     const handleDiceRolled = (data) => {
       setDiceValue(data.diceValue);
-      setShowDice(true);
-      
-      setTimeout(() => {
-        setShowDice(false);
-      }, 3000);
     };
 
     const handleDiceCategory = (data) => {
       console.log('🎲 Dice category received:', data);
-      setRolledCategory(data.category);
+      // Set the player's category when dice category is received
+      setPlayerCategory(data.category);
     };
 
     const handleGameExited = () => {
@@ -380,13 +476,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       }
     };
 
-    const handleGameReset = () => {
-      console.log('🔄 Game reset received');
-      setWinner(null);
-      setShowExchangeSquare(false);
-      setShowShakeSquare(false);
-      setPlacedCards({});
-      setShakePlacedCards({});
+    // FIXED: Use the new reset handler
+    const handleGameResetEvent = () => {
+      handleGameReset();
     };
 
     const handleGameWinner = (data) => {
@@ -475,12 +567,22 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setShakePlacedCards({});
     };
 
+    // FIXED: Listen for exchange closed event
+    const handleExchangeClosed = () => {
+      console.log('🔄 Exchange closed event received');
+      setShowExchangeSquare(false);
+      setCurrentExchangeType(null);
+      setExchangeInitiator(null);
+      setActionCard(null);
+      setPlacedCards({});
+    };
+
     socket.on('card_game_state_update', handleGameUpdate);
     socket.on('card_game_error', handleGameError);
     socket.on('card_game_dice_rolled', handleDiceRolled);
     socket.on('card_game_dice_category', handleDiceCategory);
     socket.on('card_game_exited', handleGameExited);
-    socket.on('card_game_reset', handleGameReset);
+    socket.on('card_game_reset', handleGameResetEvent); // FIXED: Use the new handler
     socket.on('card_game_winner', handleGameWinner);
     socket.on('card_game_winner_announced', handleWinnerAnnounced);
     socket.on('card_game_exchange_completed', handleExchangeCompleted);
@@ -490,6 +592,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     socket.on('card_game_open_shake_square', handleOpenShakeSquareEvent);
     socket.on('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
     socket.on('card_game_shake_completed', handleShakeCompleted);
+    socket.on('card_game_exchange_closed', handleExchangeClosed); // FIXED: Add this listener
 
     return () => {
       socket.off('card_game_state_update', handleGameUpdate);
@@ -497,7 +600,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_dice_rolled', handleDiceRolled);
       socket.off('card_game_dice_category', handleDiceCategory);
       socket.off('card_game_exited', handleGameExited);
-      socket.off('card_game_reset', handleGameReset);
+      socket.off('card_game_reset', handleGameResetEvent);
       socket.off('card_game_winner', handleGameWinner);
       socket.off('card_game_winner_announced', handleWinnerAnnounced);
       socket.off('card_game_exchange_completed', handleExchangeCompleted);
@@ -507,6 +610,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_open_shake_square', handleOpenShakeSquareEvent);
       socket.off('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
       socket.off('card_game_shake_completed', handleShakeCompleted);
+      socket.off('card_game_exchange_closed', handleExchangeClosed);
     };
   }, [socket, currentPlayer?.id, onExit, players]);
 
@@ -533,42 +637,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       });
       setDraggedCard(null);
     }
-  };
-
-  // Handle circle placement via button (for mobile)
-  const handlePlaceInCircle = (circleIndex) => {
-    if (selectedCardForCircle && gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
-      socket.emit('card_game_move_to_circle', { 
-        roomCode, 
-        playerId: currentPlayer.id, 
-        circleIndex, 
-        cardId: selectedCardForCircle.id 
-      });
-      setSelectedCardForCircle(null);
-    }
-  };
-
-  // Select card for circle placement
-  const handleSelectCardForCircle = (card) => {
-    if (areButtonsEnabled()) {
-      setSelectedCardForCircle(card);
-    }
-  };
-
-  // Cancel circle placement
-  const handleCancelCirclePlacement = () => {
-    setSelectedCardForCircle(null);
-  };
-
-  // Dice roll handler
-  const handleRollDice = () => {
-    setShowDice(true);
-    socket.emit('card_game_roll_dice', { roomCode, playerId: currentPlayer.id });
-  };
-
-  // Close category banner
-  const handleCloseCategoryBanner = () => {
-    setRolledCategory(null);
   };
 
   // Draw card handler
@@ -600,10 +668,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const handleResetGame = () => {
     if (isAdmin) {
       console.log('🔄 Admin requesting game reset');
-      setWinner(null);
-      setShowExchangeSquare(false);
-      setShowShakeSquare(false);
-      socket.emit('card_game_reset', { roomCode });
+      handleResetGameAnyPlayer();
     }
   };
 
@@ -730,6 +795,132 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Player Category Banner - Shows above the game header */}
+      {playerCategory && (
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 mb-6 text-center">
+          <div className="flex justify-between items-center">
+            <div className="flex-1 text-right">
+              <h3 className="text-xl font-bold text-white">الفئة الخاصة بك</h3>
+              <p className="text-white font-semibold text-lg">الفئة {playerCategory.id}: {playerCategory.name}</p>
+              <p className="text-white text-md mt-1">{playerCategory.description}</p>
+              <p className="text-yellow-200 font-semibold mt-2">{playerCategory.rules}</p>
+            </div>
+            <button
+              onClick={handleCloseCategoryBanner}
+              className="bg-white text-blue-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-bold ml-4"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Circle Selection Modal */}
+      {showCircleSelection && selectedCardForCircle && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold mb-2">اختر الدائرة لوضع البطاقة</h2>
+              <p className="text-indigo-200">اختر أي دائرة لوضع البطاقة فيها</p>
+            </div>
+
+            {/* Selected Card Preview */}
+            <div className="bg-indigo-700 rounded-lg p-4 mb-6 text-center">
+              <h3 className="font-bold mb-2">البطاقة المختارة:</h3>
+              <div className="flex justify-center items-center gap-4">
+                {renderCardImage(selectedCardForCircle, "w-20 h-20")}
+                <div>
+                  <div className="font-bold text-lg">{selectedCardForCircle.name}</div>
+                  <div className="text-sm text-indigo-200">
+                    {selectedCardForCircle.type === 'actor' ? 'ممثل' : 
+                     selectedCardForCircle.type === 'movie' ? 'فيلم' : 
+                     selectedCardForCircle.type === 'action' ? 'جوكر' : 'مخرج'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Circle Selection Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              {[0, 1, 2, 3].map(circleIndex => (
+                <div 
+                  key={circleIndex}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center min-h-32 flex flex-col items-center justify-center cursor-pointer transition-all ${
+                    myCircles[circleIndex] 
+                      ? 'border-green-500 bg-green-900 bg-opacity-20' 
+                      : 'border-gray-500 hover:border-yellow-500 hover:bg-yellow-900 hover:bg-opacity-10'
+                  }`}
+                  onClick={() => handlePlaceInSelectedCircle(circleIndex)}
+                >
+                  {myCircles[circleIndex] ? (
+                    <div className="text-center">
+                      {renderCircleImage(myCircles[circleIndex], "w-16 h-16")}
+                      <div className="text-xs text-gray-300 mt-1">دائرة {circleIndex + 1} (مشغولة)</div>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <FaCircle className="text-4xl text-gray-400 mx-auto mb-2" />
+                      <div className="text-sm text-gray-300">دائرة {circleIndex + 1}</div>
+                      <div className="text-xs text-gray-400 mt-1">(فارغة)</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelCirclePlacement}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-bold"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dice Roll Modal */}
+      {showDiceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl max-w-md w-full text-center p-8">
+            <div className="mb-6">
+              <div className="text-6xl mb-4">🎲</div>
+              <h2 className="text-3xl font-bold text-white mb-2">رمي النرد</h2>
+              
+              {diceValue > 0 && (
+                <>
+                  <div className="text-6xl font-bold text-yellow-300 my-4 animate-bounce">
+                    {diceValue}
+                  </div>
+                  
+                  {playerCategory && (
+                    <div className="bg-white bg-opacity-20 rounded-lg p-4 mt-4">
+                      <h3 className="text-xl font-bold text-white mb-2">الفئة: {playerCategory.name}</h3>
+                      <p className="text-white text-lg">{playerCategory.description}</p>
+                      <p className="text-yellow-200 mt-2 font-semibold">{playerCategory.rules}</p>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              {diceValue === 0 && (
+                <div className="text-xl text-white animate-pulse">
+                  جاري رمي النرد...
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleCloseDiceModal}
+              className="bg-white text-blue-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold text-lg"
+            >
+              إغلاق
+            </button>
           </div>
         </div>
       )}
@@ -865,7 +1056,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* Shake Square Modal - IMPROVED */}
+      {/* Shake Square Modal */}
       {showShakeSquare && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-indigo-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1055,25 +1246,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 إغلاق
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Category Banner */}
-      {rolledCategory && (
-        <div className=" bg-gradient-to-r from-[#00b4db] via-[#0083b0] to-[#006688]  rounded-lg p-4 mb-6 text-center">
-          <div className="flex justify-between items-center">
-            <div className="flex-1 text-right">
-              <h3 className="text-xl font-bold text-white">الفئة الخاصة بك</h3>
-              <p className="text-white font-semibold text-xl">{rolledCategory.name}</p>
-              <p className="text-white font-semibold text-xl">{rolledCategory.description}</p>
-            </div>
-            <button
-              onClick={handleCloseCategoryBanner}
-              className="bg-blue-900 text-white-500 font-extrabold hover:bg-gray-100 px-4 py-2 rounded-lg ml-4"
-            >
-              X
-            </button>
           </div>
         </div>
       )}
