@@ -1133,9 +1133,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div 
                 key={card.id} 
                 className={`p-4 text-white font-semibold rounded-lg flex flex-col ${
-                  card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#fe8c00] to-[#f83600]' :
-                  card.type === 'action' && card.subtype === 'joker' ? 'bg-gradient-to-r from-[#fe8c00] to-[#f83600]' :
-                  card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#fe8c00] to-[#f83600]' :
+                  card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#955200] to-[#f83600]' :
+                  card.type === 'action' && card.subtype === 'joker' ? 'bg-gradient-to-r from-[#955200] to-[#f83600]' :
+                  card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#955200] to-[#f83600]' :
                   card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
                   card.type === 'movie' ? ' bg-gradient-to-r ' : 'bg-indigo-600'
                 } text-black`}
