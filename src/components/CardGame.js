@@ -55,10 +55,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setSelectedCardForView(null);
   };
 
-  // Reset game handler for any player
+  // Reset game handler for any player - FIXED: Properly reset winner state
   const handleResetGameAnyPlayer = () => {
     console.log('🔄 Any player requesting game reset');
-    setWinner(null);
+    setWinner(null); // Clear winner state immediately
     setShowShakeSquare(false);
     setAnyPlayerPlacedCards(false);
     socket.emit('card_game_reset_any_player', { roomCode });
@@ -253,20 +253,22 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   }, [gameState, currentPlayer]);
 
-  // Improved winner detection - listen for winner announcement from server
+  // FIXED: Improved winner detection - listen for winner announcement from server
   useEffect(() => {
     if (gameState && players) {
       // Check for winner in game state
-      if (gameState.winner && !winner) {
+      if (gameState.winner) {
         const winnerPlayer = players.find(player => player.id === gameState.winner);
-        setWinner(winnerPlayer);
+        if (winnerPlayer && (!winner || winner.id !== winnerPlayer.id)) {
+          setWinner(winnerPlayer);
+        }
       } else {
         // Also check if any player reached level 5
         const gameWinner = players.find(player => {
           const playerLevel = gameState.playerLevels?.[player.id] || 1;
           return playerLevel >= 5;
         });
-        if (gameWinner && !winner) {
+        if (gameWinner && (!winner || winner.id !== gameWinner.id)) {
           setWinner(gameWinner);
         }
       }
@@ -282,7 +284,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Socket listeners
+  // Socket listeners - FIXED: Proper winner handling and reset
   useEffect(() => {
     if (!socket) return;
 
@@ -322,8 +324,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     };
 
     const handleGameReset = () => {
-      console.log('🔄 Game reset received');
-      setWinner(null);
+      console.log('🔄 Game reset received - clearing winner state for ALL players');
+      setWinner(null); // Clear winner for ALL players when reset is received
       setShowShakeSquare(false);
       setShakePlacedCards({});
       setShowDiceCategoryBanner(false);
@@ -331,19 +333,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setAnyPlayerPlacedCards(false);
     };
 
-    const handleGameWinner = (data) => {
-      console.log('🏆 Winner announced:', data);
-      const winnerPlayer = players.find(player => player.id === data.playerId);
-      if (!winner) {
-        setWinner(winnerPlayer);
-      }
-    };
-
-    // Listen for winner announcement from server
+    // FIXED: Handle winner announcement properly
     const handleWinnerAnnounced = (data) => {
       console.log('🏆 Winner announced to all players:', data);
       const winnerPlayer = players.find(player => player.id === data.playerId);
-      if (!winner) {
+      if (winnerPlayer) {
         setWinner(winnerPlayer);
       }
     };
@@ -385,7 +379,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     socket.on('card_game_dice_category', handleDiceCategory);
     socket.on('card_game_exited', handleGameExited);
     socket.on('card_game_reset', handleGameReset);
-    socket.on('card_game_winner', handleGameWinner);
     socket.on('card_game_winner_announced', handleWinnerAnnounced);
     socket.on('card_game_open_shake_square', handleOpenShakeSquareEvent);
     socket.on('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
@@ -398,13 +391,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_dice_category', handleDiceCategory);
       socket.off('card_game_exited', handleGameExited);
       socket.off('card_game_reset', handleGameReset);
-      socket.off('card_game_winner', handleGameWinner);
       socket.off('card_game_winner_announced', handleWinnerAnnounced);
       socket.off('card_game_open_shake_square', handleOpenShakeSquareEvent);
       socket.off('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
       socket.off('card_game_shake_completed', handleShakeCompleted);
     };
-  }, [socket, currentPlayer?.id, onExit, players, winner]);
+  }, [socket, currentPlayer?.id, onExit, players]);
 
   // Drag and drop handlers
   const handleDragStart = (e, card) => {
@@ -617,10 +609,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   <div className="text-white text-sm">رقم الفئة</div>
                 </div>
                 
-                {/* <div className="text-center">
+                <div className="text-center">
                   <div className="text-xl font-bold text-white mb-1">{diceCategoryData.name}</div>
                   <div className="text-white text-sm">اسم الفئة</div>
-                </div> */}
+                </div>
                 
                 <div className="text-center">
                   <div className="text-lg font-semibold text-white">{diceCategoryData.description}</div>
@@ -636,7 +628,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* WINNER MODAL - Show for everyone including admin */}
+      {/* WINNER MODAL - Copied from old code with reset button for ALL players */}
       {winner && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl max-w-2xl w-full text-center p-8">
@@ -660,31 +652,17 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               >
                 <FaRedo /> لعبة جديدة
               </button>
+              
+              {/* Exit to categories button still only for admin */}
+              {isAdmin && (
+                <button
+                  onClick={handleExitToCategories}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2"
+                >
+                  <FaHome /> العودة للفئات
+                </button>
+              )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Dice Category Modal */}
-      {rolledCategory && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl max-w-md w-full text-center p-6">
-            <div className="mb-6">
-              <FaDice className="text-6xl text-white mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">الفئة الخاصة بك</h2>
-              <div className="bg-white bg-opacity-20 rounded-lg p-4">
-                <p className="text-3xl font-bold text-yellow-300 mb-2">الفئة {rolledCategory.id}</p>
-                <p className="text-xl font-semibold text-white mb-2">{rolledCategory.name}</p>
-                <p className="text-white">{rolledCategory.description}</p>
-              </div>
-            </div>
-            
-            <button
-              onClick={handleCloseCategoryModal}
-              className="bg-white text-blue-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-bold text-lg"
-            >
-              إغلاق
-            </button>
           </div>
         </div>
       )}
@@ -806,7 +784,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   onClick={handleCompleteShake}
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
                 >
-                  إنهاء النفض
+                  إتمام العملية
                 </button>
               </div>
             )}
@@ -1133,9 +1111,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div 
                 key={card.id} 
                 className={`p-4 text-white font-semibold rounded-lg flex flex-col ${
-                  card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#955200] to-[#f83600]' :
-                  card.type === 'action' && card.subtype === 'joker' ? 'bg-gradient-to-r from-[#955200] to-[#f83600]' :
-                  card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#955200] to-[#f83600]' :
+                  card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
+                  card.type === 'action' && card.subtype === 'joker' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
+                  card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
                   card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
                   card.type === 'movie' ? ' bg-gradient-to-r ' : 'bg-indigo-600'
                 } text-black`}
@@ -1178,7 +1156,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       onClick={() => handleSelectCardForCircle(card)}
                       disabled={!isMyTurn || !buttonsEnabled}
                       className={`px-4 py-2 rounded text-lg font-semibold flex items-center gap-1 flex-1 justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#136a8a] to-[#267871] shadow-md text-white hover:text-black' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r shadow-md  from-[#6d6027] to-[#ae8902] text-white hover:text-black' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       وضع في الدائرة
@@ -1190,7 +1168,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       onClick={() => handlePlayToTable(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
                       className={`px-4 py-2 text-lg rounded flex-1 justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#799f0c] to-[#acbb78] shadow-md text-white hover:text-black font-semibold' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r shadow-md from-[#799f0c] to-[#acbb78] text-white hover:text-black font-semibold' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       لعب للطاولة
@@ -1199,8 +1177,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <button
                       onClick={() => handleUseSkipCard(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded flex-1 text-lg h-[50px] font-bold items-center justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#200122] to-[#6f0000] shadow-md hover:text-emerald-600' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 py-2 rounded flex w-full shadow-md gap-x-4 text-lg h-[50px] font-bold items-center justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#8B0000] to-[#FF0000] hover:text-black' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       <FaUserSlash /> تخطي التالي 
@@ -1209,8 +1187,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <button
                       onClick={() => handleUseShakeCard(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
-                      className={`px-4 py-2 rounded flex w-full justify-center gap-x-3 text-lg h-[50px] font-bold items-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#3494e6] to-[#ec6ead] shadow-md hover:text-black' : 'bg-gray-400 cursor-not-allowed'
+                      className={`px-4 py-2 rounded flex w-full shadow-md gap-x-4 text-lg h-[50px] font-bold items-center justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#8B0000] to-[#FF0000] hover:text-black' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       <FaUser /> نفض نفسك
@@ -1220,7 +1198,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       onClick={() => handlePlayToTable(card.id)}
                       disabled={!isMyTurn || !buttonsEnabled}
                       className={`px-4 py-2 text-lg rounded flex-1 justify-center ${
-                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#799f0c] to-[#acbb78] shadow-md text-white hover:text-black font-semibold' : 'bg-gray-400 cursor-not-allowed'
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#799f0c] to-[#acbb78] text-white hover:text-black font-semibold' : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >
                       لعب للطاولة

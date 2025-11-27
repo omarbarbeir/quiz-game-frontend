@@ -1,0 +1,73 @@
+   /* Custom scrollbar for Webkit browsers (Chrome, Safari, Edge) */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 12px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #4c51bf; /* indigo-700 */
+      border-radius: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #a5b4fc; /* indigo-300 */
+      border-radius: 6px;
+      border: 2px solid #4c51bf;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #818cf8; /* indigo-400 */
+    }
+
+    /* Custom scrollbar for Firefox */
+    .custom-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #a5b4fc #4c51bf;
+    }
+
+    /* Custom scrollbar for player hand */
+    .player-hand-scrollbar::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .player-hand-scrollbar::-webkit-scrollbar-track {
+      background: #3730a3; /* indigo-800 */
+      border-radius: 5px;
+    }
+
+    .player-hand-scrollbar::-webkit-scrollbar-thumb {
+      background: #6366f1; /* indigo-500 */
+      border-radius: 5px;
+    }
+
+    .player-hand-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #4f46e5; /* indigo-600 */
+    }
+
+    .player-hand-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #6366f1 #3730a3;
+    }
+
+    /* Custom scrollbar for modal content */
+    .modal-scrollbar::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .modal-scrollbar::-webkit-scrollbar-track {
+      background: #1e1b4b; /* indigo-900 */
+      border-radius: 4px;
+    }
+
+    .modal-scrollbar::-webkit-scrollbar-thumb {
+      background: #6366f1; /* indigo-500 */
+      border-radius: 4px;
+    }
+
+    .modal-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #4f46e5; /* indigo-600 */
+    }
+
+    .modal-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #6366f1 #1e1b4b;
+    }
