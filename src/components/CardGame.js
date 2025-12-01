@@ -17,11 +17,29 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [selectedCardForView, setSelectedCardForView] = useState(null);
   const [winner, setWinner] = useState(null);
   
-  // Shake card states - IMPROVED
+  // Shake card states
   const [showShakeSquare, setShowShakeSquare] = useState(false);
   const [shakeInitiator, setShakeInitiator] = useState(null);
   const [shakeActionCard, setShakeActionCard] = useState(null);
   const [shakePlacedCards, setShakePlacedCards] = useState({});
+  const [shakeCanComplete, setShakeCanComplete] = useState(false);
+
+  // Exchange card states
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [exchangeInitiator, setExchangeInitiator] = useState(null);
+  const [exchangeActionCard, setExchangeActionCard] = useState(null);
+  const [exchangeSelectedCard, setExchangeSelectedCard] = useState(null);
+  const [exchangeTargetCard, setExchangeTargetCard] = useState(null);
+  const [exchangeCompleted, setExchangeCompleted] = useState(false);
+  const [exchangePhase, setExchangePhase] = useState('waiting');
+
+  // Collective exchange card states - NOW SAME AS REGULAR EXCHANGE
+  const [showCollectiveExchangeModal, setShowCollectiveExchangeModal] = useState(false);
+  const [collectiveExchangeInitiator, setCollectiveExchangeInitiator] = useState(null);
+  const [collectiveExchangeActionCard, setCollectiveExchangeActionCard] = useState(null);
+  const [collectiveExchangeSelectedCard, setCollectiveExchangeSelectedCard] = useState(null);
+  const [collectiveExchangeTargetCard, setCollectiveExchangeTargetCard] = useState(null);
+  const [collectiveExchangePhase, setCollectiveExchangePhase] = useState('waiting');
 
   // Dice category banner state
   const [showDiceCategoryBanner, setShowDiceCategoryBanner] = useState(false);
@@ -55,33 +73,201 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setSelectedCardForView(null);
   };
 
-  // Reset game handler for any player - FIXED: Properly reset winner state
+  // Reset game handler for any player
   const handleResetGameAnyPlayer = () => {
     console.log('🔄 Any player requesting game reset');
-    setWinner(null); // Clear winner state immediately
+    setWinner(null);
     setShowShakeSquare(false);
+    setShowExchangeModal(false);
+    setShowCollectiveExchangeModal(false);
     setAnyPlayerPlacedCards(false);
     socket.emit('card_game_reset_any_player', { roomCode });
   };
 
-  // Open shake square for ALL players - IMPROVED
+  // Open shake square for ALL players
   const handleOpenShakeSquare = (data) => {
     console.log('🔄 Opening shake square:', data);
     setShowShakeSquare(true);
     setShakeInitiator(data.playerId);
     setShakeActionCard(data.actionCard);
     setShakePlacedCards({});
-    setAnyPlayerPlacedCards(false); // Reset when new shake starts
+    setAnyPlayerPlacedCards(false);
+    setShakeCanComplete(false);
   };
 
-  // Place ALL cards in shake - FIXED: Only allow one player to click
+  // Exchange card events
+  const handleOpenExchangeChooseCard = (data) => {
+    console.log('🔄 Opening exchange choose card for initiator:', data);
+    setShowExchangeModal(true);
+    setExchangeInitiator(data.initiatorId);
+    setExchangeActionCard(data.actionCard);
+    setExchangeSelectedCard(null);
+    setExchangeTargetCard(null);
+    setExchangeCompleted(false);
+    setExchangePhase('initiator_choose');
+  };
+
+  const handleOpenExchangeWaiting = (data) => {
+    console.log('🔄 Opening exchange waiting for other players:', data);
+    setShowExchangeModal(true);
+    setExchangeInitiator(data.initiatorId);
+    setExchangeActionCard(null);
+    setExchangeSelectedCard(null);
+    setExchangeTargetCard(null);
+    setExchangeCompleted(false);
+    setExchangePhase('waiting');
+  };
+
+  const handleExchangeInitiatorChosen = (data) => {
+    console.log('🔄 Exchange initiator chosen card:', data);
+    setExchangeSelectedCard(data.initiatorCard);
+    if (currentPlayer.id === data.initiatorId) {
+      setExchangePhase('waiting_responder');
+    } else {
+      setExchangePhase('responder_choose');
+    }
+  };
+
+  // Collective exchange events - NOW SAME AS REGULAR EXCHANGE
+  const handleOpenCollectiveExchangeChooseCard = (data) => {
+    console.log('🔄 Opening collective exchange choose card for initiator:', data);
+    setShowCollectiveExchangeModal(true);
+    setCollectiveExchangeInitiator(data.initiatorId);
+    setCollectiveExchangeActionCard(data.actionCard);
+    setCollectiveExchangeSelectedCard(null);
+    setCollectiveExchangeTargetCard(null);
+    setCollectiveExchangePhase('initiator_choose');
+  };
+
+  const handleOpenCollectiveExchangeWaiting = (data) => {
+    console.log('🔄 Opening collective exchange waiting for other players:', data);
+    setShowCollectiveExchangeModal(true);
+    setCollectiveExchangeInitiator(data.initiatorId);
+    setCollectiveExchangeActionCard(null);
+    setCollectiveExchangeSelectedCard(null);
+    setCollectiveExchangeTargetCard(null);
+    setCollectiveExchangePhase('waiting');
+  };
+
+  const handleCollectiveExchangeInitiatorChosen = (data) => {
+    console.log('🔄 Collective exchange initiator chosen card:', data);
+    setCollectiveExchangeSelectedCard(data.initiatorCard);
+    if (currentPlayer.id === data.initiatorId) {
+      setCollectiveExchangePhase('waiting_responder');
+    } else {
+      setCollectiveExchangePhase('responder_choose');
+    }
+  };
+
+  // Use exchange card
+  const handleUseExchangeCard = (cardId) => {
+    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
+      console.log('🔄 Using exchange card:', cardId);
+      socket.emit('card_game_use_exchange', {
+        roomCode,
+        playerId: currentPlayer.id,
+        cardId
+      });
+    }
+  };
+
+  // Use collective exchange card - NOW SAME AS REGULAR EXCHANGE
+  const handleUseCollectiveExchangeCard = (cardId) => {
+    if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
+      console.log('🔄 Using collective exchange card:', cardId);
+      socket.emit('card_game_use_collective_exchange', {
+        roomCode,
+        playerId: currentPlayer.id,
+        cardId
+      });
+    }
+  };
+
+  // Initiator chooses card for exchange
+  const handleInitiatorChooseCard = (card) => {
+    if (currentPlayer.id === exchangeInitiator && exchangePhase === 'initiator_choose') {
+      console.log('🔄 Initiator choosing card for exchange:', card);
+      socket.emit('card_game_exchange_choose_card', {
+        roomCode,
+        playerId: currentPlayer.id,
+        cardId: card.id
+      });
+      setExchangeSelectedCard(card);
+      setExchangePhase('waiting_responder');
+    }
+  };
+
+  // Initiator chooses card for collective exchange - NOW SAME AS REGULAR EXCHANGE
+  const handleCollectiveInitiatorChooseCard = (card) => {
+    if (currentPlayer.id === collectiveExchangeInitiator && collectiveExchangePhase === 'initiator_choose') {
+      console.log('🔄 Collective exchange initiator choosing card:', card);
+      socket.emit('card_game_collective_exchange_choose_card', {
+        roomCode,
+        playerId: currentPlayer.id,
+        cardId: card.id
+      });
+      setCollectiveExchangeSelectedCard(card);
+      setCollectiveExchangePhase('waiting_responder');
+    }
+  };
+
+  // Responder chooses card for exchange
+  const handleResponderChooseCard = (card) => {
+    if (currentPlayer.id !== exchangeInitiator && exchangePhase === 'responder_choose') {
+      console.log('🔄 Responder choosing card for exchange:', card);
+      socket.emit('card_game_exchange_respond', {
+        roomCode,
+        playerId: currentPlayer.id,
+        cardId: card.id
+      });
+      setExchangeTargetCard(card);
+      setExchangePhase('completed');
+    }
+  };
+
+  // Responder chooses card for collective exchange - NOW SAME AS REGULAR EXCHANGE
+  const handleCollectiveExchangeRespond = (card) => {
+    if (currentPlayer.id !== collectiveExchangeInitiator && collectiveExchangePhase === 'responder_choose') {
+      console.log('🔄 Responder choosing card for collective exchange:', card);
+      socket.emit('card_game_collective_exchange_respond', {
+        roomCode,
+        playerId: currentPlayer.id,
+        cardId: card.id
+      });
+      setCollectiveExchangeTargetCard(card);
+      setCollectiveExchangePhase('completed');
+    }
+  };
+
+  // Cancel exchange
+  const handleCancelExchange = () => {
+    if (currentPlayer.id === exchangeInitiator) {
+      socket.emit('card_game_exchange_cancel', {
+        roomCode,
+        playerId: currentPlayer.id
+      });
+      setShowExchangeModal(false);
+    }
+  };
+
+  // Cancel collective exchange - NOW SAME AS REGULAR EXCHANGE
+  const handleCancelCollectiveExchange = () => {
+    if (currentPlayer.id === collectiveExchangeInitiator) {
+      socket.emit('card_game_collective_exchange_cancel', {
+        roomCode,
+        playerId: currentPlayer.id
+      });
+      setShowCollectiveExchangeModal(false);
+    }
+  };
+
+  // Place ALL cards in shake
   const handlePlaceAllCardsInShake = () => {
     if (anyPlayerPlacedCards) {
       console.log('❌ Button already clicked by another player');
       return;
     }
     
-    // Immediately disable button for all players
     setAnyPlayerPlacedCards(true);
     
     socket.emit('card_game_shake_place_all', {
@@ -90,8 +276,13 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     });
   };
 
-  // Complete shake - IMPROVED
+  // Complete shake
   const handleCompleteShake = () => {
+    if (!shakeCanComplete) {
+      console.log('❌ Cannot complete shake - no player has placed cards');
+      return;
+    }
+    
     socket.emit('card_game_complete_shake', {
       roomCode,
       playerId: currentPlayer.id
@@ -225,6 +416,64 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   };
 
+  // Render exchange card - shows card details
+  const renderExchangeCard = (card, onClick = null, isSelected = false, isInitiator = false) => {
+    return (
+      <div className="relative">
+        <div 
+          className={`p-3 rounded-lg mb-2 transition-all cursor-pointer ${
+            isSelected ? 'ring-4 ring-yellow-400 bg-blue-700' : 'bg-blue-600 hover:bg-blue-500'
+          } flex flex-col items-center`}
+          onClick={onClick}
+        >
+          <div className="font-bold text-center text-lg mb-2">Card</div>
+          <div className="text-xs text-center opacity-75">
+            {card.type === 'actor' ? 'ممثل' : 
+             card.type === 'movie' ? 'فيلم' : 
+             card.type === 'action' ? 'إجراء' : 'مخرج'}
+          </div>
+          <div className="text-sm font-semibold text-center mt-2 text-white">
+            {card.name}
+          </div>
+          {isSelected && (
+            <div className="text-xs text-yellow-300 font-bold mt-1">
+              {isInitiator ? '✓ مختارة للتبادل' : '✓ مختارة'}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Render collective exchange card - different color (purple) BUT SAME SYSTEM
+  const renderCollectiveExchangeCard = (card, onClick = null, isSelected = false, isInitiator = false) => {
+    return (
+      <div className="relative">
+        <div 
+          className={`p-3 rounded-lg mb-2 transition-all cursor-pointer ${
+            isSelected ? 'ring-4 ring-yellow-400 bg-purple-700' : 'bg-purple-600 hover:bg-purple-500'
+          } flex flex-col items-center`}
+          onClick={onClick}
+        >
+          <div className="font-bold text-center text-lg mb-2">Card</div>
+          <div className="text-xs text-center opacity-75">
+            {card.type === 'actor' ? 'ممثل' : 
+             card.type === 'movie' ? 'فيلم' : 
+             card.type === 'action' ? 'إجراء' : 'مخرج'}
+          </div>
+          <div className="text-sm font-semibold text-center mt-2 text-white">
+            {card.name}
+          </div>
+          {isSelected && (
+            <div className="text-xs text-yellow-300 font-bold mt-1">
+              {isInitiator ? '✓ مختارة للتبادل' : '✓ مختارة'}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Close dice category banner
   const handleCloseDiceCategoryBanner = () => {
     setShowDiceCategoryBanner(false);
@@ -253,17 +502,15 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   }, [gameState, currentPlayer]);
 
-  // FIXED: Improved winner detection - listen for winner announcement from server
+  // Winner detection
   useEffect(() => {
     if (gameState && players) {
-      // Check for winner in game state
       if (gameState.winner) {
         const winnerPlayer = players.find(player => player.id === gameState.winner);
         if (winnerPlayer && (!winner || winner.id !== winnerPlayer.id)) {
           setWinner(winnerPlayer);
         }
       } else {
-        // Also check if any player reached level 5
         const gameWinner = players.find(player => {
           const playerLevel = gameState.playerLevels?.[player.id] || 1;
           return playerLevel >= 5;
@@ -284,7 +531,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Socket listeners - FIXED: Proper winner handling and reset
+  // Socket listeners
   useEffect(() => {
     if (!socket) return;
 
@@ -325,15 +572,17 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
     const handleGameReset = () => {
       console.log('🔄 Game reset received - clearing winner state for ALL players');
-      setWinner(null); // Clear winner for ALL players when reset is received
+      setWinner(null);
       setShowShakeSquare(false);
+      setShowExchangeModal(false);
+      setShowCollectiveExchangeModal(false);
       setShakePlacedCards({});
       setShowDiceCategoryBanner(false);
       setDiceCategoryData(null);
       setAnyPlayerPlacedCards(false);
+      setShakeCanComplete(false);
     };
 
-    // FIXED: Handle winner announcement properly
     const handleWinnerAnnounced = (data) => {
       console.log('🏆 Winner announced to all players:', data);
       const winnerPlayer = players.find(player => player.id === data.playerId);
@@ -348,7 +597,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       handleOpenShakeSquare(data);
     };
 
-    // Listen for shake all cards placed - FIXED: Update anyPlayerPlacedCards when any player places cards
+    // Listen for shake all cards placed
     const handleShakeAllCardsPlaced = (data) => {
       console.log('🔄 All cards placed in shake:', data);
       setShakePlacedCards(prev => ({
@@ -359,8 +608,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         }
       }));
       
-      // CRITICAL FIX: Set anyPlayerPlacedCards to true when ANY player places cards
       setAnyPlayerPlacedCards(true);
+      setShakeCanComplete(data.canComplete);
     };
 
     // Listen for shake completion
@@ -370,7 +619,82 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setShakeInitiator(null);
       setShakeActionCard(null);
       setShakePlacedCards({});
-      setAnyPlayerPlacedCards(false); // Reset when shake completes
+      setAnyPlayerPlacedCards(false);
+      setShakeCanComplete(false);
+    };
+
+    // Exchange events
+    const handleExchangeChooseCard = (data) => {
+      console.log('🔄 Exchange choose card for initiator:', data);
+      handleOpenExchangeChooseCard(data);
+    };
+
+    const handleExchangeWaiting = (data) => {
+      console.log('🔄 Exchange waiting for other players:', data);
+      handleOpenExchangeWaiting(data);
+    };
+
+    const handleExchangeInitiatorChosenEvent = (data) => {
+      console.log('🔄 Exchange initiator chosen event:', data);
+      handleExchangeInitiatorChosen(data);
+    };
+
+    const handleExchangeCompleted = (data) => {
+      console.log('🔄 Exchange completed:', data);
+      setShowExchangeModal(false);
+      setExchangeInitiator(null);
+      setExchangeActionCard(null);
+      setExchangeSelectedCard(null);
+      setExchangeTargetCard(null);
+      setExchangeCompleted(false);
+      setExchangePhase('waiting');
+    };
+
+    const handleExchangeCancelled = (data) => {
+      console.log('🔄 Exchange cancelled:', data);
+      setShowExchangeModal(false);
+      setExchangeInitiator(null);
+      setExchangeActionCard(null);
+      setExchangeSelectedCard(null);
+      setExchangeTargetCard(null);
+      setExchangeCompleted(false);
+      setExchangePhase('waiting');
+    };
+
+    // Collective exchange events - NOW SAME AS REGULAR EXCHANGE
+    const handleCollectiveExchangeChooseCard = (data) => {
+      console.log('🔄 Collective exchange choose card for initiator:', data);
+      handleOpenCollectiveExchangeChooseCard(data);
+    };
+
+    const handleCollectiveExchangeWaiting = (data) => {
+      console.log('🔄 Collective exchange waiting for other players:', data);
+      handleOpenCollectiveExchangeWaiting(data);
+    };
+
+    const handleCollectiveExchangeInitiatorChosenEvent = (data) => {
+      console.log('🔄 Collective exchange initiator chosen event:', data);
+      handleCollectiveExchangeInitiatorChosen(data);
+    };
+
+    const handleCollectiveExchangeCompleted = (data) => {
+      console.log('🔄 Collective exchange completed:', data);
+      setShowCollectiveExchangeModal(false);
+      setCollectiveExchangeInitiator(null);
+      setCollectiveExchangeActionCard(null);
+      setCollectiveExchangeSelectedCard(null);
+      setCollectiveExchangeTargetCard(null);
+      setCollectiveExchangePhase('waiting');
+    };
+
+    const handleCollectiveExchangeCancelled = (data) => {
+      console.log('🔄 Collective exchange cancelled:', data);
+      setShowCollectiveExchangeModal(false);
+      setCollectiveExchangeInitiator(null);
+      setCollectiveExchangeActionCard(null);
+      setCollectiveExchangeSelectedCard(null);
+      setCollectiveExchangeTargetCard(null);
+      setCollectiveExchangePhase('waiting');
     };
 
     socket.on('card_game_state_update', handleGameUpdate);
@@ -383,6 +707,18 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     socket.on('card_game_open_shake_square', handleOpenShakeSquareEvent);
     socket.on('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
     socket.on('card_game_shake_completed', handleShakeCompleted);
+    socket.on('card_game_exchange_choose_card', handleExchangeChooseCard);
+    socket.on('card_game_exchange_waiting', handleExchangeWaiting);
+    socket.on('card_game_exchange_initiator_chosen', handleExchangeInitiatorChosenEvent);
+    socket.on('card_game_exchange_completed', handleExchangeCompleted);
+    socket.on('card_game_exchange_cancelled', handleExchangeCancelled);
+    
+    // Collective exchange listeners - NOW SAME AS REGULAR EXCHANGE
+    socket.on('card_game_collective_exchange_choose_card', handleCollectiveExchangeChooseCard);
+    socket.on('card_game_collective_exchange_waiting', handleCollectiveExchangeWaiting);
+    socket.on('card_game_collective_exchange_initiator_chosen', handleCollectiveExchangeInitiatorChosenEvent);
+    socket.on('card_game_collective_exchange_completed', handleCollectiveExchangeCompleted);
+    socket.on('card_game_collective_exchange_cancelled', handleCollectiveExchangeCancelled);
 
     return () => {
       socket.off('card_game_state_update', handleGameUpdate);
@@ -395,12 +731,24 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_open_shake_square', handleOpenShakeSquareEvent);
       socket.off('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
       socket.off('card_game_shake_completed', handleShakeCompleted);
+      socket.off('card_game_exchange_choose_card', handleExchangeChooseCard);
+      socket.off('card_game_exchange_waiting', handleExchangeWaiting);
+      socket.off('card_game_exchange_initiator_chosen', handleExchangeInitiatorChosenEvent);
+      socket.off('card_game_exchange_completed', handleExchangeCompleted);
+      socket.off('card_game_exchange_cancelled', handleExchangeCancelled);
+      
+      // Collective exchange listeners cleanup
+      socket.off('card_game_collective_exchange_choose_card', handleCollectiveExchangeChooseCard);
+      socket.off('card_game_collective_exchange_waiting', handleCollectiveExchangeWaiting);
+      socket.off('card_game_collective_exchange_initiator_chosen', handleCollectiveExchangeInitiatorChosenEvent);
+      socket.off('card_game_collective_exchange_completed', handleCollectiveExchangeCompleted);
+      socket.off('card_game_collective_exchange_cancelled', handleCollectiveExchangeCancelled);
     };
   }, [socket, currentPlayer?.id, onExit, players]);
 
   // Drag and drop handlers
   const handleDragStart = (e, card) => {
-    if (card.type !== 'action' || (card.type === 'action' && (card.subtype === 'joker' || card.subtype === 'skip' || card.subtype === 'shake'))) {
+    if (card.type !== 'action' || (card.type === 'action' && (card.subtype === 'joker' || card.subtype === 'skip' || card.subtype === 'shake' || card.subtype === 'exchange' || card.subtype === 'collective_exchange'))) {
       setDraggedCard(card);
       e.dataTransfer.setData('text/plain', card.id.toString());
     }
@@ -490,6 +838,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       console.log('🔄 Admin requesting game reset');
       setWinner(null);
       setShowShakeSquare(false);
+      setShowExchangeModal(false);
+      setShowCollectiveExchangeModal(false);
       socket.emit('card_game_reset', { roomCode });
     }
   };
@@ -565,9 +915,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   // Get shake initiator name
   const shakeInitiatorPlayer = players.find(p => p.id === shakeInitiator);
+  // Get exchange initiator name
+  const exchangeInitiatorPlayer = players.find(p => p.id === exchangeInitiator);
+  // Get collective exchange initiator name
+  const collectiveExchangeInitiatorPlayer = players.find(p => p.id === collectiveExchangeInitiator);
 
   // Check if current player can place cards in shake
-  // Button disappears for ALL players if any player has placed cards
   const canPlaceCardsInShake = currentPlayer.id !== shakeInitiator && !anyPlayerPlacedCards && !shakePlacedCards[currentPlayer.id];
 
   return (
@@ -585,7 +938,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* Dice Category Banner - Only shows for player who rolled dice */}
+      {/* Dice Category Banner */}
       {showDiceCategoryBanner && diceCategoryData && (
         <div className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 relative">
           <button
@@ -628,7 +981,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* WINNER MODAL - Copied from old code with reset button for ALL players */}
+      {/* WINNER MODAL */}
       {winner && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl max-w-2xl w-full text-center p-8">
@@ -644,7 +997,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <p className="text-white mt-2">🎊 أحسنت! 🎊</p>
             </div>
 
-            {/* Reset button available for ALL players */}
             <div className="flex gap-4 justify-center flex-wrap">
               <button
                 onClick={handleResetGameAnyPlayer}
@@ -653,7 +1005,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 <FaRedo /> لعبة جديدة
               </button>
               
-              {/* Exit to categories button still only for admin */}
               {isAdmin && (
                 <button
                   onClick={handleExitToCategories}
@@ -667,7 +1018,383 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* Shake Square Modal - FIXED: Button properly disabled for all players */}
+      {/* Collective Exchange Modal - NOW SAME AS REGULAR EXCHANGE */}
+      {showCollectiveExchangeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-purple-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-center text-white">كل واحد يطلع باللي معاه - تبادل جماعي</h2>
+              <p className="text-purple-200 text-center">
+                بدأ بواسطة: {collectiveExchangeInitiatorPlayer?.name || 'لاعب'}
+              </p>
+            </div>
+
+            {collectiveExchangePhase === 'waiting' && (
+              <div className="text-center">
+                <div className="text-yellow-300 text-xl mb-4">
+                  ⏳ بانتظار {collectiveExchangeInitiatorPlayer?.name || 'اللاعب'} لاختيار بطاقته...
+                </div>
+                <div className="bg-purple-700 rounded-lg p-4 mb-4">
+                  <p className="text-lg">اللاعب الذي بدأ التبادل يحتاج لاختيار بطاقة من يده أولاً</p>
+                  <p className="text-sm text-purple-200 mt-2">بعد ذلك يمكن لأي لاعب آخر اختيار بطاقة للتبادل</p>
+                </div>
+              </div>
+            )}
+
+            {collectiveExchangePhase === 'initiator_choose' && currentPlayer.id === collectiveExchangeInitiator && (
+              <div>
+                <div className="text-center mb-6">
+                  <div className="text-yellow-300 text-xl mb-2">📝 اختر بطاقة للتبادل الجماعي</div>
+                  <p className="text-purple-200">اختر بطاقة من يدك لتبادلها مع لاعب آخر</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-purple-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي</h3>
+                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                      {myHand.map(card => (
+                        <div 
+                          key={card.id} 
+                          className="cursor-pointer transform hover:scale-105 transition-transform"
+                          onClick={() => handleCollectiveInitiatorChooseCard(card)}
+                        >
+                          {renderCollectiveExchangeCard(card, null, collectiveExchangeSelectedCard?.id === card.id, true)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4 text-center">تعليمات التبادل الجماعي</h3>
+                    <div className="space-y-4">
+                      <div className="bg-purple-600 p-3 rounded-lg">
+                        <h4 className="font-semibold text-yellow-300">📝 الخطوات:</h4>
+                        <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
+                          <li>اختر بطاقة من يدك للتبادل</li>
+                          <li>سيتم عرض البطاقة المختارة للاعبين الآخرين</li>
+                          <li>يمكن لأي لاعب آخر اختيار بطاقة للتبادل معك</li>
+                        </ol>
+                      </div>
+
+                      <div className="bg-yellow-900 bg-opacity-30 p-3 rounded-lg">
+                        <h4 className="font-semibold text-yellow-300">⚠️ ملاحظات:</h4>
+                        <ul className="list-disc list-inside text-sm mt-2 space-y-1">
+                          <li>أنت تختار البطاقة التي تريد التخلي عنها</li>
+                          <li>اللاعب الآخر سيختار البطاقة التي يعطيك إياها</li>
+                          <li>لا يمكنك إلغاء التبادل بعد اختيار البطاقة</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={handleCancelCollectiveExchange}
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 mx-auto"
+                  >
+                    <FaTimes /> إلغاء التبادل
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {collectiveExchangePhase === 'waiting_responder' && currentPlayer.id === collectiveExchangeInitiator && (
+              <div className="text-center">
+                <div className="text-yellow-300 text-xl mb-4">
+                  ✅ لقد اخترت بطاقتك
+                </div>
+                {collectiveExchangeSelectedCard && (
+                  <div className="bg-green-600 rounded-lg p-4 mb-4 max-w-md mx-auto">
+                    <div className="font-bold text-lg">البطاقة المختارة:</div>
+                    <div className="text-xl font-bold mt-2">{collectiveExchangeSelectedCard.name}</div>
+                    <div className="text-sm opacity-75">
+                      {collectiveExchangeSelectedCard.type === 'actor' ? 'ممثل' : 
+                       collectiveExchangeSelectedCard.type === 'movie' ? 'فيلم' : 
+                       collectiveExchangeSelectedCard.type === 'action' ? 'إجراء' : 'مخرج'}
+                    </div>
+                  </div>
+                )}
+                <div className="bg-purple-700 rounded-lg p-4">
+                  <p className="text-lg">⏳ بانتظار اللاعبين الآخرين لاختيار بطاقة للتبادل...</p>
+                  <p className="text-sm text-purple-200 mt-2">أول لاعب يختار بطاقة سيكون شريكك في التبادل</p>
+                </div>
+              </div>
+            )}
+
+            {collectiveExchangePhase === 'responder_choose' && currentPlayer.id !== collectiveExchangeInitiator && (
+              <div>
+                <div className="text-center mb-6">
+                  <div className="text-yellow-300 text-xl mb-2">🔄 التبادل الجماعي</div>
+                  <p className="text-purple-200">
+                    {collectiveExchangeInitiatorPlayer?.name || 'اللاعب'} يريد تبادل بطاقته:
+                  </p>
+                  {collectiveExchangeSelectedCard && (
+                    <div className="bg-purple-600 rounded-lg p-3 mt-2 max-w-md mx-auto">
+                      <div className="font-bold text-lg">{collectiveExchangeSelectedCard.name}</div>
+                      <div className="text-sm opacity-75">
+                        {collectiveExchangeSelectedCard.type === 'actor' ? 'ممثل' : 
+                         collectiveExchangeSelectedCard.type === 'movie' ? 'فيلم' : 
+                         collectiveExchangeSelectedCard.type === 'action' ? 'إجراء' : 'مخرج'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-purple-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4 text-center">اختر بطاقة للتبادل</h3>
+                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                      {myHand.map(card => (
+                        <div 
+                          key={card.id} 
+                          className="cursor-pointer transform hover:scale-105 transition-transform"
+                          onClick={() => handleCollectiveExchangeRespond(card)}
+                        >
+                          {renderCollectiveExchangeCard(card, null, collectiveExchangeTargetCard?.id === card.id)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4 text-center">تفاصيل التبادل</h3>
+                    <div className="space-y-4">
+                      <div className="bg-purple-600 p-3 rounded-lg">
+                        <h4 className="font-semibold text-yellow-300">🔄 ماذا سيحدث:</h4>
+                        <ul className="list-disc list-inside text-sm mt-2 space-y-1">
+                          <li>ستعطي البطاقة المختارة لـ {collectiveExchangeInitiatorPlayer?.name || 'اللاعب'}</li>
+                          <li>ستحصل على بطاقة {collectiveExchangeSelectedCard?.name} منه</li>
+                          <li>التبادل نهائي ولا يمكن التراجع عنه</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-green-900 bg-opacity-30 p-3 rounded-lg">
+                        <h4 className="font-semibold text-green-300">💡 نصيحة:</h4>
+                        <p className="text-sm mt-2">
+                          اختر بطاقة لا تحتاجها أو تريد استبدالها ببطاقة {collectiveExchangeSelectedCard?.type === 'actor' ? 'ممثل' : 'فيلم'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {collectiveExchangePhase === 'completed' && (
+              <div className="text-center">
+                <div className="text-green-300 text-xl mb-4">
+                  ✅ تم إكمال التبادل
+                </div>
+                <div className="bg-purple-700 rounded-lg p-4">
+                  <p className="text-lg">جاري معالجة التبادل...</p>
+                  <p className="text-sm text-purple-200 mt-2">سيتم تحديث البطاقات قريباً</p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 text-center">
+              {/* <button
+                onClick={() => setShowCollectiveExchangeModal(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+                disabled={collectiveExchangePhase === 'initiator_choose' && currentPlayer.id === collectiveExchangeInitiator}
+              >
+                إغلاق النافذة
+              </button> */}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exchange Modal */}
+      {showExchangeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-blue-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-center text-white">هات و خد - تبادل البطاقات</h2>
+              <p className="text-blue-200 text-center">
+                بدأ بواسطة: {exchangeInitiatorPlayer?.name || 'لاعب'}
+              </p>
+            </div>
+
+            {exchangePhase === 'waiting' && (
+              <div className="text-center">
+                <div className="text-yellow-300 text-xl mb-4">
+                  ⏳ بانتظار {exchangeInitiatorPlayer?.name || 'اللاعب'} لاختيار بطاقته...
+                </div>
+                <div className="bg-blue-700 rounded-lg p-4 mb-4">
+                  <p className="text-lg">اللاعب الذي بدأ التبادل يحتاج لاختيار بطاقة من يده أولاً</p>
+                  <p className="text-sm text-blue-200 mt-2">بعد ذلك يمكن لأي لاعب آخر اختيار بطاقة للتبادل</p>
+                </div>
+              </div>
+            )}
+
+            {exchangePhase === 'initiator_choose' && currentPlayer.id === exchangeInitiator && (
+              <div>
+                <div className="text-center mb-6">
+                  <div className="text-yellow-300 text-xl mb-2">📝 اختر بطاقة للتبادل</div>
+                  <p className="text-blue-200">اختر بطاقة من يدك لتبادلها مع لاعب آخر</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-blue-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي</h3>
+                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                      {myHand.map(card => (
+                        <div 
+                          key={card.id} 
+                          className="cursor-pointer transform hover:scale-105 transition-transform"
+                          onClick={() => handleInitiatorChooseCard(card)}
+                        >
+                          {renderExchangeCard(card, null, exchangeSelectedCard?.id === card.id, true)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4 text-center">تعليمات</h3>
+                    <div className="space-y-4">
+                      <div className="bg-blue-600 p-3 rounded-lg">
+                        <h4 className="font-semibold text-yellow-300">📝 الخطوات:</h4>
+                        <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
+                          <li>اختر بطاقة من يدك للتبادل</li>
+                          <li>سيتم عرض البطاقة المختارة للاعبين الآخرين</li>
+                          <li>يمكن لأي لاعب آخر اختيار بطاقة للتبادل معك</li>
+                        </ol>
+                      </div>
+
+                      <div className="bg-yellow-900 bg-opacity-30 p-3 rounded-lg">
+                        <h4 className="font-semibold text-yellow-300">⚠️ ملاحظات:</h4>
+                        <ul className="list-disc list-inside text-sm mt-2 space-y-1">
+                          <li>أنت تختار البطاقة التي تريد التخلي عنها</li>
+                          <li>اللاعب الآخر سيختار البطاقة التي يعطيك إياها</li>
+                          <li>لا يمكنك إلغاء التبادل بعد اختيار البطاقة</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* <div className="mt-6 text-center">
+                  <button
+                    onClick={handleCancelExchange}
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 mx-auto"
+                  >
+                    <FaTimes /> إلغاء التبادل
+                  </button>
+                </div> */}
+              </div>
+            )}
+
+            {exchangePhase === 'waiting_responder' && currentPlayer.id === exchangeInitiator && (
+              <div className="text-center">
+                <div className="text-yellow-300 text-xl mb-4">
+                  ✅ لقد اخترت بطاقتك
+                </div>
+                {exchangeSelectedCard && (
+                  <div className="bg-green-600 rounded-lg p-4 mb-4 max-w-md mx-auto">
+                    <div className="font-bold text-lg">البطاقة المختارة:</div>
+                    <div className="text-xl font-bold mt-2">{exchangeSelectedCard.name}</div>
+                    <div className="text-sm opacity-75">
+                      {exchangeSelectedCard.type === 'actor' ? 'ممثل' : 
+                       exchangeSelectedCard.type === 'movie' ? 'فيلم' : 
+                       exchangeSelectedCard.type === 'action' ? 'إجراء' : 'مخرج'}
+                    </div>
+                  </div>
+                )}
+                <div className="bg-blue-700 rounded-lg p-4">
+                  <p className="text-lg">⏳ بانتظار اللاعبين الآخرين لاختيار بطاقة للتبادل...</p>
+                  <p className="text-sm text-blue-200 mt-2">أول لاعب يختار بطاقة سيكون شريكك في التبادل</p>
+                </div>
+              </div>
+            )}
+
+            {exchangePhase === 'responder_choose' && currentPlayer.id !== exchangeInitiator && (
+              <div>
+                <div className="text-center mb-6">
+                  <div className="text-yellow-300 text-xl mb-2">🔄 تبادل البطاقات</div>
+                  <p className="text-blue-200">
+                    {exchangeInitiatorPlayer?.name || 'اللاعب'} يريد تبادل بطاقته:
+                  </p>
+                  {exchangeSelectedCard && (
+                    <div className="bg-blue-600 rounded-lg p-3 mt-2 max-w-md mx-auto">
+                      <div className="font-bold text-lg">{exchangeSelectedCard.name}</div>
+                      <div className="text-sm opacity-75">
+                        {exchangeSelectedCard.type === 'actor' ? 'ممثل' : 
+                         exchangeSelectedCard.type === 'movie' ? 'فيلم' : 
+                         exchangeSelectedCard.type === 'action' ? 'إجراء' : 'مخرج'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-blue-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4 text-center">اختر بطاقة للتبادل</h3>
+                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                      {myHand.map(card => (
+                        <div 
+                          key={card.id} 
+                          className="cursor-pointer transform hover:scale-105 transition-transform"
+                          onClick={() => handleResponderChooseCard(card)}
+                        >
+                          {renderExchangeCard(card, null, exchangeTargetCard?.id === card.id)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4 text-center">تفاصيل التبادل</h3>
+                    <div className="space-y-4">
+                      <div className="bg-blue-600 p-3 rounded-lg">
+                        <h4 className="font-semibold text-yellow-300">🔄 ماذا سيحدث:</h4>
+                        <ul className="list-disc list-inside text-sm mt-2 space-y-1">
+                          <li>ستعطي البطاقة المختارة لـ {exchangeInitiatorPlayer?.name || 'اللاعب'}</li>
+                          <li>ستحصل على بطاقة {exchangeSelectedCard?.name} منه</li>
+                          <li>التبادل نهائي ولا يمكن التراجع عنه</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-green-900 bg-opacity-30 p-3 rounded-lg">
+                        <h4 className="font-semibold text-green-300">💡 نصيحة:</h4>
+                        <p className="text-sm mt-2">
+                          اختر بطاقة لا تحتاجها أو تريد استبدالها ببطاقة {exchangeSelectedCard?.type === 'actor' ? 'ممثل' : 'فيلم'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {exchangePhase === 'completed' && (
+              <div className="text-center">
+                <div className="text-green-300 text-xl mb-4">
+                  ✅ تم إكمال التبادل
+                </div>
+                <div className="bg-blue-700 rounded-lg p-4">
+                  <p className="text-lg">جاري معالجة التبادل...</p>
+                  <p className="text-sm text-blue-200 mt-2">سيتم تحديث البطاقات قريباً</p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 text-center">
+              {/* <button
+                onClick={() => setShowExchangeModal(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+                disabled={exchangePhase === 'initiator_choose' && currentPlayer.id === exchangeInitiator}
+              >
+                إغلاق النافذة
+              </button> */}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shake Square Modal */}
       {showShakeSquare && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-indigo-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -681,49 +1408,45 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Section: My Cards and Shake Button */}
               <div className="bg-indigo-700 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي</h3>
                 
                 <div className="mb-4">
                   <h4 className="font-semibold mb-2">بطاقاتك الحالية ({myHand.length}):</h4>
-                  <div className="overflow-y-auto h-48">
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                     {myHand.map(card => (
-                      <div key={card.id} className="mb-2">
+                      <div key={card.id}>
                         {renderShakeCard(card)}
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* SHOW BUTTON ONLY IF NO PLAYER HAS PLACED CARDS YET - FIXED LOGIC */}
                 {canPlaceCardsInShake && (
                   <button
                     onClick={handlePlaceAllCardsInShake}
-                    className="w-full py-3 rounded-lg font-bold bg-red-600 hover:bg-red-700"
+                    className="w-full py-3 rounded-lg font-bold bg-red-600 hover:bg-red-700 text-white"
                   >
                     🎯 وضع كل البطاقات ({myHand.length}) وسحب 5 بطاقات جديدة
                   </button>
                 )}
 
-                {/* SHOW MESSAGE IF PLAYER HAS ALREADY PLACED CARDS */}
                 {shakePlacedCards[currentPlayer.id] && (
-                  <div className="text-center text-green-400 font-bold">
+                  <div className="text-center text-green-400 font-bold mt-2">
                     ✓ لقد وضعت كل بطاقاتك
                   </div>
                 )}
 
-                {/* SHOW MESSAGE IF ANOTHER PLAYER HAS PLACED CARDS */}
                 {anyPlayerPlacedCards && !shakePlacedCards[currentPlayer.id] && currentPlayer.id !== shakeInitiator && (
-                  <div className="text-center text-yellow-400 font-bold">
+                  <div className="text-center text-yellow-400 font-bold mt-2">
                     ⚠️ تم وضع البطاقات مسبقاً من قبل لاعب آخر
                   </div>
                 )}
 
-                {/* SHOW MESSAGE FOR INITIATOR */}
                 {currentPlayer.id === shakeInitiator && (
-                  <div className="text-center text-gray-400 font-bold">
+                  <div className="text-center text-gray-400 font-bold mt-2">
                     ❌ لا يمكنك وضع بطاقاتك (أنت من بدأ النفض)
                   </div>
                 )}
@@ -782,10 +1505,20 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div className="mt-6 text-center">
                 <button
                   onClick={handleCompleteShake}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
+                  disabled={!shakeCanComplete}
+                  className={`px-6 py-3 rounded-lg font-bold ${
+                    shakeCanComplete 
+                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                      : 'bg-gray-600 cursor-not-allowed text-gray-300'
+                  }`}
                 >
-                  إتمام العملية
+                  {shakeCanComplete ? 'إتمام العملية' : '⏳ بانتظار وضع البطاقات...'}
                 </button>
+                {!shakeCanComplete && (
+                  <p className="text-yellow-300 text-sm mt-2">
+                    يجب أن يضع أحد اللاعبين بطاقاته أولاً
+                  </p>
+                )}
               </div>
             )}
 
@@ -857,7 +1590,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     <span> - {
                       selectedCardForView.subtype === 'joker' ? 'جوكر' : 
                       selectedCardForView.subtype === 'skip' ? 'تخطي' :
-                      selectedCardForView.subtype === 'shake' ? 'نفض نفسك' : 'إجراء'
+                      selectedCardForView.subtype === 'shake' ? 'نفض نفسك' : 
+                      selectedCardForView.subtype === 'exchange' ? 'هات و خد' : 
+                      selectedCardForView.subtype === 'collective_exchange' ? 'كل واحد يطلع باللي معاه' : 'إجراء'
                     }</span>
                   )}
                 </p>
@@ -886,7 +1621,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* Challenge Modal - FIXED: Working like old code */}
+      {/* Challenge Modal */}
       {gameState.challengeInProgress && gameState.declaredCategory && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
@@ -1114,10 +1849,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
                   card.type === 'action' && card.subtype === 'joker' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
                   card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
+                  card.type === 'action' && card.subtype === 'exchange' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
+                  card.type === 'action' && card.subtype === 'collective_exchange' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
                   card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
                   card.type === 'movie' ? ' bg-gradient-to-r ' : 'bg-indigo-600'
                 } text-black`}
-                draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip' || card.subtype === 'shake')}
+                draggable={!isMobile && isMyTurn && buttonsEnabled && (card.type !== 'action' || card.subtype === 'joker' || card.subtype === 'skip' || card.subtype === 'shake' || card.subtype === 'exchange' || card.subtype === 'collective_exchange')}
                 onDragStart={(e) => handleDragStart(e, card)}
               >
                 {/* Top section: Image and card info */}
@@ -1129,7 +1866,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       {card.type === 'action' ? `إجراء: ${
                         card.subtype === 'joker' ? 'جوكر' :
                         card.subtype === 'skip' ? 'تخطي' :
-                        card.subtype === 'shake' ? 'نفض نفسك' : card.subtype
+                        card.subtype === 'shake' ? 'نفض نفسك' :
+                        card.subtype === 'exchange' ? 'هات و خد' :
+                        card.subtype === 'collective_exchange' ? 'كل واحد يطلع باللي معاه' : card.subtype
                       }` : 
                        card.type === 'actor' ? 'ممثل' :
                        card.type === 'movie' ? 'فيلم' : 'مخرج'}
@@ -1142,6 +1881,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                     )}
                     {card.type === 'action' && card.subtype === 'shake' && (
                       <div className="text-sm opacity-75 mt-1 text-center">يمكن للجميع وضع كل بطاقاتهم</div>
+                    )}
+                    {card.type === 'action' && card.subtype === 'exchange' && (
+                      <div className="text-sm opacity-75 mt-1 text-center">تبادل بطاقة مع لاعب آخر</div>
+                    )}
+                    {card.type === 'action' && card.subtype === 'collective_exchange' && (
+                      <div className="text-sm opacity-75 mt-1 text-center">تبادل جماعي مع لاعب آخر</div>
                     )}
                     {card.type === 'movie' && (
                       <div className="text-sm opacity-75 mt-1 text-center">🎬 انقر للمشاهدة</div>
@@ -1192,6 +1937,26 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       }`}
                     >
                       <FaUser /> نفض نفسك
+                    </button>
+                  ) : card.type === 'action' && card.subtype === 'exchange' ? (
+                    <button
+                      onClick={() => handleUseExchangeCard(card.id)}
+                      disabled={!isMyTurn || !buttonsEnabled}
+                      className={`px-4 py-2 rounded flex w-full shadow-md gap-x-4 text-lg h-[50px] font-bold items-center justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#8B4513] to-[#D2691E] hover:text-black' : 'bg-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <FaExchangeAlt /> هات و خد
+                    </button>
+                  ) : card.type === 'action' && card.subtype === 'collective_exchange' ? (
+                    <button
+                      onClick={() => handleUseCollectiveExchangeCard(card.id)}
+                      disabled={!isMyTurn || !buttonsEnabled}
+                      className={`px-4 py-2 rounded flex w-full shadow-md gap-x-4 text-lg h-[50px] font-bold items-center justify-center ${
+                        isMyTurn && buttonsEnabled ? 'bg-gradient-to-r from-[#6b21a8] to-[#a855f7] hover:text-black' : 'bg-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <FaUsers /> كل واحد يطلع
                     </button>
                   ) : (
                     <button
@@ -1374,6 +2139,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                         topTableCard.type === 'action' && topTableCard.subtype === 'skip' ? 'bg-red-600' :
                         topTableCard.type === 'action' && topTableCard.subtype === 'joker' ? 'bg-cyan-600' :
                         topTableCard.type === 'action' && topTableCard.subtype === 'shake' ? 'bg-red-700' :
+                        topTableCard.type === 'action' && topTableCard.subtype === 'exchange' ? 'bg-orange-600' :
+                        topTableCard.type === 'action' && topTableCard.subtype === 'collective_exchange' ? 'bg-purple-600' :
                         topTableCard.type === 'actor' ? 'bg-yellow-600' :
                         topTableCard.type === 'movie' ? 'bg-green-600' : 'bg-indigo-600'
                       }`}
@@ -1392,7 +2159,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                             {topTableCard.type === 'action' ? `إجراء: ${
                               topTableCard.subtype === 'joker' ? 'جوكر' :
                               topTableCard.subtype === 'skip' ? 'تخطي' :
-                              topTableCard.subtype === 'shake' ? 'نفض نفسك' : topTableCard.subtype
+                              topTableCard.subtype === 'shake' ? 'نفض نفسك' :
+                              topTableCard.subtype === 'exchange' ? 'هات و خد' :
+                              topTableCard.subtype === 'collective_exchange' ? 'كل واحد يطلع باللي معاه' : topTableCard.subtype
                             }` : 
                              topTableCard.type === 'actor' ? 'ممثل' : 
                              topTableCard.type === 'movie' ? 'فيلم' : 'مخرج'}
