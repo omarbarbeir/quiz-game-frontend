@@ -159,6 +159,30 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
+  // Get all available cards for exchange (hand + circles)
+  const getAllExchangeCards = () => {
+    if (!gameState || !currentPlayer) return [];
+    
+    const myHand = gameState.playerHands[currentPlayer.id] || [];
+    const myCircles = gameState.playerCircles[currentPlayer.id] || [];
+    
+    // Get all cards from hand
+    const handCards = myHand.map(card => ({
+      ...card,
+      source: 'hand'
+    }));
+    
+    // Get all cards from circles (filter out null)
+    const circleCards = myCircles
+      .filter(card => card !== null)
+      .map(card => ({
+        ...card,
+        source: 'circle'
+      }));
+    
+    return [...handCards, ...circleCards];
+  };
+
   // Use exchange card
   const handleUseExchangeCard = (cardId) => {
     if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
@@ -190,7 +214,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.emit('card_game_exchange_choose_card', {
         roomCode,
         playerId: currentPlayer.id,
-        cardId: card.id
+        cardId: card.id,
+        source: card.source
       });
       setExchangeSelectedCard(card);
       setExchangePhase('waiting_responder');
@@ -204,7 +229,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.emit('card_game_collective_exchange_choose_card', {
         roomCode,
         playerId: currentPlayer.id,
-        cardId: card.id
+        cardId: card.id,
+        source: card.source
       });
       setCollectiveExchangeSelectedCard(card);
       setCollectiveExchangePhase('waiting_responder');
@@ -218,7 +244,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.emit('card_game_exchange_respond', {
         roomCode,
         playerId: currentPlayer.id,
-        cardId: card.id
+        cardId: card.id,
+        source: card.source
       });
       setExchangeTargetCard(card);
       setExchangePhase('completed');
@@ -232,7 +259,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.emit('card_game_collective_exchange_respond', {
         roomCode,
         playerId: currentPlayer.id,
-        cardId: card.id
+        cardId: card.id,
+        source: card.source
       });
       setCollectiveExchangeTargetCard(card);
       setCollectiveExchangePhase('completed');
@@ -416,14 +444,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   };
 
-  // Render exchange card - shows card details
+  // Render exchange card - shows card details with source indicator
   const renderExchangeCard = (card, onClick = null, isSelected = false, isInitiator = false) => {
+    const isCircleCard = card.source === 'circle';
+    
     return (
       <div className="relative">
         <div 
           className={`p-3 rounded-lg mb-2 transition-all cursor-pointer ${
-            isSelected ? 'ring-4 ring-yellow-400 bg-blue-700' : 'bg-blue-600 hover:bg-blue-500'
-          } flex flex-col items-center`}
+            isSelected ? 'ring-4 ring-yellow-400' : ''
+          } ${isCircleCard ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'} flex flex-col items-center`}
           onClick={onClick}
         >
           <div className="font-bold text-center text-lg mb-2">Card</div>
@@ -435,6 +465,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           <div className="text-sm font-semibold text-center mt-2 text-white">
             {card.name}
           </div>
+          {isCircleCard && (
+            <div className="text-xs text-yellow-300 font-bold mt-1">
+              ⭕ في الدائرة
+            </div>
+          )}
           {isSelected && (
             <div className="text-xs text-yellow-300 font-bold mt-1">
               {isInitiator ? '✓ مختارة للتبادل' : '✓ مختارة'}
@@ -447,12 +482,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   // Render collective exchange card - different color (purple) BUT SAME SYSTEM
   const renderCollectiveExchangeCard = (card, onClick = null, isSelected = false, isInitiator = false) => {
+    const isCircleCard = card.source === 'circle';
+    
     return (
       <div className="relative">
         <div 
           className={`p-3 rounded-lg mb-2 transition-all cursor-pointer ${
-            isSelected ? 'ring-4 ring-yellow-400 bg-purple-700' : 'bg-purple-600 hover:bg-purple-500'
-          } flex flex-col items-center`}
+            isSelected ? 'ring-4 ring-yellow-400' : ''
+          } ${isCircleCard ? 'bg-green-600 hover:bg-green-500' : 'bg-purple-600 hover:bg-purple-500'} flex flex-col items-center`}
           onClick={onClick}
         >
           <div className="font-bold text-center text-lg mb-2">Card</div>
@@ -464,6 +501,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           <div className="text-sm font-semibold text-center mt-2 text-white">
             {card.name}
           </div>
+          {isCircleCard && (
+            <div className="text-xs text-yellow-300 font-bold mt-1">
+              ⭕ في الدائرة
+            </div>
+          )}
           {isSelected && (
             <div className="text-xs text-yellow-300 font-bold mt-1">
               {isInitiator ? '✓ مختارة للتبادل' : '✓ مختارة'}
@@ -913,6 +955,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const myLevel = gameState.playerLevels?.[currentPlayer.id] || 1;
   const buttonsEnabled = areButtonsEnabled();
 
+  // Get all exchange cards (hand + circles)
+  const allExchangeCards = getAllExchangeCards();
+
   // Get shake initiator name
   const shakeInitiatorPlayer = players.find(p => p.id === shakeInitiator);
   // Get exchange initiator name
@@ -1035,7 +1080,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   ⏳ بانتظار {collectiveExchangeInitiatorPlayer?.name || 'اللاعب'} لاختيار بطاقته...
                 </div>
                 <div className="bg-purple-700 rounded-lg p-4 mb-4">
-                  <p className="text-lg">اللاعب الذي بدأ التبادل يحتاج لاختيار بطاقة من يده أولاً</p>
+                  <p className="text-lg">اللاعب الذي بدأ التبادل يحتاج لاختيار بطاقة من يده أو دوائره أولاً</p>
                   <p className="text-sm text-purple-200 mt-2">بعد ذلك يمكن لأي لاعب آخر اختيار بطاقة للتبادل</p>
                 </div>
               </div>
@@ -1045,22 +1090,29 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div>
                 <div className="text-center mb-6">
                   <div className="text-yellow-300 text-xl mb-2">📝 اختر بطاقة للتبادل الجماعي</div>
-                  <p className="text-purple-200">اختر بطاقة من يدك لتبادلها مع لاعب آخر</p>
+                  <p className="text-purple-200">اختر بطاقة من يدك أو دوائرك لتبادلها مع لاعب آخر</p>
+                  <p className="text-green-300 text-sm mt-1">⭕ البطاقات الخضراء موجودة في دوائرك</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-purple-700 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي</h3>
+                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي (اليد والدوائر)</h3>
                     <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                      {myHand.map(card => (
-                        <div 
-                          key={card.id} 
-                          className="cursor-pointer transform hover:scale-105 transition-transform"
-                          onClick={() => handleCollectiveInitiatorChooseCard(card)}
-                        >
-                          {renderCollectiveExchangeCard(card, null, collectiveExchangeSelectedCard?.id === card.id, true)}
+                      {allExchangeCards.length === 0 ? (
+                        <div className="text-center text-gray-400 p-4">
+                          لا توجد بطاقات متاحة للتبادل
                         </div>
-                      ))}
+                      ) : (
+                        allExchangeCards.map(card => (
+                          <div 
+                            key={card.id} 
+                            className="cursor-pointer transform hover:scale-105 transition-transform"
+                            onClick={() => handleCollectiveInitiatorChooseCard(card)}
+                          >
+                            {renderCollectiveExchangeCard(card, null, collectiveExchangeSelectedCard?.id === card.id, true)}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 
@@ -1070,16 +1122,17 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       <div className="bg-purple-600 p-3 rounded-lg">
                         <h4 className="font-semibold text-yellow-300">📝 الخطوات:</h4>
                         <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
-                          <li>اختر بطاقة من يدك للتبادل</li>
-                          <li>سيتم عرض البطاقة المختارة للاعبين الآخرين</li>
-                          <li>يمكن لأي لاعب آخر اختيار بطاقة للتبادل معك</li>
+                          <li>اخنتر لاعب للبتادل معه</li>
+                          <li>يجب ان تقول اسم الفيلم او الممثل اللي انت عايزه من اللاعب الآخر</li>
+                          <li>اذا كان اللاعب الآخر معاه الكارت سوف يعطيه لك و انت تعطيه كارت من كروتك بإختيارك انت وليس من إختيار اللآعب الآخر</li>
+                          <li>اذا لم يكن الكارت الذي قولته مع اللاعب الآخر، سوف تضغط علي زرار إلغاء التبادل و ينتقل الدور للاعب التالي</li>
                         </ol>
                       </div>
 
                       <div className="bg-yellow-900 bg-opacity-30 p-3 rounded-lg">
                         <h4 className="font-semibold text-yellow-300">⚠️ ملاحظات:</h4>
                         <ul className="list-disc list-inside text-sm mt-2 space-y-1">
-                          <li>أنت تختار البطاقة التي تريد التخلي عنها</li>
+                          <li>يمكنك تبادل البطاقات من يدك أو دوائرك</li>
                           <li>اللاعب الآخر سيختار البطاقة التي يعطيك إياها</li>
                           <li>لا يمكنك إلغاء التبادل بعد اختيار البطاقة</li>
                         </ul>
@@ -1113,6 +1166,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                        collectiveExchangeSelectedCard.type === 'movie' ? 'فيلم' : 
                        collectiveExchangeSelectedCard.type === 'action' ? 'إجراء' : 'مخرج'}
                     </div>
+                    {collectiveExchangeSelectedCard.source === 'circle' && (
+                      <div className="text-xs text-yellow-300 mt-1">⭕ كانت في دائرة</div>
+                    )}
                   </div>
                 )}
                 <div className="bg-purple-700 rounded-lg p-4">
@@ -1137,6 +1193,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                          collectiveExchangeSelectedCard.type === 'movie' ? 'فيلم' : 
                          collectiveExchangeSelectedCard.type === 'action' ? 'إجراء' : 'مخرج'}
                       </div>
+                      {collectiveExchangeSelectedCard.source === 'circle' && (
+                        <div className="text-xs text-yellow-300 mt-1">⭕ كانت في دائرة</div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1145,15 +1204,21 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   <div className="bg-purple-700 rounded-lg p-4">
                     <h3 className="text-lg font-semibold mb-4 text-center">اختر بطاقة للتبادل</h3>
                     <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                      {myHand.map(card => (
-                        <div 
-                          key={card.id} 
-                          className="cursor-pointer transform hover:scale-105 transition-transform"
-                          onClick={() => handleCollectiveExchangeRespond(card)}
-                        >
-                          {renderCollectiveExchangeCard(card, null, collectiveExchangeTargetCard?.id === card.id)}
+                      {allExchangeCards.length === 0 ? (
+                        <div className="text-center text-gray-400 p-4">
+                          لا توجد بطاقات متاحة للتبادل
                         </div>
-                      ))}
+                      ) : (
+                        allExchangeCards.map(card => (
+                          <div 
+                            key={card.id} 
+                            className="cursor-pointer transform hover:scale-105 transition-transform"
+                            onClick={() => handleCollectiveExchangeRespond(card)}
+                          >
+                            {renderCollectiveExchangeCard(card, null, collectiveExchangeTargetCard?.id === card.id)}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 
@@ -1223,7 +1288,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   ⏳ بانتظار {exchangeInitiatorPlayer?.name || 'اللاعب'} لاختيار بطاقته...
                 </div>
                 <div className="bg-blue-700 rounded-lg p-4 mb-4">
-                  <p className="text-lg">اللاعب الذي بدأ التبادل يحتاج لاختيار بطاقة من يده أولاً</p>
+                  <p className="text-lg">اللاعب الذي بدأ التبادل يحتاج لاختيار بطاقة من يده أو دوائره أولاً</p>
                   <p className="text-sm text-blue-200 mt-2">بعد ذلك يمكن لأي لاعب آخر اختيار بطاقة للتبادل</p>
                 </div>
               </div>
@@ -1233,22 +1298,29 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div>
                 <div className="text-center mb-6">
                   <div className="text-yellow-300 text-xl mb-2">📝 اختر بطاقة للتبادل</div>
-                  <p className="text-blue-200">اختر بطاقة من يدك لتبادلها مع لاعب آخر</p>
+                  <p className="text-blue-200">اختر بطاقة من يدك أو دوائرك لتبادلها مع لاعب آخر</p>
+                  <p className="text-green-300 text-sm mt-1">⭕ البطاقات الخضراء موجودة في دوائرك</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-700 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي</h3>
+                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي (اليد والدوائر)</h3>
                     <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                      {myHand.map(card => (
-                        <div 
-                          key={card.id} 
-                          className="cursor-pointer transform hover:scale-105 transition-transform"
-                          onClick={() => handleInitiatorChooseCard(card)}
-                        >
-                          {renderExchangeCard(card, null, exchangeSelectedCard?.id === card.id, true)}
+                      {allExchangeCards.length === 0 ? (
+                        <div className="text-center text-gray-400 p-4">
+                          لا توجد بطاقات متاحة للتبادل
                         </div>
-                      ))}
+                      ) : (
+                        allExchangeCards.map(card => (
+                          <div 
+                            key={card.id} 
+                            className="cursor-pointer transform hover:scale-105 transition-transform"
+                            onClick={() => handleInitiatorChooseCard(card)}
+                          >
+                            {renderExchangeCard(card, null, exchangeSelectedCard?.id === card.id, true)}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 
@@ -1258,7 +1330,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       <div className="bg-blue-600 p-3 rounded-lg">
                         <h4 className="font-semibold text-yellow-300">📝 الخطوات:</h4>
                         <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
-                          <li>اختر بطاقة من يدك للتبادل</li>
+                          <li>اختر بطاقة من يدك أو دوائرك للتبادل</li>
                           <li>سيتم عرض البطاقة المختارة للاعبين الآخرين</li>
                           <li>يمكن لأي لاعب آخر اختيار بطاقة للتبادل معك</li>
                         </ol>
@@ -1267,7 +1339,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       <div className="bg-yellow-900 bg-opacity-30 p-3 rounded-lg">
                         <h4 className="font-semibold text-yellow-300">⚠️ ملاحظات:</h4>
                         <ul className="list-disc list-inside text-sm mt-2 space-y-1">
-                          <li>أنت تختار البطاقة التي تريد التخلي عنها</li>
+                          <li>يمكنك تبادل البطاقات من يدك أو دوائرك</li>
                           <li>اللاعب الآخر سيختار البطاقة التي يعطيك إياها</li>
                           <li>لا يمكنك إلغاء التبادل بعد اختيار البطاقة</li>
                         </ul>
@@ -1276,14 +1348,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   </div>
                 </div>
 
-                {/* <div className="mt-6 text-center">
+                <div className="mt-6 text-center">
                   <button
                     onClick={handleCancelExchange}
                     className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 mx-auto"
                   >
                     <FaTimes /> إلغاء التبادل
                   </button>
-                </div> */}
+                </div>
               </div>
             )}
 
@@ -1301,6 +1373,9 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                        exchangeSelectedCard.type === 'movie' ? 'فيلم' : 
                        exchangeSelectedCard.type === 'action' ? 'إجراء' : 'مخرج'}
                     </div>
+                    {exchangeSelectedCard.source === 'circle' && (
+                      <div className="text-xs text-yellow-300 mt-1">⭕ كانت في دائرة</div>
+                    )}
                   </div>
                 )}
                 <div className="bg-blue-700 rounded-lg p-4">
@@ -1314,10 +1389,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div>
                 <div className="text-center mb-6">
                   <div className="text-yellow-300 text-xl mb-2">🔄 تبادل البطاقات</div>
-                  <p className="text-blue-200">
+                  {/* <p className="text-blue-200">
                     {exchangeInitiatorPlayer?.name || 'اللاعب'} يريد تبادل بطاقته:
-                  </p>
-                  {exchangeSelectedCard && (
+                  </p> */}
+                  {/* {exchangeSelectedCard && (
                     <div className="bg-blue-600 rounded-lg p-3 mt-2 max-w-md mx-auto">
                       <div className="font-bold text-lg">{exchangeSelectedCard.name}</div>
                       <div className="text-sm opacity-75">
@@ -1325,23 +1400,32 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                          exchangeSelectedCard.type === 'movie' ? 'فيلم' : 
                          exchangeSelectedCard.type === 'action' ? 'إجراء' : 'مخرج'}
                       </div>
+                      {exchangeSelectedCard.source === 'circle' && (
+                        <div className="text-xs text-yellow-300 mt-1">⭕ كانت في دائرة</div>
+                      )}
                     </div>
-                  )}
+                  )} */}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-700 rounded-lg p-4">
                     <h3 className="text-lg font-semibold mb-4 text-center">اختر بطاقة للتبادل</h3>
                     <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                      {myHand.map(card => (
-                        <div 
-                          key={card.id} 
-                          className="cursor-pointer transform hover:scale-105 transition-transform"
-                          onClick={() => handleResponderChooseCard(card)}
-                        >
-                          {renderExchangeCard(card, null, exchangeTargetCard?.id === card.id)}
+                      {allExchangeCards.length === 0 ? (
+                        <div className="text-center text-gray-400 p-4">
+                          لا توجد بطاقات متاحة للتبادل
                         </div>
-                      ))}
+                      ) : (
+                        allExchangeCards.map(card => (
+                          <div 
+                            key={card.id} 
+                            className="cursor-pointer transform hover:scale-105 transition-transform"
+                            onClick={() => handleResponderChooseCard(card)}
+                          >
+                            {renderExchangeCard(card, null, exchangeTargetCard?.id === card.id)}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 
@@ -1382,13 +1466,13 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             )}
 
             <div className="mt-6 text-center">
-              {/* <button
+              <button
                 onClick={() => setShowExchangeModal(false)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
                 disabled={exchangePhase === 'initiator_choose' && currentPlayer.id === exchangeInitiator}
               >
                 إغلاق النافذة
-              </button> */}
+              </button>
             </div>
           </div>
         </div>
@@ -1849,8 +1933,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
                   card.type === 'action' && card.subtype === 'joker' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
                   card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
-                  card.type === 'action' && card.subtype === 'exchange' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
-                  card.type === 'action' && card.subtype === 'collective_exchange' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
+                  card.type === 'action' && card.subtype === 'exchange' ? 'bg-gradient-to-r from-[#8B4513] to-[#D2691E]' :
+                  card.type === 'action' && card.subtype === 'collective_exchange' ? 'bg-gradient-to-r from-[#6b21a8] to-[#a855f7]' :
                   card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
                   card.type === 'movie' ? ' bg-gradient-to-r ' : 'bg-indigo-600'
                 } text-black`}
