@@ -32,14 +32,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [exchangeTargetCard, setExchangeTargetCard] = useState(null);
   const [exchangeCompleted, setExchangeCompleted] = useState(false);
   const [exchangePhase, setExchangePhase] = useState('waiting');
+  const [exchangeWaitingWithCards, setExchangeWaitingWithCards] = useState(false);
 
-  // Collective exchange card states - NOW SAME AS REGULAR EXCHANGE
+  // Collective exchange card states
   const [showCollectiveExchangeModal, setShowCollectiveExchangeModal] = useState(false);
   const [collectiveExchangeInitiator, setCollectiveExchangeInitiator] = useState(null);
   const [collectiveExchangeActionCard, setCollectiveExchangeActionCard] = useState(null);
   const [collectiveExchangeSelectedCard, setCollectiveExchangeSelectedCard] = useState(null);
   const [collectiveExchangeTargetCard, setCollectiveExchangeTargetCard] = useState(null);
   const [collectiveExchangePhase, setCollectiveExchangePhase] = useState('waiting');
+  const [collectiveExchangeWaitingWithCards, setCollectiveExchangeWaitingWithCards] = useState(false);
 
   // Dice category banner state
   const [showDiceCategoryBanner, setShowDiceCategoryBanner] = useState(false);
@@ -95,7 +97,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setShakeCanComplete(false);
   };
 
-  // Exchange card events
+  // Exchange card events - UPDATED FOR NEW FLOW
   const handleOpenExchangeChooseCard = (data) => {
     console.log('🔄 Opening exchange choose card for initiator:', data);
     setShowExchangeModal(true);
@@ -105,10 +107,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setExchangeTargetCard(null);
     setExchangeCompleted(false);
     setExchangePhase('initiator_choose');
+    setExchangeWaitingWithCards(false);
   };
 
-  const handleOpenExchangeWaiting = (data) => {
-    console.log('🔄 Opening exchange waiting for other players:', data);
+  const handleOpenExchangeWaitingWithCards = (data) => {
+    console.log('🔄 Opening exchange waiting with cards for other players:', data);
     setShowExchangeModal(true);
     setExchangeInitiator(data.initiatorId);
     setExchangeActionCard(null);
@@ -116,6 +119,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setExchangeTargetCard(null);
     setExchangeCompleted(false);
     setExchangePhase('waiting');
+    setExchangeWaitingWithCards(true);
   };
 
   const handleExchangeInitiatorChosen = (data) => {
@@ -123,12 +127,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setExchangeSelectedCard(data.initiatorCard);
     if (currentPlayer.id === data.initiatorId) {
       setExchangePhase('waiting_responder');
+      setExchangeWaitingWithCards(false);
     } else {
       setExchangePhase('responder_choose');
+      setExchangeWaitingWithCards(false);
     }
   };
 
-  // Collective exchange events - NOW SAME AS REGULAR EXCHANGE
+  // Collective exchange events - UPDATED FOR NEW FLOW
   const handleOpenCollectiveExchangeChooseCard = (data) => {
     console.log('🔄 Opening collective exchange choose card for initiator:', data);
     setShowCollectiveExchangeModal(true);
@@ -137,16 +143,18 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setCollectiveExchangeSelectedCard(null);
     setCollectiveExchangeTargetCard(null);
     setCollectiveExchangePhase('initiator_choose');
+    setCollectiveExchangeWaitingWithCards(false);
   };
 
-  const handleOpenCollectiveExchangeWaiting = (data) => {
-    console.log('🔄 Opening collective exchange waiting for other players:', data);
+  const handleOpenCollectiveExchangeWaitingWithCards = (data) => {
+    console.log('🔄 Opening collective exchange waiting with cards for other players:', data);
     setShowCollectiveExchangeModal(true);
     setCollectiveExchangeInitiator(data.initiatorId);
     setCollectiveExchangeActionCard(null);
     setCollectiveExchangeSelectedCard(null);
     setCollectiveExchangeTargetCard(null);
     setCollectiveExchangePhase('waiting');
+    setCollectiveExchangeWaitingWithCards(true);
   };
 
   const handleCollectiveExchangeInitiatorChosen = (data) => {
@@ -154,8 +162,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setCollectiveExchangeSelectedCard(data.initiatorCard);
     if (currentPlayer.id === data.initiatorId) {
       setCollectiveExchangePhase('waiting_responder');
+      setCollectiveExchangeWaitingWithCards(false);
     } else {
       setCollectiveExchangePhase('responder_choose');
+      setCollectiveExchangeWaitingWithCards(false);
     }
   };
 
@@ -195,7 +205,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Use collective exchange card - NOW SAME AS REGULAR EXCHANGE
+  // Use collective exchange card
   const handleUseCollectiveExchangeCard = (cardId) => {
     if (gameState.currentTurn === currentPlayer?.id && areButtonsEnabled()) {
       console.log('🔄 Using collective exchange card:', cardId);
@@ -222,7 +232,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Initiator chooses card for collective exchange - NOW SAME AS REGULAR EXCHANGE
+  // Initiator chooses card for collective exchange
   const handleCollectiveInitiatorChooseCard = (card) => {
     if (currentPlayer.id === collectiveExchangeInitiator && collectiveExchangePhase === 'initiator_choose') {
       console.log('🔄 Collective exchange initiator choosing card:', card);
@@ -252,7 +262,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Responder chooses card for collective exchange - NOW SAME AS REGULAR EXCHANGE
+  // Responder chooses card for collective exchange
   const handleCollectiveExchangeRespond = (card) => {
     if (currentPlayer.id !== collectiveExchangeInitiator && collectiveExchangePhase === 'responder_choose') {
       console.log('🔄 Responder choosing card for collective exchange:', card);
@@ -278,7 +288,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Cancel collective exchange - NOW SAME AS REGULAR EXCHANGE
+  // Cancel collective exchange
   const handleCancelCollectiveExchange = () => {
     if (currentPlayer.id === collectiveExchangeInitiator) {
       socket.emit('card_game_collective_exchange_cancel', {
@@ -445,16 +455,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   };
 
   // Render exchange card - shows card details with source indicator
-  const renderExchangeCard = (card, onClick = null, isSelected = false, isInitiator = false) => {
+  const renderExchangeCard = (card, onClick = null, isSelected = false, isInitiator = false, isDisabled = false) => {
     const isCircleCard = card.source === 'circle';
     
     return (
       <div className="relative">
         <div 
-          className={`p-3 rounded-lg mb-2 transition-all cursor-pointer ${
+          className={`p-3 rounded-lg mb-2 transition-all ${isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
             isSelected ? 'ring-4 ring-yellow-400' : ''
           } ${isCircleCard ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'} flex flex-col items-center`}
-          onClick={onClick}
+          onClick={isDisabled ? null : onClick}
         >
           <div className="font-bold text-center text-lg mb-2">Card</div>
           <div className="text-xs text-center opacity-75">
@@ -473,6 +483,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           {isSelected && (
             <div className="text-xs text-yellow-300 font-bold mt-1">
               {isInitiator ? '✓ مختارة للتبادل' : '✓ مختارة'}
+            </div>
+          )}
+          {isDisabled && (
+            <div className="text-xs text-gray-300 font-bold mt-1">
+              ⏳ بانتظار اختيار اللاعب الآخر
             </div>
           )}
         </div>
@@ -481,16 +496,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   };
 
   // Render collective exchange card - different color (purple) BUT SAME SYSTEM
-  const renderCollectiveExchangeCard = (card, onClick = null, isSelected = false, isInitiator = false) => {
+  const renderCollectiveExchangeCard = (card, onClick = null, isSelected = false, isInitiator = false, isDisabled = false) => {
     const isCircleCard = card.source === 'circle';
     
     return (
       <div className="relative">
         <div 
-          className={`p-3 rounded-lg mb-2 transition-all cursor-pointer ${
+          className={`p-3 rounded-lg mb-2 transition-all ${isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
             isSelected ? 'ring-4 ring-yellow-400' : ''
           } ${isCircleCard ? 'bg-green-600 hover:bg-green-500' : 'bg-purple-600 hover:bg-purple-500'} flex flex-col items-center`}
-          onClick={onClick}
+          onClick={isDisabled ? null : onClick}
         >
           <div className="font-bold text-center text-lg mb-2">Card</div>
           <div className="text-xs text-center opacity-75">
@@ -509,6 +524,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           {isSelected && (
             <div className="text-xs text-yellow-300 font-bold mt-1">
               {isInitiator ? '✓ مختارة للتبادل' : '✓ مختارة'}
+            </div>
+          )}
+          {isDisabled && (
+            <div className="text-xs text-gray-300 font-bold mt-1">
+              ⏳ بانتظار اختيار اللاعب الآخر
             </div>
           )}
         </div>
@@ -573,7 +593,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Socket listeners
+  // Socket listeners - UPDATED FOR NEW EVENTS
   useEffect(() => {
     if (!socket) return;
 
@@ -665,15 +685,15 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setShakeCanComplete(false);
     };
 
-    // Exchange events
+    // Exchange events - UPDATED
     const handleExchangeChooseCard = (data) => {
       console.log('🔄 Exchange choose card for initiator:', data);
       handleOpenExchangeChooseCard(data);
     };
 
-    const handleExchangeWaiting = (data) => {
-      console.log('🔄 Exchange waiting for other players:', data);
-      handleOpenExchangeWaiting(data);
+    const handleExchangeWaitingWithCards = (data) => {
+      console.log('🔄 Exchange waiting with cards for other players:', data);
+      handleOpenExchangeWaitingWithCards(data);
     };
 
     const handleExchangeInitiatorChosenEvent = (data) => {
@@ -690,6 +710,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setExchangeTargetCard(null);
       setExchangeCompleted(false);
       setExchangePhase('waiting');
+      setExchangeWaitingWithCards(false);
     };
 
     const handleExchangeCancelled = (data) => {
@@ -701,17 +722,18 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setExchangeTargetCard(null);
       setExchangeCompleted(false);
       setExchangePhase('waiting');
+      setExchangeWaitingWithCards(false);
     };
 
-    // Collective exchange events - NOW SAME AS REGULAR EXCHANGE
+    // Collective exchange events - UPDATED
     const handleCollectiveExchangeChooseCard = (data) => {
       console.log('🔄 Collective exchange choose card for initiator:', data);
       handleOpenCollectiveExchangeChooseCard(data);
     };
 
-    const handleCollectiveExchangeWaiting = (data) => {
-      console.log('🔄 Collective exchange waiting for other players:', data);
-      handleOpenCollectiveExchangeWaiting(data);
+    const handleCollectiveExchangeWaitingWithCards = (data) => {
+      console.log('🔄 Collective exchange waiting with cards for other players:', data);
+      handleOpenCollectiveExchangeWaitingWithCards(data);
     };
 
     const handleCollectiveExchangeInitiatorChosenEvent = (data) => {
@@ -727,6 +749,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setCollectiveExchangeSelectedCard(null);
       setCollectiveExchangeTargetCard(null);
       setCollectiveExchangePhase('waiting');
+      setCollectiveExchangeWaitingWithCards(false);
     };
 
     const handleCollectiveExchangeCancelled = (data) => {
@@ -737,6 +760,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setCollectiveExchangeSelectedCard(null);
       setCollectiveExchangeTargetCard(null);
       setCollectiveExchangePhase('waiting');
+      setCollectiveExchangeWaitingWithCards(false);
     };
 
     socket.on('card_game_state_update', handleGameUpdate);
@@ -750,14 +774,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     socket.on('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
     socket.on('card_game_shake_completed', handleShakeCompleted);
     socket.on('card_game_exchange_choose_card', handleExchangeChooseCard);
-    socket.on('card_game_exchange_waiting', handleExchangeWaiting);
+    socket.on('card_game_exchange_waiting_with_cards', handleExchangeWaitingWithCards);
     socket.on('card_game_exchange_initiator_chosen', handleExchangeInitiatorChosenEvent);
     socket.on('card_game_exchange_completed', handleExchangeCompleted);
     socket.on('card_game_exchange_cancelled', handleExchangeCancelled);
     
-    // Collective exchange listeners - NOW SAME AS REGULAR EXCHANGE
+    // Collective exchange listeners - UPDATED
     socket.on('card_game_collective_exchange_choose_card', handleCollectiveExchangeChooseCard);
-    socket.on('card_game_collective_exchange_waiting', handleCollectiveExchangeWaiting);
+    socket.on('card_game_collective_exchange_waiting_with_cards', handleCollectiveExchangeWaitingWithCards);
     socket.on('card_game_collective_exchange_initiator_chosen', handleCollectiveExchangeInitiatorChosenEvent);
     socket.on('card_game_collective_exchange_completed', handleCollectiveExchangeCompleted);
     socket.on('card_game_collective_exchange_cancelled', handleCollectiveExchangeCancelled);
@@ -774,14 +798,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_shake_all_cards_placed', handleShakeAllCardsPlaced);
       socket.off('card_game_shake_completed', handleShakeCompleted);
       socket.off('card_game_exchange_choose_card', handleExchangeChooseCard);
-      socket.off('card_game_exchange_waiting', handleExchangeWaiting);
+      socket.off('card_game_exchange_waiting_with_cards', handleExchangeWaitingWithCards);
       socket.off('card_game_exchange_initiator_chosen', handleExchangeInitiatorChosenEvent);
       socket.off('card_game_exchange_completed', handleExchangeCompleted);
       socket.off('card_game_exchange_cancelled', handleExchangeCancelled);
       
       // Collective exchange listeners cleanup
       socket.off('card_game_collective_exchange_choose_card', handleCollectiveExchangeChooseCard);
-      socket.off('card_game_collective_exchange_waiting', handleCollectiveExchangeWaiting);
+      socket.off('card_game_collective_exchange_waiting_with_cards', handleCollectiveExchangeWaitingWithCards);
       socket.off('card_game_collective_exchange_initiator_chosen', handleCollectiveExchangeInitiatorChosenEvent);
       socket.off('card_game_collective_exchange_completed', handleCollectiveExchangeCompleted);
       socket.off('card_game_collective_exchange_cancelled', handleCollectiveExchangeCancelled);
@@ -1063,7 +1087,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* Collective Exchange Modal - NOW SAME AS REGULAR EXCHANGE */}
+      {/* Collective Exchange Modal - UPDATED */}
       {showCollectiveExchangeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-purple-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1074,14 +1098,32 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               </p>
             </div>
 
-            {collectiveExchangePhase === 'waiting' && (
+            {collectiveExchangePhase === 'waiting' && collectiveExchangeWaitingWithCards && (
               <div className="text-center">
                 <div className="text-yellow-300 text-xl mb-4">
                   ⏳ بانتظار {collectiveExchangeInitiatorPlayer?.name || 'اللاعب'} لاختيار بطاقته...
                 </div>
                 <div className="bg-purple-700 rounded-lg p-4 mb-4">
                   <p className="text-lg">اللاعب الذي بدأ التبادل يحتاج لاختيار بطاقة من يده أو دوائره أولاً</p>
-                  <p className="text-sm text-purple-200 mt-2">بعد ذلك يمكن لأي لاعب آخر اختيار بطاقة للتبادل</p>
+                  <p className="text-sm text-purple-200 mt-2">يمكنك رؤية بطاقاتك لكن لا يمكنك الاختيار حتى يختار اللاعب الآخر</p>
+                </div>
+
+                {/* Show player's cards (non-selectable) */}
+                <div className="bg-purple-700 rounded-lg p-4 mt-4">
+                  <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي (غير قابلة للاختيار)</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                    {allExchangeCards.length === 0 ? (
+                      <div className="text-center text-gray-400 p-4">
+                        لا توجد بطاقات متاحة
+                      </div>
+                    ) : (
+                      allExchangeCards.map(card => (
+                        <div key={card.id}>
+                          {renderCollectiveExchangeCard(card, null, false, false, true)}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1198,6 +1240,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       )}
                     </div>
                   )}
+                  <p className="text-purple-200 mt-4">اختر بطاقة من يدك أو دوائرك للتبادل:</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1257,21 +1300,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 </div>
               </div>
             )}
-
-            <div className="mt-6 text-center">
-              {/* <button
-                onClick={() => setShowCollectiveExchangeModal(false)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
-                disabled={collectiveExchangePhase === 'initiator_choose' && currentPlayer.id === collectiveExchangeInitiator}
-              >
-                إغلاق النافذة
-              </button> */}
-            </div>
           </div>
         </div>
       )}
 
-      {/* Exchange Modal */}
+      {/* Exchange Modal - UPDATED */}
       {showExchangeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-blue-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1282,14 +1315,32 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               </p>
             </div>
 
-            {exchangePhase === 'waiting' && (
+            {exchangePhase === 'waiting' && exchangeWaitingWithCards && (
               <div className="text-center">
                 <div className="text-yellow-300 text-xl mb-4">
                   ⏳ بانتظار {exchangeInitiatorPlayer?.name || 'اللاعب'} لاختيار بطاقته...
                 </div>
                 <div className="bg-blue-700 rounded-lg p-4 mb-4">
                   <p className="text-lg">اللاعب الذي بدأ التبادل يحتاج لاختيار بطاقة من يده أو دوائره أولاً</p>
-                  <p className="text-sm text-blue-200 mt-2">بعد ذلك يمكن لأي لاعب آخر اختيار بطاقة للتبادل</p>
+                  <p className="text-sm text-blue-200 mt-2">يمكنك رؤية بطاقاتك لكن لا يمكنك الاختيار حتى يختار اللاعب الآخر</p>
+                </div>
+
+                {/* Show player's cards (non-selectable) */}
+                <div className="bg-blue-700 rounded-lg p-4 mt-4">
+                  <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي (غير قابلة للاختيار)</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                    {allExchangeCards.length === 0 ? (
+                      <div className="text-center text-gray-400 p-4">
+                        لا توجد بطاقات متاحة
+                      </div>
+                    ) : (
+                      allExchangeCards.map(card => (
+                        <div key={card.id}>
+                          {renderExchangeCard(card, null, false, false, true)}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1389,10 +1440,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div>
                 <div className="text-center mb-6">
                   <div className="text-yellow-300 text-xl mb-2">🔄 تبادل البطاقات</div>
-                  {/* <p className="text-blue-200">
+                  <p className="text-blue-200">
                     {exchangeInitiatorPlayer?.name || 'اللاعب'} يريد تبادل بطاقته:
-                  </p> */}
-                  {/* {exchangeSelectedCard && (
+                  </p>
+                  {exchangeSelectedCard && (
                     <div className="bg-blue-600 rounded-lg p-3 mt-2 max-w-md mx-auto">
                       <div className="font-bold text-lg">{exchangeSelectedCard.name}</div>
                       <div className="text-sm opacity-75">
@@ -1404,7 +1455,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                         <div className="text-xs text-yellow-300 mt-1">⭕ كانت في دائرة</div>
                       )}
                     </div>
-                  )} */}
+                  )}
+                  <p className="text-blue-200 mt-4">اختر بطاقة من يدك أو دوائرك للتبادل:</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1464,16 +1516,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 </div>
               </div>
             )}
-
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => setShowExchangeModal(false)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
-                disabled={exchangePhase === 'initiator_choose' && currentPlayer.id === exchangeInitiator}
-              >
-                إغلاق النافذة
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1930,10 +1972,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div 
                 key={card.id} 
                 className={`p-4 text-white font-semibold rounded-lg flex flex-col ${
-                  card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
+                  card.type === 'action' && card.subtype === 'skip' ? 'bg-gradient-to-r from-[#cb2d3e] to-[#ef473a]' :
                   card.type === 'action' && card.subtype === 'joker' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
-                  card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#00b4db] to-[#0083b0]' :
-                  card.type === 'action' && card.subtype === 'exchange' ? 'bg-gradient-to-r from-[#8B4513] to-[#D2691E]' :
+                  card.type === 'action' && card.subtype === 'shake' ? 'bg-gradient-to-r from-[#e52d27] to-[#b31217]' :
+                  card.type === 'action' && card.subtype === 'exchange' ? 'bg-gradient-to-r from-[#94716b] to-[#b79891]' :
                   card.type === 'action' && card.subtype === 'collective_exchange' ? 'bg-gradient-to-r from-[#6b21a8] to-[#a855f7]' :
                   card.type === 'actor' ? 'bg-gradient-to-r from-[#499864] to-[#09481d]' :
                   card.type === 'movie' ? ' bg-gradient-to-r ' : 'bg-indigo-600'
