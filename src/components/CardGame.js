@@ -33,6 +33,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [exchangeCompleted, setExchangeCompleted] = useState(false);
   const [exchangePhase, setExchangePhase] = useState('waiting');
   const [exchangeWaitingWithCards, setExchangeWaitingWithCards] = useState(false);
+  const [exchangePlayerCards, setExchangePlayerCards] = useState([]);
 
   // Collective exchange card states
   const [showCollectiveExchangeModal, setShowCollectiveExchangeModal] = useState(false);
@@ -42,6 +43,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [collectiveExchangeTargetCard, setCollectiveExchangeTargetCard] = useState(null);
   const [collectiveExchangePhase, setCollectiveExchangePhase] = useState('waiting');
   const [collectiveExchangeWaitingWithCards, setCollectiveExchangeWaitingWithCards] = useState(false);
+  const [collectiveExchangePlayerCards, setCollectiveExchangePlayerCards] = useState([]);
 
   // Dice category banner state
   const [showDiceCategoryBanner, setShowDiceCategoryBanner] = useState(false);
@@ -108,6 +110,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setExchangeCompleted(false);
     setExchangePhase('initiator_choose');
     setExchangeWaitingWithCards(false);
+    setExchangePlayerCards(data.playerCards || []);
   };
 
   const handleOpenExchangeWaitingWithCards = (data) => {
@@ -144,6 +147,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setCollectiveExchangeTargetCard(null);
     setCollectiveExchangePhase('initiator_choose');
     setCollectiveExchangeWaitingWithCards(false);
+    setCollectiveExchangePlayerCards(data.playerCards || []);
   };
 
   const handleOpenCollectiveExchangeWaitingWithCards = (data) => {
@@ -169,28 +173,45 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  // Get all available cards for exchange (hand + circles)
+  // Get all available cards for exchange (hand + circles) - MAINTAIN ORIGINAL ORDER
   const getAllExchangeCards = () => {
     if (!gameState || !currentPlayer) return [];
     
     const myHand = gameState.playerHands[currentPlayer.id] || [];
     const myCircles = gameState.playerCircles[currentPlayer.id] || [];
     
-    // Get all cards from hand
-    const handCards = myHand.map(card => ({
-      ...card,
-      source: 'hand'
-    }));
+    // Combine all cards with their sources
+    const allCards = [];
     
-    // Get all cards from circles (filter out null)
-    const circleCards = myCircles
-      .filter(card => card !== null)
-      .map(card => ({
+    // Add hand cards with their current position and mark source
+    myHand.forEach((card, index) => {
+      allCards.push({
         ...card,
-        source: 'circle'
-      }));
+        source: 'hand',
+        displayOrder: card.originalHandIndex !== undefined ? card.originalHandIndex : index
+      });
+    });
     
-    return [...handCards, ...circleCards];
+    // Add circle cards, preserving their original hand index
+    myCircles.forEach((card, circleIndex) => {
+      if (card) {
+        allCards.push({
+          ...card,
+          source: 'circle',
+          displayOrder: card.originalHandIndex !== undefined ? card.originalHandIndex : 1000 + circleIndex
+        });
+      }
+    });
+    
+    // Sort by original hand index to maintain the order from hand
+    allCards.sort((a, b) => {
+      // Cards without originalHandIndex go to the end
+      const aOrder = a.displayOrder;
+      const bOrder = b.displayOrder;
+      return aOrder - bOrder;
+    });
+    
+    return allCards;
   };
 
   // Use exchange card
@@ -711,6 +732,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setExchangeCompleted(false);
       setExchangePhase('waiting');
       setExchangeWaitingWithCards(false);
+      setExchangePlayerCards([]);
     };
 
     const handleExchangeCancelled = (data) => {
@@ -723,6 +745,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setExchangeCompleted(false);
       setExchangePhase('waiting');
       setExchangeWaitingWithCards(false);
+      setExchangePlayerCards([]);
     };
 
     // Collective exchange events - UPDATED
@@ -750,6 +773,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setCollectiveExchangeTargetCard(null);
       setCollectiveExchangePhase('waiting');
       setCollectiveExchangeWaitingWithCards(false);
+      setCollectiveExchangePlayerCards([]);
     };
 
     const handleCollectiveExchangeCancelled = (data) => {
@@ -761,6 +785,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setCollectiveExchangeTargetCard(null);
       setCollectiveExchangePhase('waiting');
       setCollectiveExchangeWaitingWithCards(false);
+      setCollectiveExchangePlayerCards([]);
     };
 
     socket.on('card_game_state_update', handleGameUpdate);
@@ -979,7 +1004,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const myLevel = gameState.playerLevels?.[currentPlayer.id] || 1;
   const buttonsEnabled = areButtonsEnabled();
 
-  // Get all exchange cards (hand + circles)
+  // Get all exchange cards (hand + circles) in original order
   const allExchangeCards = getAllExchangeCards();
 
   // Get shake initiator name
@@ -1134,18 +1159,19 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   <div className="text-yellow-300 text-xl mb-2">📝 اختر بطاقة للتبادل الجماعي</div>
                   <p className="text-purple-200">اختر بطاقة من يدك أو دوائرك لتبادلها مع لاعب آخر</p>
                   <p className="text-green-300 text-sm mt-1">⭕ البطاقات الخضراء موجودة في دوائرك</p>
+                  <p className="text-yellow-300 text-sm mt-1">📊 البطاقات مرتبة حسب ترتيبها الأصلي في يدك</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-purple-700 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي (اليد والدوائر)</h3>
+                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي (اليد والدوائر) بالترتيب الأصلي</h3>
                     <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                      {allExchangeCards.length === 0 ? (
+                      {collectiveExchangePlayerCards.length === 0 ? (
                         <div className="text-center text-gray-400 p-4">
                           لا توجد بطاقات متاحة للتبادل
                         </div>
                       ) : (
-                        allExchangeCards.map(card => (
+                        collectiveExchangePlayerCards.map(card => (
                           <div 
                             key={card.id} 
                             className="cursor-pointer transform hover:scale-105 transition-transform"
@@ -1175,6 +1201,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                         <h4 className="font-semibold text-yellow-300">⚠️ ملاحظات:</h4>
                         <ul className="list-disc list-inside text-sm mt-2 space-y-1">
                           <li>يمكنك تبادل البطاقات من يدك أو دوائرك</li>
+                          <li>البطاقات مرتبة حسب ترتيبها الأصلي في يدك</li>
                           <li>اللاعب الآخر سيختار البطاقة التي يعطيك إياها</li>
                           <li>لا يمكنك إلغاء التبادل بعد اختيار البطاقة</li>
                         </ul>
@@ -1351,18 +1378,19 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   <div className="text-yellow-300 text-xl mb-2">📝 اختر بطاقة للتبادل</div>
                   <p className="text-blue-200">اختر بطاقة من يدك أو دوائرك لتبادلها مع لاعب آخر</p>
                   <p className="text-green-300 text-sm mt-1">⭕ البطاقات الخضراء موجودة في دوائرك</p>
+                  <p className="text-yellow-300 text-sm mt-1">📊 البطاقات مرتبة حسب ترتيبها الأصلي في يدك</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-700 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي (اليد والدوائر)</h3>
+                    <h3 className="text-lg font-semibold mb-4 text-center">بطاقاتي (اليد والدوائر) بالترتيب الأصلي</h3>
                     <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                      {allExchangeCards.length === 0 ? (
+                      {exchangePlayerCards.length === 0 ? (
                         <div className="text-center text-gray-400 p-4">
                           لا توجد بطاقات متاحة للتبادل
                         </div>
                       ) : (
-                        allExchangeCards.map(card => (
+                        exchangePlayerCards.map(card => (
                           <div 
                             key={card.id} 
                             className="cursor-pointer transform hover:scale-105 transition-transform"
@@ -1391,6 +1419,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                         <h4 className="font-semibold text-yellow-300">⚠️ ملاحظات:</h4>
                         <ul className="list-disc list-inside text-sm mt-2 space-y-1">
                           <li>يمكنك تبادل البطاقات من يدك أو دوائرك</li>
+                          <li>البطاقات مرتبة حسب ترتيبها الأصلي في يدك</li>
                           <li>اللاعب الآخر سيختار البطاقة التي يعطيك إياها</li>
                           <li>لا يمكنك إلغاء التبادل بعد اختيار البطاقة</li>
                         </ul>
