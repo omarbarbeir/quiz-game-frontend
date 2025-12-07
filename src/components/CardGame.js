@@ -1429,12 +1429,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 </div>
 
                 <div className="mt-6 text-center">
-                  <button
+                  {/* <button
                     onClick={handleCancelExchange}
                     className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 mx-auto"
                   >
                     <FaTimes /> إلغاء التبادل
-                  </button>
+                  </button> */}
                 </div>
               </div>
             )}
@@ -1469,10 +1469,10 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div>
                 <div className="text-center mb-6">
                   <div className="text-yellow-300 text-xl mb-2">🔄 تبادل البطاقات</div>
-                  <p className="text-blue-200">
+                  {/* <p className="text-blue-200">
                     {exchangeInitiatorPlayer?.name || 'اللاعب'} يريد تبادل بطاقته:
-                  </p>
-                  {exchangeSelectedCard && (
+                  </p> */}
+                  {/* {exchangeSelectedCard && (
                     <div className="bg-blue-600 rounded-lg p-3 mt-2 max-w-md mx-auto">
                       <div className="font-bold text-lg">{exchangeSelectedCard.name}</div>
                       <div className="text-sm opacity-75">
@@ -1484,7 +1484,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                         <div className="text-xs text-yellow-300 mt-1">⭕ كانت في دائرة</div>
                       )}
                     </div>
-                  )}
+                  )} */}
                   <p className="text-blue-200 mt-4">اختر بطاقة من يدك أو دوائرك للتبادل:</p>
                 </div>
 
