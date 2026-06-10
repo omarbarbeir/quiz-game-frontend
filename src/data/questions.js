@@ -341,7 +341,6 @@ const questions = {
   ],
 
 
-
   history: [
     {
       id: 1,
@@ -767,6 +766,20 @@ const questions = {
   ],
 
 
+  flags: [
+    { image: "/Flags/egypt.png", answer: "مصر" },
+    { image: "/Flags/france.png", answer: "فرنسا" },
+    { image: "/Flags/italy.jpeg", answer: "إيطاليا" },
+    { image: "/Flags/spain.png", answer: "إسبانيا" },
+    // { image: "/images/flags/france.png", answer: "فرنسا" },
+    // { image: "/images/flags/germany.png", answer: "ألمانيا" },
+    // add more flags as needed – image paths should be in public/images/flags/
+  ],
+
+  spyWords: [
+    "قطة", "كلب", "سيارة", "طائرة", "شجرة", "تفاحة", "قمر", "نجم", "مطر", "شمس",
+    "بيت", "مدرسة", "مستشفى", "ملعب", "حديقة", "جبل", "بحر", "نهر", "ثلج", "نار"
+  ],
 
   music: [
     {
@@ -1017,7 +1030,6 @@ const questions = {
   ],
 
 
-
   reverse: [
     {
       text: "ج ا ز م",
@@ -1141,8 +1153,28 @@ const questions = {
     },
   ],
 
+  "who-said": [
+    { text: "إحنا مش بتوع كلام، إحنا بتوع أفعال", answer: "فيلم ..." },  // fill in real data
+    { text: "مين اللي إنت بتتكلم عليه ده؟", answer: "فيلم ..." },
+    // add your sentence/answer pairs here
+  ],
 
-photos: {
+  "song-for": [
+    { text: "عبد الحليم حافظ", answer: "" },   // singer name
+    { text: "أم كلثوم", answer: "" },
+    { text: "محمد منير", answer: "" },
+    // add singer names – the text can be shown as a question, answer can be empty or the same
+  ],
+
+  "put-word-in-song": [
+    { text: "حب", answer: "" },    // the word to embed
+    { text: "قمر", answer: "" },
+    { text: "ليل", answer: "" },
+    // add more words
+  ],
+
+
+  photos: {
     landmarks: [
       {
         id: 'photo1',
@@ -1876,7 +1908,17 @@ photos: {
 
     ],
 
-  
-}};
+    football: [
+      { image: "/images/FootBall/messi.jpg" , answer: "ميسي" },
+      { image: "/images/FootBall/cr7.jpg" , answer: "رونالدو" },
+      { image: "/images/FootBall/salah.jpg" , answer: "محمد صلاح" },
+      // add more players
+    ]
+
+  },
+
+
+
+};
 
 export default questions;

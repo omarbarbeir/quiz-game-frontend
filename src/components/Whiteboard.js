@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { FaEraser, FaPaintBrush, FaTrash, FaClock, FaPause, FaPlay, FaRedo } from 'react-icons/fa';
+import { FaEraser, FaPaintBrush, FaTrash } from 'react-icons/fa';
 
 const Whiteboard = ({ socket, roomCode, isAdmin }) => {
   const canvasRef = useRef(null);
@@ -8,9 +8,6 @@ const Whiteboard = ({ socket, roomCode, isAdmin }) => {
   const brushColorRef = useRef('#ffffff');
   const brushSizeRef = useRef(5);
   const [tool, setTool] = useState('brush');
-  const [timeLeft, setTimeLeft] = useState(null);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const timerRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -88,45 +85,10 @@ const Whiteboard = ({ socket, roomCode, isAdmin }) => {
       });
     };
 
-    // Timer event handlers
-    const handleTimerStarted = (duration) => {
-      setTimeLeft(duration);
-      setTimerRunning(true);
-    };
-    
-    const handleTimerUpdate = (time) => {
-      setTimeLeft(time);
-    };
-    
-    const handleTimerEnd = () => {
-      setTimerRunning(false);
-      setTimeLeft(0);
-    };
-
-    const handleTimerStopped = () => {
-      setTimerRunning(false);
-    };
-
-    const handleTimerContinued = (time) => {
-      setTimeLeft(time);
-      setTimerRunning(true);
-    };
-
-    const handleTimerReset = () => {
-      setTimeLeft(120);
-      setTimerRunning(false);
-    };
-
     socket.on('stroke_started', handleStrokeStarted);
     socket.on('stroke_updated', handleStrokeUpdated);
     socket.on('whiteboard_cleared', handleWhiteboardCleared);
     socket.on('whiteboard_state', handleWhiteboardState);
-    socket.on('timer_started', handleTimerStarted);
-    socket.on('timer_update', handleTimerUpdate);
-    socket.on('timer_end', handleTimerEnd);
-    socket.on('timer_stopped', handleTimerStopped);
-    socket.on('timer_continued', handleTimerContinued);
-    socket.on('timer_reset', handleTimerReset);
     
     socket.emit('get_whiteboard_state', roomCode);
     
@@ -135,53 +97,8 @@ const Whiteboard = ({ socket, roomCode, isAdmin }) => {
       socket.off('stroke_updated', handleStrokeUpdated);
       socket.off('whiteboard_cleared', handleWhiteboardCleared);
       socket.off('whiteboard_state', handleWhiteboardState);
-      socket.off('timer_started', handleTimerStarted);
-      socket.off('timer_update', handleTimerUpdate);
-      socket.off('timer_end', handleTimerEnd);
-      socket.off('timer_stopped', handleTimerStopped);
-      socket.off('timer_continued', handleTimerContinued);
-      socket.off('timer_reset', handleTimerReset);
     };
   }, [socket, roomCode]);
-
-  const startCountdown = () => {
-    if (socket) {
-      socket.emit('start_timer', { roomCode, duration: 120 });
-    }
-  };
-
-  const stopTimer = () => {
-    if (socket) {
-      socket.emit('stop_timer', { roomCode });
-    }
-  };
-
-  const continueTimer = () => {
-    if (socket) {
-      socket.emit('continue_timer', { roomCode, currentTime: timeLeft });
-    }
-  };
-
-  const resetTimer = () => {
-    if (socket) {
-      socket.emit('reset_timer', { roomCode });
-    }
-  };
-
-  useEffect(() => {
-    const preventTouch = (e) => {
-      if (isDrawingRef.current) {
-        e.preventDefault();
-      }
-    };
-    
-    document.addEventListener('touchmove', preventTouch, { passive: false });
-    
-    return () => {
-      document.removeEventListener('touchmove', preventTouch);
-      clearInterval(timerRef.current);
-    };
-  }, []);
 
   const startDrawing = (e) => {
     isDrawingRef.current = true;
@@ -269,24 +186,8 @@ const Whiteboard = ({ socket, roomCode, isAdmin }) => {
     }
   };
 
-  const formatTime = (seconds) => {
-    if (seconds === null) return '2:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
   return (
     <div className="relative mt-4">
-      <div className="text-center mb-4">
-        <div className="inline-flex items-center justify-center bg-indigo-800 px-4 py-2 rounded-full">
-          <FaClock className="mr-2" />
-          <span className="text-xl font-bold">
-            {formatTime(timeLeft)}
-          </span>
-        </div>
-      </div>
-      
       <div 
         ref={containerRef} 
         className="relative w-full bg-indigo-900 rounded-lg border-2 border-indigo-700"
@@ -366,53 +267,6 @@ const Whiteboard = ({ socket, roomCode, isAdmin }) => {
         >
           <FaTrash /> مسح السبورة
         </button>
-        
-        {isAdmin && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={startCountdown}
-              disabled={timerRunning}
-              className={`px-3 py-2 rounded flex items-center gap-2 ${
-                timerRunning 
-                  ? 'bg-gray-600 cursor-not-allowed' 
-                  : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              <FaPlay /> بدء المؤقت
-            </button>
-            
-            <button
-              onClick={stopTimer}
-              disabled={!timerRunning}
-              className={`px-3 py-2 rounded flex items-center gap-2 ${
-                !timerRunning 
-                  ? 'bg-gray-600 cursor-not-allowed' 
-                  : 'bg-yellow-600 hover:bg-yellow-700'
-              }`}
-            >
-              <FaPause /> إيقاف
-            </button>
-            
-            <button
-              onClick={continueTimer}
-              disabled={timerRunning || timeLeft === null || timeLeft === 0}
-              className={`px-3 py-2 rounded flex items-center gap-2 ${
-                timerRunning || timeLeft === null || timeLeft === 0
-                  ? 'bg-gray-600 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              <FaPlay /> استئناف
-            </button>
-            
-            <button
-              onClick={resetTimer}
-              className="px-3 py-2 rounded flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-            >
-              <FaRedo /> إعادة تعيين
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

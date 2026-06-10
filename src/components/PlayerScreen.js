@@ -2,6 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo } from 'react-icons/fa';
 import Whiteboard from './Whiteboard';
 import CardGame from './CardGame';
+import TicTacToe from './TicTacToe';
+import Timer from './Timer';
+import GridGame from './GridGame';
+import BingoGame from './BingoGame';
+import BattleshipGame from './BattleshipGame';
+import SwordOfKnowledge from './SwordOfKnowledge';
+import BracketGame from './BracketGame';
 
 const PlayerScreen = ({ 
   playerId,
@@ -20,7 +27,8 @@ const PlayerScreen = ({
   setActivePlayer,
   setBuzzerLocked,
   setGameStatus,
-  cardGameState
+  cardGameState,
+  onExitCardGame
 }) => {
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [showReloadWarning, setShowReloadWarning] = useState(false);
@@ -28,17 +36,16 @@ const PlayerScreen = ({
   const isActivePlayer = activePlayer === playerId;
   const [pausedTime, setPausedTime] = useState(0);
 
+  const publicUrl = process.env.PUBLIC_URL || '';
+
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-  
-  const shouldShowImage = currentQuestion?.image && 
-                         currentQuestion?.category === 'random-photos' && 
-                         currentQuestion?.subcategory;
   
   const isReverseQuestion = currentQuestion?.category === 'reverse';
   
+  // ----- Socket listeners -----
   useEffect(() => {
     const handlePlayAudio = () => {
-      if (audioRef.current && !activePlayer && !shouldShowImage && !isReverseQuestion) {
+      if (audioRef.current && !activePlayer && !currentQuestion?.image) {
         audioRef.current.play()
           .then(() => setAudioPlaying(true))
           .catch(error => console.error("Audio play failed:", error));
@@ -62,9 +69,11 @@ const PlayerScreen = ({
       }
     };
     
+    // Handles both Whoami and Spy personalised data
     const handlePlayerPhotoQuestion = (photoData) => {
       if (photoData.playerId === playerId) {
-        setCurrentQuestion(photoData);
+        if (onExitCardGame) onExitCardGame();
+        setCurrentQuestion(photoData.question);
         setActivePlayer(null);
         setBuzzerLocked(false);
         setGameStatus('playing');
@@ -83,12 +92,24 @@ const PlayerScreen = ({
         setGameStatus('playing');
       }
     };
+
+    // ⭐ NEW: enter TicTacToe mode when server sends game state
+    const handleTicTacToeState = (state) => {
+      setCurrentQuestion({
+        id: 'tic-tac-toe',
+        category: 'tic-tac-toe',
+        text: 'Tic Tac Toe',
+        answer: ''
+      });
+      setGameStatus('playing');
+    };
     
     socket.on('play_audio', handlePlayAudio);
     socket.on('pause_audio', handlePauseAudio);
     socket.on('continue_audio', handleContinueAudio);
     socket.on('player_photo_question', handlePlayerPhotoQuestion);
     socket.on('card_game_state_update', handleCardGameStateUpdate);
+    socket.on('tic_tac_toe_state', handleTicTacToeState);
     
     return () => {
       socket.off('play_audio', handlePlayAudio);
@@ -96,18 +117,174 @@ const PlayerScreen = ({
       socket.off('continue_audio', handleContinueAudio);
       socket.off('player_photo_question', handlePlayerPhotoQuestion);
       socket.off('card_game_state_update', handleCardGameStateUpdate);
+      socket.off('tic_tac_toe_state', handleTicTacToeState);
     };
-  }, [socket, activePlayer, currentQuestion, shouldShowImage, playerId, setCurrentQuestion, setActivePlayer, setBuzzerLocked, setGameStatus, isReverseQuestion]);
+  }, [socket, activePlayer, currentQuestion, playerId, setCurrentQuestion, setActivePlayer, setBuzzerLocked, setGameStatus, onExitCardGame]);
   
+  // Load audio for audio questions
   useEffect(() => {
-    if (currentQuestion && audioRef.current && !shouldShowImage && !isReverseQuestion) {
-      const audioUrl = `${process.env.PUBLIC_URL}${currentQuestion.audio}`;
+    if (currentQuestion && audioRef.current && !currentQuestion.image && currentQuestion.category !== 'spy') {
+      const audioUrl = `${publicUrl}${currentQuestion.audio}`;
       audioRef.current.src = audioUrl;
       audioRef.current.load();
       setAudioPlaying(false);
       setPausedTime(0);
     }
-  }, [currentQuestion, shouldShowImage, isReverseQuestion]);
+  }, [currentQuestion, publicUrl]);
+
+  // Render TicTacToe when in tic-tac-toe mode
+  if (currentQuestion?.category === 'tic-tac-toe') {
+    const currentPlayer = players.find(p => p.id === playerId);
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-right">Tic Tac Toe</h1>
+            <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
+          </div>
+          <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
+          </div>
+        </div>
+
+        <TicTacToe
+          socket={socket}
+          roomCode={roomCode}
+          players={players}
+          currentPlayer={currentPlayer}
+          isAdmin={false}
+        />
+
+        <button onClick={onLeaveRoom} className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2">
+          <FaSignOutAlt /> مغادرة الغرفة
+        </button>
+      </div>
+    );
+  }
+
+  // Render GridGame when in grid-game mode
+  if (currentQuestion?.category === 'grid-game') {
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-right">الجدول التعاوني</h1>
+            <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
+          </div>
+          <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
+          </div>
+        </div>
+        <GridGame socket={socket} roomCode={roomCode} playerId={playerId} />
+        <button onClick={onLeaveRoom} className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2">
+          <FaSignOutAlt /> مغادرة الغرفة
+        </button>
+      </div>
+    );
+  }
+
+  // Render BingoGame when in bingo mode
+  if (currentQuestion?.category === 'bingo') {
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-right">بينجو</h1>
+            <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
+          </div>
+          <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
+          </div>
+        </div>
+        <BingoGame socket={socket} roomCode={roomCode} playerId={playerId} />
+        <button onClick={onLeaveRoom} className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2">
+          <FaSignOutAlt /> مغادرة الغرفة
+        </button>
+      </div>
+    );
+  }
+
+  // Render Battleship when in battleship mode
+  if (currentQuestion?.category === 'battleship') {
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-right">حرب السفن</h1>
+            <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
+          </div>
+          <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl">{roomCode}</span>
+          </div>
+        </div>
+        <BattleshipGame socket={socket} roomCode={roomCode} playerId={playerId} />
+        <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
+          <FaSignOutAlt /> مغادرة الغرفة
+        </button>
+      </div>
+    );
+  }
+
+  // Render Sword of Knowledge when in sword-of-knowledge mode
+  if (currentQuestion?.category === 'sword-of-knowledge') {
+    const currentPlayer = players.find(p => p.id === playerId);
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-right">سيف المعرفة</h1>
+            <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
+          </div>
+          <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl">{roomCode}</span>
+          </div>
+        </div>
+        <SwordOfKnowledge
+          socket={socket}
+          roomCode={roomCode}
+          players={players}
+          currentPlayer={currentPlayer}
+          isAdmin={false}
+        />
+        <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
+          <FaSignOutAlt /> مغادرة الغرفة
+        </button>
+      </div>
+    );
+  }
+
+  if (currentQuestion?.category === 'round16') {
+    const currentPlayer = players.find(p => p.id === playerId);
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-right">دور الـ١٦</h1>
+            <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
+          </div>
+          <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl">{roomCode}</span>
+          </div>
+        </div>
+        <BracketGame
+          socket={socket}
+          roomCode={roomCode}
+          players={players}
+          currentPlayer={currentPlayer}
+          isAdmin={false}
+        />
+        <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
+          <FaSignOutAlt /> مغادرة الغرفة
+        </button>
+      </div>
+    );
+  }
 
   // Render CardGame when in card game mode
   if (currentQuestion?.category === 'card-game' || cardGameState?.gameStarted) {
@@ -119,7 +296,6 @@ const PlayerScreen = ({
             <h1 className="text-2xl font-bold text-right">لاعب لعبة البطاقات</h1>
             <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
           </div>
-          
           <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
             <span className="font-medium">رمز الغرفة:</span>
             <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
@@ -132,6 +308,7 @@ const PlayerScreen = ({
           players={players}
           currentPlayer={currentPlayer}
           isAdmin={false}
+          onExit={onExitCardGame}
         />
 
         <button
@@ -144,6 +321,7 @@ const PlayerScreen = ({
     );
   }
 
+  // ========== MAIN QUIZ VIEW ==========
   return (
     <div className="w-full">
       {showReloadWarning && (
@@ -218,36 +396,66 @@ const PlayerScreen = ({
                 مغادرة اللعبة
               </button>
             </div>
-          ) : currentQuestion?.category === 'whiteboard' ? (
-            <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
-              <h2 className="text-xl font-semibold mb-4 text-center">السبورة التعاونية</h2>
-              <Whiteboard socket={socket} roomCode={roomCode} isAdmin={false} />
-            </div>
-          ) : (
+            ) : currentQuestion?.category === 'whiteboard' ? (
+              <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
+                <Timer socket={socket} roomCode={roomCode} isAdmin={false} />
+                <h2 className="text-xl font-semibold mb-4 text-center">السبورة التعاونية</h2>
+                <Whiteboard socket={socket} roomCode={roomCode} isAdmin={false} />
+              </div>
+            ) : (
             <>
-              {shouldShowImage ? (
+              {/* ===== SPY ROUND DISPLAY ===== */}
+              {currentQuestion?.category === 'spy' ? (
+                <div className="relative p-[2px] rounded-xl overflow-hidden">
+                  {/* Shimmer border */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-cyan-400 animate-shimmer rounded-xl" />
+                  <div className="relative bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-lg text-center">
+                    <div className="mb-4">
+                      <h2 className="text-xl font-semibold text-cyan-300">جولة الجاسوس</h2>
+                      <p className="text-gray-400 mt-2">انظر إلى كلمتك:</p>
+                    </div>
+                    <div className="bg-gray-800/70 p-6 rounded-lg border border-purple-500/20">
+                      <p className="text-3xl font-bold text-yellow-300">
+                        {currentQuestion.text}
+                      </p>
+                      {currentQuestion.text?.includes('Spy') && (
+                        <p className="text-red-400 mt-4 text-lg">أنت الجاسوس! حاول التخفي!</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : currentQuestion?.image ? (
+                /* ===== ANY IMAGE QUESTION (flags, whoami, etc.) ===== */
                 <div className="bg-indigo-800 rounded-xl p-6 shadow-lg text-center">
                   <div className="mb-4">
                     <h2 className="text-xl font-semibold">
-                      أنا مين: {currentQuestion.subcategory}
+                      {currentQuestion.category === 'random-photos' ? `أنا مين: ${currentQuestion.subcategory || ''}` :
+                       currentQuestion.category === 'flags' ? 'أعلام الدول' :
+                       'سؤال بالصورة'}
                     </h2>
                     <p className="text-indigo-300 mt-2">
-                      صورتك الفريدة لتتعرف عليها
+                      {currentQuestion.category === 'random-photos' ? 'صورتك الفريدة لتتعرف عليها' : ''}
                     </p>
                   </div>
-                  
                   <div className="mt-4">
-                    <div className="aspect-w-1 aspect-h-1">
-                      <img 
-                        src={`${process.env.PUBLIC_URL}${currentQuestion.image}`} 
-                        alt="Your unique question" 
-                        className="object-contain rounded-lg max-h-[60vh] mx-auto"
-                      />
-                    </div>
+                    <img 
+                      src={`${publicUrl}${currentQuestion.image}`} 
+                      alt="Question" 
+                      className="object-contain rounded-lg max-h-[60vh] mx-auto"
+                    />
+                    {/* Answer box – hidden for flags */}
+                    {currentQuestion.category !== 'flags' && (
                       <div className="mt-4 bg-green-600 p-4 rounded-lg">
                         <h3 className="font-semibold mb-2">الإجابة:</h3>
                         <p className="text-3xl font-bold">{currentQuestion.answer}</p>
                       </div>
+                    )}
+                    {currentQuestion.bounc && (
+                      <div className="mt-4 bg-red-700 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2">تلميح:</h3>
+                        <p className="text-lg font-bold">{currentQuestion.bounc}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : isReverseQuestion ? (
@@ -310,56 +518,90 @@ const PlayerScreen = ({
                   </div>
                 </div>
               ) : (
-                <div className="bg-indigo-800 rounded-xl p-8 shadow-lg text-center">
-                  <h2 className="text-xl font-semibold">في انتظار السؤال</h2>
-                  <p className="text-indigo-300">سيبدأ المسؤول اللعبة قريبًا...</p>
-                </div>
+                /* ===== TEXT QUESTION DISPLAY ===== */
+                currentQuestion && (currentQuestion.category === 'who-said' || currentQuestion.category === 'song-for' || currentQuestion.category === 'put-word-in-song') ? (
+                  <div className="bg-indigo-800 rounded-xl p-6 shadow-lg text-center">
+                    <div className="mb-4">
+                      <h2 className="text-xl font-semibold">
+                        {currentQuestion.category === 'who-said' ? 'مين قال الجملة دي' :
+                         currentQuestion.category === 'song-for' ? 'أغنية لـ' :
+                         'حط كلمة في أغنية'}
+                      </h2>
+                      <p className="text-indigo-300 mt-2">استمع للسؤال من المسؤول واضغط للجواب</p>
+                    </div>
+                    {/* No answer shown to players */}
+                  </div>
+                ) : (
+                  <div className="bg-indigo-800 rounded-xl p-8 shadow-lg text-center">
+                    <h2 className="text-xl font-semibold">في انتظار السؤال</h2>
+                    <p className="text-indigo-300">سيبدأ المسؤول اللعبة قريبًا...</p>
+                  </div>
+                )
               )}
 
-              <div className="bg-gradient-to-br from-rose-800 to-pink-800 rounded-xl p-6 shadow-lg">
-                <button
-                  onClick={onBuzzerPress}
-                  disabled={buzzerLocked || !currentQuestion || gameStatus !== 'playing' || activePlayer}
-                  className={`w-full py-8 rounded-xl text-3xl font-bold flex flex-col items-center justify-center transform transition-all ${
-                    isActivePlayer
-                      ? 'bg-green-500'
-                      : activePlayer
-                        ? 'bg-gray-700 cursor-not-allowed'
-                        : buzzerLocked || !currentQuestion || gameStatus !== 'playing'
-                          ? 'bg-gray-700 cursor-not-allowed'
-                          : 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:scale-95'
-                  }`}
-                >
-                  {isActivePlayer ? (
-                    <span>لقد ضغطت!</span>
-                  ) : activePlayer ? (
-                    <>
-                      <FaLock className="text-2xl mb-2" />
-                      <span>تم قفل الزر</span>
-                    </>
-                  ) : buzzerLocked ? (
-                    <>
-                      <FaLock className="text-2xl mb-2" />
-                      <span>تم قفل الزر</span>
-                    </>
-                  ) : (
-                    <span>اضغط للجواب!</span>
+              {/* ----- BUZZER (show for all except spy) ----- */}
+              {/* ----- BUZZER with animated border ----- */}
+              {currentQuestion?.category !== 'spy' && (
+                <div className="relative p-[2px] rounded-xl overflow-hidden">
+                  {/* shimmer border only when buzzer is active (ready to press) */}
+                  {(!buzzerLocked && !activePlayer && gameStatus === 'playing' && currentQuestion) && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-cyan-400 animate-shimmer-fast rounded-xl" />
                   )}
-                </button>
-                
-                {activePlayer && (
-                  <div className="mt-4 text-center">
-                    <p className="text-lg">
-                      <span className="font-bold">
-                        {players.find(p => p.id === activePlayer)?.isAdmin 
-                          ? "المسؤول" 
-                          : "لاعب"
-                        } ضغط على الزر!
-                      </span>
-                    </p>
+                  <div className="relative bg-gradient-to-br from-cyan-900/90 to-purple-900/90 rounded-xl p-6 shadow-lg">
+                    <button
+                      onClick={() => {
+                        if (!buzzerLocked && currentQuestion && gameStatus === 'playing' && !activePlayer) {
+                          const audio = new Audio('/sounds/buzzer.mp3');
+                          audio.play().catch(err => console.error('Buzzer play error:', err));
+                        }
+                        onBuzzerPress();
+                      }}
+                      disabled={buzzerLocked || !currentQuestion || gameStatus !== 'playing' || activePlayer}
+                      className={`w-full py-12 rounded-xl text-4xl font-bold flex flex-col items-center justify-center transform transition-all ${
+                        isActivePlayer
+                          ? 'bg-gradient-to-r from-cyan-400 to-purple-400 cursor-not-allowed shadow-lg shadow-cyan-500/20'
+                          : activePlayer
+                            ? 'bg-gray-700 cursor-not-allowed'
+                            : buzzerLocked || !currentQuestion || gameStatus !== 'playing'
+                              ? 'bg-gray-700 cursor-not-allowed'
+                              : 'bg-gradient-to-br from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 active:scale-95 shadow-lg shadow-cyan-500/20'
+                      }`}
+                    >
+                      {isActivePlayer ? (
+                        <>
+                          <FaLock className="text-3xl mb-2" />
+                          <span>لقد ضغطت!</span>
+                        </>
+                      ) : activePlayer ? (
+                        <>
+                          <FaLock className="text-3xl mb-2" />
+                          <span>تم قفل الزر</span>
+                        </>
+                      ) : buzzerLocked || !currentQuestion || gameStatus !== 'playing' ? (
+                        <>
+                          <FaLock className="text-3xl mb-2" />
+                          <span>تم قفل الزر</span>
+                        </>
+                      ) : (
+                        <span>اضغط للجواب!</span>
+                      )}
+                    </button>
+
+                    {activePlayer && (
+                      <div className="mt-4 text-center">
+                        <p className="text-lg">
+                          <span className="font-bold">
+                            {players.find(p => p.id === activePlayer)?.isAdmin
+                              ? "المسؤول"
+                              : "لاعب"}
+                            ضغط على الزر!
+                          </span>
+                        </p>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
           
@@ -371,7 +613,8 @@ const PlayerScreen = ({
           </button>
         </div>
 
-        <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
+        {/* Player list */}
+        {/* <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">اللاعبون</h2>
             <span className="bg-indigo-700 px-3 py-1 rounded-full">
@@ -412,7 +655,8 @@ const PlayerScreen = ({
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
+
       </div>
     </div>
   );
