@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaTimes } from 'react-icons/fa';
 
 const GridGame = ({ socket, roomCode, playerId }) => {
-  const rows = 29;          // 1 header + 28 data rows
+  const rows = 29;
   const cols = 9;
 
   const emptyGrid = Array.from({ length: rows }, () => Array(cols).fill(''));
@@ -44,16 +44,15 @@ const GridGame = ({ socket, roomCode, playerId }) => {
     [socket, roomCode, playerId]
   );
 
-  // Focus the next cell in reading order (right → left, top → bottom)
   const focusNext = (row, col) => {
     let nextRow = row;
-    let nextCol = col + 1;   // ← now moving to a higher column index goes LEFT
+    let nextCol = col + 1;
     if (nextCol >= cols) {
-      nextCol = 0;           // wrap to rightmost cell of the next row
-      nextRow += 1;          // actually we move DOWN in the visual layout
+      nextCol = 0;
+      nextRow += 1;
       if (nextRow >= rows) {
         nextRow = rows - 1;
-        nextCol = cols - 1;  // last cell
+        nextCol = cols - 1;
       }
     }
     setTimeout(() => {
@@ -98,9 +97,8 @@ const GridGame = ({ socket, roomCode, playerId }) => {
         <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
           <thead>
             <tr className="bg-gradient-to-r from-cyan-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm sticky top-0 z-10">
-              {/* Render columns from right to left – matches visual RTL order */}
               {Array.from({ length: cols }, (_, i) => {
-                const col = cols - 1 - i;   // array index
+                const col = cols - 1 - i;
                 return (
                   <th key={col} className="p-2 border border-cyan-500/20">
                     <input
@@ -110,9 +108,8 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                       onChange={(e) => updateCell(0, col, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, 0, col)}
                       onClick={(e) => handleCellClick(e, 0, col, grid[0][col])}
-                      className="w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded"
+                      className="w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded rtl-input"
                       placeholder="اسماء الخانات"
-                      dir="rtl"
                     />
                   </th>
                 );
@@ -133,7 +130,6 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                       : 'bg-indigo-950/40 hover:bg-indigo-900/60'
                   }`}
                 >
-                  {/* Render columns from right to left */}
                   {Array.from({ length: cols }, (_, i) => {
                     const col = cols - 1 - i;
                     return (
@@ -148,9 +144,8 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                           className="w-full bg-gray-800/50 text-white text-center outline-none rounded-lg px-2 py-1.5 transition-all duration-200
                                      focus:bg-gradient-to-r focus:from-purple-600/40 focus:to-cyan-600/40 focus:scale-105 focus:shadow-lg focus:shadow-cyan-500/20
                                      hover:bg-gray-700/60 hover:shadow-md hover:shadow-cyan-500/10
-                                     border border-transparent focus:border-cyan-400/50"
+                                     border border-transparent focus:border-cyan-400/50 rtl-input"
                           placeholder=""
-                          dir="rtl"
                         />
                       </td>
                     );
