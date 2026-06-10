@@ -50,32 +50,33 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     setSelectedShip(null);
   };
 
+  const playSound = (soundFile) => {
+    const audio = new Audio(soundFile);
+    audio.play().catch(() => {});
+  };
+
   const handleCellClick = (row, col) => {
     if (row < 1 || row > playRows || col < 1 || col > playCols) return;
 
     const cellValue = grid[row][col];
 
-
     // ----- DESTROY MODE -----
     if (destroyMode) {
-      // Play appropriate sound
       if (cellValue === null) {
-        new Audio('/audio/water.mp3').play().catch(() => {});
-      } else if (cellValue !== 'hit') {
-        new Audio('/audio/explosion.mp3').play().catch(() => {});
-      }
-
-      if (cellValue && cellValue !== 'hit') {
+        playSound('/audio/water.mp3');
+      } else if (cellValue && !cellValue.startsWith('hit-')) {
+        playSound('/audio/explosion.mp3');
+        const shipId = cellValue;    // cellValue is the ship id
         const newGrid = grid.map(r => [...r]);
-        newGrid[row][col] = 'hit';
+        newGrid[row][col] = `hit-${shipId}`;
         setGrid(newGrid);
-        socket.emit('battleship_destroy', { roomCode, playerId, row, col });
+        socket.emit('battleship_destroy', { roomCode, playerId, row, col, shipId });
       }
       return;
     }
 
     // ----- PLACEMENT MODE -----
-    if (cellValue && cellValue !== 'hit') {
+    if (cellValue && !cellValue.startsWith('hit-')) {
       removeShip(cellValue);
       return;
     }
@@ -110,7 +111,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     if (!shipData) return;
     const newGrid = grid.map(r => [...r]);
     shipData.positions.forEach(({ r, c }) => {
-      if (newGrid[r][c] !== 'hit') newGrid[r][c] = null;
+      if (!newGrid[r][c]?.startsWith?.('hit-')) newGrid[r][c] = null;
     });
     setGrid(newGrid);
     const newPlaced = placedShips.filter(s => s.shipId !== shipId);
@@ -132,7 +133,9 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
           <button onClick={resetBoard} className="bg-red-600 hover:bg-red-500 px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm font-bold transition-colors">
             <FaRedo /> إعادة
           </button>
-          <button onClick={toggleDestroyMode} className={`px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm font-bold transition-all duration-200 ${destroyMode ? 'bg-gray-900 text-red-400 border border-red-500 shadow-lg shadow-red-500/20' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+          <button onClick={toggleDestroyMode} className={`px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm font-bold transition-all duration-200 ${
+            destroyMode ? 'bg-gray-900 text-red-400 border border-red-500 shadow-lg shadow-red-500/20' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          }`}>
             {destroyMode ? <FaTimes /> : <FaBomb />} {destroyMode ? 'إلغاء التدمير' : 'تدمير'}
           </button>
         </div>
@@ -143,7 +146,9 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
           {ships.map(ship => (
             <button key={ship.id} onClick={() => setSelectedShip(prev => prev === ship.id ? null : ship.id)}
               disabled={placedShips.some(s => s.shipId === ship.id)}
-              className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1 transition-all duration-200 ${placedShips.some(s => s.shipId === ship.id) ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : selectedShip === ship.id ? `${ship.color} text-white scale-105 shadow-lg` : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+              className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1 transition-all duration-200 ${
+                placedShips.some(s => s.shipId === ship.id) ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : selectedShip === ship.id ? `${ship.color} text-white scale-105 shadow-lg` : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}>
               <span className={`w-3 h-3 rounded-full ${ship.color.split(' ')[0]}`}></span>
               {ship.name} ({ship.length})
             </button>
@@ -154,7 +159,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
         </div>
       )}
 
-      {/* Grid (unchanged) */}
+      {/* Grid */}
       <div className="overflow-auto rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
         <table className="w-full border-collapse" style={{ minWidth: '400px' }}>
           <thead>
@@ -176,26 +181,32 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
                   {Array.from({ length: playCols }, (_, colIdx) => {
                     const c = colIdx + 1;
                     const cellValue = grid[r][c];
-                    const shipObj = cellValue && cellValue !== 'hit' ? ships.find(s => s.id === cellValue) : null;
-                    const isHit = cellValue === 'hit';
+                    const isHit = cellValue?.startsWith?.('hit-');
+                    const hitShipId = isHit ? cellValue.replace('hit-', '') : null;
+                    const shipObj = !isHit && cellValue ? ships.find(s => s.id === cellValue) : null;
+                    const originalShip = hitShipId ? ships.find(s => s.id === hitShipId) : null;
+
                     return (
-                    <td
-                      key={c}
-                      onClick={() => handleCellClick(r, c)}
-                      className={`h-8 w-8 sm:h-10 sm:w-10 border border-purple-500/20 cursor-pointer transition-all duration-150 hover:opacity-80 relative ${
-                        cellValue === 'hit'
-                          ? 'bg-gray-950'
-                          : shipObj
-                            ? `${shipObj.color} bg-opacity-80`
-                            : 'bg-gray-900/70'
-                      }`}
-                    >
-                      {cellValue === 'hit' && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/30 rounded-sm">
-                          <span className="text-red-600 font-bold text-lg">✕</span>
-                        </div>
-                      )}
-                    </td>
+                      <td
+                        key={c}
+                        onClick={() => handleCellClick(r, c)}
+                        className={`h-8 w-8 sm:h-10 sm:w-10 border border-purple-500/20 cursor-pointer transition-all duration-150 hover:opacity-80 relative ${
+                          isHit
+                            ? originalShip
+                              ? `${originalShip.color} bg-opacity-80`   // show original colour
+                              : 'bg-gray-950'
+                            : shipObj
+                              ? `${shipObj.color} bg-opacity-80`
+                              : 'bg-gray-900/70'
+                        }`}
+                      >
+                        {/* White overlay with X on hit cells */}
+                        {isHit && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/40 rounded-sm">
+                            <span className="text-red-600 font-bold text-lg">✕</span>
+                          </div>
+                        )}
+                      </td>
                     );
                   })}
                 </tr>
@@ -212,4 +223,4 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   );
 };
 
-export default BattleshipGame;  
+export default BattleshipGame;
