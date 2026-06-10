@@ -44,12 +44,12 @@ const GridGame = ({ socket, roomCode, playerId }) => {
     [socket, roomCode, playerId]
   );
 
-  // Focus the next cell in reading order (right → left, top → bottom)
+  // Focus next cell in reading order: right → left, top → bottom
   const focusNext = (row, col) => {
     let nextRow = row;
-    let nextCol = col + 1;   // higher index = visually to the left (because DOM reversed + table rtl)
+    let nextCol = col + 1;   // higher index = visually to the left (because DOM is reversed)
     if (nextCol >= cols) {
-      nextCol = 0;
+      nextCol = 0;           // wrap to rightmost cell of the next row
       nextRow += 1;
       if (nextRow >= rows) {
         nextRow = rows - 1;
@@ -95,11 +95,13 @@ const GridGame = ({ socket, roomCode, playerId }) => {
       </h2>
 
       <div className="overflow-auto max-h-[70vh] rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
-        <table className="w-full border-collapse" style={{ minWidth: '800px' }} dir="rtl">
+        {/* ❌ removed dir="rtl" from the table */}
+        <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
           <thead>
             <tr className="bg-gradient-to-r from-cyan-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm sticky top-0 z-10">
+              {/* Columns reversed: rightmost first, leftmost last */}
               {Array.from({ length: cols }, (_, i) => {
-                const col = cols - 1 - i;   // reverse order
+                const col = cols - 1 - i;
                 return (
                   <th key={col} className="p-2 border border-cyan-500/20">
                     <input

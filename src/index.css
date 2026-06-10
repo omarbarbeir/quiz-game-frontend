@@ -43,10 +43,6 @@ code {
   animation: scaleIn 0.5s ease-out;
 }
 
-.rtl-input {
-  direction: rtl;
-  text-align: right;
-}
 
 @tailwind base;
 @tailwind components;
