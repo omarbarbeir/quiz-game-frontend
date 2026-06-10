@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaTimes } from 'react-icons/fa';
 
 const GridGame = ({ socket, roomCode, playerId }) => {
-  const rows = 29;
+  const rows = 29;          // 1 header + 28 data rows
   const cols = 9;
 
   const emptyGrid = Array.from({ length: rows }, () => Array(cols).fill(''));
@@ -44,9 +44,10 @@ const GridGame = ({ socket, roomCode, playerId }) => {
     [socket, roomCode, playerId]
   );
 
+  // Focus the next cell in reading order (right → left, top → bottom)
   const focusNext = (row, col) => {
     let nextRow = row;
-    let nextCol = col + 1;
+    let nextCol = col + 1;   // higher index = visually to the left (because DOM reversed + table rtl)
     if (nextCol >= cols) {
       nextCol = 0;
       nextRow += 1;
@@ -94,11 +95,11 @@ const GridGame = ({ socket, roomCode, playerId }) => {
       </h2>
 
       <div className="overflow-auto max-h-[70vh] rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
-        <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
+        <table className="w-full border-collapse" style={{ minWidth: '800px' }} dir="rtl">
           <thead>
             <tr className="bg-gradient-to-r from-cyan-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm sticky top-0 z-10">
               {Array.from({ length: cols }, (_, i) => {
-                const col = cols - 1 - i;
+                const col = cols - 1 - i;   // reverse order
                 return (
                   <th key={col} className="p-2 border border-cyan-500/20">
                     <input
@@ -108,8 +109,9 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                       onChange={(e) => updateCell(0, col, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, 0, col)}
                       onClick={(e) => handleCellClick(e, 0, col, grid[0][col])}
-                      className="w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded rtl-input"
+                      className="w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded"
                       placeholder="اسماء الخانات"
+                      dir="rtl"
                     />
                   </th>
                 );
@@ -144,8 +146,9 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                           className="w-full bg-gray-800/50 text-white text-center outline-none rounded-lg px-2 py-1.5 transition-all duration-200
                                      focus:bg-gradient-to-r focus:from-purple-600/40 focus:to-cyan-600/40 focus:scale-105 focus:shadow-lg focus:shadow-cyan-500/20
                                      hover:bg-gray-700/60 hover:shadow-md hover:shadow-cyan-500/10
-                                     border border-transparent focus:border-cyan-400/50 rtl-input"
+                                     border border-transparent focus:border-cyan-400/50"
                           placeholder=""
+                          dir="rtl"
                         />
                       </td>
                     );
