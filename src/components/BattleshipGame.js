@@ -18,15 +18,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   const [orientation, setOrientation] = useState('horizontal');
   const [destroyMode, setDestroyMode] = useState(false);
 
-  // Preloaded audio refs – work reliably on mobile
-  const waterAudio = useRef(null);
-  const explosionAudio = useRef(null);
-
-  useEffect(() => {
-    waterAudio.current = new Audio('/sounds/water.mp3');
-    explosionAudio.current = new Audio('/sounds/explosion.mp3');
-  }, []);
-
+  // Load state from server (unchanged)
   useEffect(() => {
     if (!socket || !playerId) return;
     socket.emit('battleship_init', { roomCode, playerId });
@@ -54,29 +46,28 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     setSelectedShip(null);
   };
 
-  const playSound = (audioRef) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {});
-    }
+  // Play sound directly (like the buzzer)
+  const playSound = (soundFile) => {
+    const audio = new Audio(soundFile);
+    audio.play().catch(() => {});
   };
 
   const handleCellClick = (row, col) => {
     if (row < 1 || row > playRows || col < 1 || col > playCols) return;
     const cellValue = grid[row][col];
 
-    // ========== DESTROY MODE ==========
+    // ----- DESTROY MODE -----
     if (destroyMode) {
       if (cellValue === null) {
-        // Empty → water sound + white miss
-        playSound(waterAudio);
+        // Empty cell – water sound + white miss
+        playSound('/audio/water.mp3');
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = 'miss';
         setGrid(newGrid);
         socket.emit('battleship_miss', { roomCode, playerId, row, col });
       } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
-        // Ship → explosion sound + red X overlay
-        playSound(explosionAudio);
+        // Ship cell – explosion sound + red X overlay
+        playSound('/audio/explosion.mp3');
         const shipId = cellValue;
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = `hit-${shipId}`;
@@ -86,7 +77,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
       return;
     }
 
-    // ========== PLACEMENT MODE ==========
+    // ----- PLACEMENT MODE -----
     if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
       removeShip(cellValue);
       return;
@@ -201,13 +192,11 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
                           shipObj ? `${shipObj.color} bg-opacity-80` :
                           'bg-gray-900/70'
                         }`}>
-                        {/* Missed empty square: white background, black X */}
                         {isMiss && (
                           <div className="absolute inset-0 flex items-center justify-center">
                             <span className="text-black font-bold text-lg">✕</span>
                           </div>
                         )}
-                        {/* Hit ship square: white transparent overlay, red X */}
                         {isHit && (
                           <div className="absolute inset-0 flex items-center justify-center bg-white/40 rounded-sm">
                             <span className="text-red-600 font-bold text-lg">✕</span>
