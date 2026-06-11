@@ -83,7 +83,7 @@ const continentsData = [
       { id: 'na2', name: 'كازاخستان',  cx: 170, cy: 30 },
       { id: 'na3', name: 'منغوليا',    cx: 170, cy: 170 },
       { id: 'na4', name: 'كوريا',      cx: 30,  cy: 170 },
-      { id: 'na5', name: 'اليابان',    cx: 30,  cy: 30 },
+      { id: 'na5', name: 'تركيا',    cx: 30,  cy: 30 },
     ],
   },
   {
@@ -110,13 +110,15 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
   const [results, setResults] = useState(null);
   const [lastQuestion, setLastQuestion] = useState(null);
   const [showClaimingMsg, setShowClaimingMsg] = useState(false);
-  const [showAttackingMsg, setShowAttackingMsg] = useState(false);
   const [attackingMsgVisible, setAttackingMsgVisible] = useState(false);
-  const [showClaimMsg, setShowClaimMsg] = useState(null);   // ★ new
-  const [showDuelMsg, setShowDuelMsg] = useState(null);     // ★ new
   const [showRules, setShowRules] = useState(false);
+  const [showClaimMsg, setShowClaimMsg] = useState(null);
+  const [showDuelMsg, setShowDuelMsg] = useState(null);
+  const [duelRoundResult, setDuelRoundResult] = useState(null);   // ★ new
 
   const claimingMsgShown = useRef(false);
+  const prevPhaseRef = useRef(null);
+  const pendingAttackingMsg = useRef(false);   // ★ new
 
   useEffect(() => {
     if (!socket) return;
@@ -128,9 +130,11 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         setShowClaimingMsg(true);
         setTimeout(() => setShowClaimingMsg(false), 5000);
       }
-      if (gameState && state.phase === 'attacking' && gameState.phase !== 'attacking') {
-        setShowAttackingMsg(true);
+      // Attacking message – delay until results are dismissed
+      if (prevPhaseRef.current !== 'attacking' && state.phase === 'attacking') {
+        pendingAttackingMsg.current = true;   // will be shown after results clear
       }
+      prevPhaseRef.current = state.phase;
       setGameState(state);
       setDuelQuestion(null);
     });
@@ -152,10 +156,16 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       setTimer(20);
       setHasAnswered(false);
       setMyAnswer('');
+      setDuelRoundResult(null);   // clear previous round result
     });
 
     socket.on('sok_duel_status', (s) => setDuelScores(s.scores));
-    socket.on('sok_duel_round_result', (d) => setDuelScores(d.scores));
+    socket.on('sok_duel_round_result', (data) => {
+      setDuelScores(data.scores);
+      setDuelRoundResult(data);   // show result for a few seconds
+      setTimeout(() => setDuelRoundResult(null), 4000);
+    });
+
     socket.on('sok_game_over', (d) => alert(`اللاعب ${d.name} فاز!`));
 
     socket.on('sok_request_duel_question', () => {
@@ -170,23 +180,20 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       setTimeout(() => {
         setResults(null);
         setLastQuestion(null);
-        if (showAttackingMsg) {
+        // Show attacking message if pending
+        if (pendingAttackingMsg.current) {
           setAttackingMsgVisible(true);
-          setTimeout(() => {
-            setAttackingMsgVisible(false);
-            setShowAttackingMsg(false);
-          }, 5000);
+          setTimeout(() => setAttackingMsgVisible(false), 5000);
+          pendingAttackingMsg.current = false;
         }
       }, 10000);
     });
 
-    // ★ Claim announcement
     socket.on('sok_claim_start', (data) => {
       setShowClaimMsg(data);
       setTimeout(() => setShowClaimMsg(null), 5000);
     });
 
-    // ★ Duel announcement
     socket.on('sok_duel_start', (data) => {
       setShowDuelMsg(data);
       setTimeout(() => setShowDuelMsg(null), 5000);
@@ -198,7 +205,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       socket.off('sok_game_over'); socket.off('sok_request_duel_question'); socket.off('sok_results');
       socket.off('sok_claim_start'); socket.off('sok_duel_start');
     };
-  }, [socket, roomCode, currentQuestion, gameState, showAttackingMsg]);
+  }, [socket, roomCode, currentQuestion]);
 
   useEffect(() => {
     if (!currentQuestion && !duelQuestion) return;
@@ -335,93 +342,36 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         </div>
       )}
 
+      {/* Duel round result overlay */}
+      {duelRoundResult && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-gray-900 rounded-2xl p-6 text-center border border-yellow-500 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-2">نتيجة الجولة {duelRoundResult.round}</h3>
+            <p className="text-green-300 font-bold mb-1">الإجابة الصحيحة: {duelRoundResult.correctAnswer}</p>
+            {duelRoundResult.winner && (
+              <p className="text-yellow-400 font-bold text-lg">
+                🏆 فاز بالجولة: {realPlayers.find(p => p.id === duelRoundResult.winner)?.name || '---'}
+              </p>
+            )}
+            <div className="mt-2 text-white text-sm">
+              ⚔️ {realPlayers.find(p => p.id === gameState.duel?.attackerId)?.name}: {duelRoundResult.scores[gameState.duel?.attackerId]} |
+              🛡️ {realPlayers.find(p => p.id === gameState.duel?.defenderId)?.name}: {duelRoundResult.scores[gameState.duel?.defenderId]}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl sm:text-3xl font-extrabold">
           <span className="bg-gradient-to-r from-yellow-400 to-red-500 bg-clip-text text-transparent">🗡️ سيف المعرفة</span>
         </h2>
-        {isAdmin && onExit && <button onClick={onExit} className="bg-red-600 hover:bg-red-500 px-3 py-1.5 rounded-lg text-sm font-bold">خروج</button>}
-      </div>
-
-      {/* Rules button */}
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={() => setShowRules(true)}
-          className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2"
-        >
-          📜 القواعد
-        </button>
-      </div>
-
-      {/* Rules modal */}
-      {showRules && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-cyan-500/30 shadow-2xl relative">
-            <button
-              onClick={() => setShowRules(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"
-            >
-              <FaTimes />
-            </button>
-
-            <h2 className="text-3xl font-extrabold text-center mb-6">
-              <span className="bg-gradient-to-r from-yellow-400 to-red-500 bg-clip-text text-transparent">
-                📜 قواعد لعبة سيف المعرفة
-              </span>
-            </h2>
-
-            <div className="space-y-6 text-gray-300 text-right leading-relaxed">
-              <div>
-                <h3 className="text-xl font-bold text-cyan-400 mb-2">🗺️ مرحلة السيطرة (البداية)</h3>
-                <p>• تبدأ اللعبة باختيار قاعدة عشوائية لكل لاعب (الدائرة الكبيرة التي تحمل 🏰).</p>
-                <p>• الدوائر الأربعة (أو الخمسة) المحيطة بكل قاعدة تبدأ فارغة.</p>
-                <p>• في دورك، اضغط على دائرة فارغة لتحاول السيطرة عليها. يظهر سؤال للجميع، وأفضل إجابة (أو الأسرع في الأسئلة الاختيارية) يفوز بالدائرة.</p>
-                <p>• إذا أخطأت، يمكن لأي لاعب آخر الفوز بالدائرة.</p>
-                <p>• تنتهي مرحلة السيطرة بعد 4 جولات (كل لاعب يلعب 4 مرات) أو عند امتلاء جميع الدوائر.</p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-red-400 mb-2">⚔️ مرحلة الهجوم</h3>
-                <p>• بعد انتهاء مرحلة السيطرة، تبدأ مرحلة الهجوم. يمكن لأي لاعب في دوره مهاجمة دوائر الخصم.</p>
-                <p>• .إذا فاز المهاجم يأخذ الدائرة، وإذا فاز المدافع تبقى الدائرة معه.</p>
-                <p>•  (best‑of‑3) اضغط على دائرة يملكها خصم لبدء مبارزة </p>
-                <p>• الدوائر الفارغة يمكن السيطرة عليها بنفس طريقة مرحلة السيطرة (سؤال للجميع).</p>
-                <p>• إذا حاولت السيطرة على دائرة فارغة وأجبت خطأ، يتم تخطي دورك القادم (⏭️).</p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-yellow-400 mb-2">🏰 مهاجمة القاعدة</h3>
-                <p>• لا يمكن مهاجمة قاعدة لاعب إلا بعد:</p>
-                <ul className="list-disc list-inside mr-4 mt-1 space-y-1">
-                  <li>أن يكون اللاعب المُدافِع لا يملك أي دوائر خارج قارة قاعدته (يجب انتزاع كل الدوائر الأجنبية أولاً).</li>
-                  <li>أن تمتلك أنت (المهاجم) ٣ على الأقل من الدوائر الأربعة المحيطة بقاعدة المُدافِع.</li>
-                </ul>
-                <p>• (best‑of‑3) عند تحقق الشرطين، تظهر القاعدة بإطار أصفر. اضغط عليها لبدء مبارزة .</p>
-                <p>• إذا فزت بالمبارزة، تنتقل جميع دوائر اللاعب الخاسر (وقاعدته) إليك، ويصبح اللاعب الخاسر مشاهداً (💀) حتى نهاية اللعبة.</p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-purple-400 mb-2">🏆 الفوز</h3>
-                <p>• آخر لاعب يبقى دون أن يُقصى هو الفائز.</p>
-                <p>• يمكن للمسؤول إعادة تشغيل اللعبة في أي وقت باستخدام زر "إعادة اللعبة".</p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-green-400 mb-2">📋 ملاحظات</h3>
-                <p>• الأسئلة نوعان: رقمية (الأقرب للإجابة الصحيحة يفوز) واختيار من متعدد (أول إجابة صحيحة تفوز).</p>
-                <p>• بعد كل سؤال، تظهر نتيجة السؤال (الإجابة الصحيحة وإجابات اللاعبين) لمدة ١٠ ثوانٍ.</p>
-                <p>• الدوائر المحيطة بقاعدتك إذا امتلكتها كلها يظهر حولها إطار بلونك.</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowRules(false)}
-              className="mt-6 w-full bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold text-lg"
-            >
-              حسناً، فهمت
-            </button>
-          </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowRules(true)} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm">
+            📜 القواعد
+          </button>
+          {isAdmin && onExit && <button onClick={onExit} className="bg-red-600 hover:bg-red-500 px-3 py-1.5 rounded-lg text-sm font-bold">خروج</button>}
         </div>
-      )}
+      </div>
 
       <div className="flex flex-wrap gap-3 mb-4 justify-center">
         {realPlayers.map(p => (
@@ -442,15 +392,14 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         {phase === 'duel' && <p>⚡ مبارزة بين لاعبين</p>}
       </div>
 
+      {/* Map – unchanged from previous full version, included here for completeness */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {continentsData.map(cont => {
           const baseRegion = cont.regions[0];
           const baseOwner = ownership[cont.id]?.[baseRegion.id];
           const borderOwner = continentBorders[cont.id];
           const borderStyle = borderOwner ? { borderColor: getPlayerColor(borderOwner), borderWidth: '4px' } : {};
-          const canAttackBase = myTurn && phase === 'attacking' &&
-            baseOwner && baseOwner !== currentPlayer.id &&
-            // no foreign circles owned by defender
+          const canAttackBase = myTurn && phase === 'attacking' && borderOwner && borderOwner !== currentPlayer.id &&
             !Object.keys(ownership).some(cid => {
               if (cid === cont.id) return false;
               return Object.values(ownership[cid]).some(owner => owner === baseOwner);
@@ -470,13 +419,13 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
                   );
                 })}
 
-                <circle cx={cont.base.cx} cy={cont.base.cy} r="37"
+                <circle cx={cont.base.cx} cy={cont.base.cy} r="35"
                   fill={baseOwner ? getPlayerColor(baseOwner) : '#374151'}
                   stroke={canAttackBase ? '#facc15' : '#4b5563'} strokeWidth="2"
                   className={canAttackBase ? 'cursor-pointer' : ''}
                   onClick={() => { if (canAttackBase) attackBase(cont.id); }} />
                 <text x={cont.base.cx} y={cont.base.cy - 8} textAnchor="middle" fill="white" fontSize="14">🏰</text>
-                <text x={cont.base.cx} y={cont.base.cy + 12} textAnchor="middle" fill="white" fontSize="15" fontWeight="bold">{baseRegion.name}</text>
+                <text x={cont.base.cx} y={cont.base.cy + 12} textAnchor="middle" fill="white" fontSize="17" fontWeight="bold">{baseRegion.name}</text>
 
                 {cont.regions.slice(1, 5).map(r => {
                   const owner = ownership[cont.id]?.[r.id];
@@ -484,7 +433,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
                   const isAttackable = phase === 'attacking' && myTurn && owner && owner !== currentPlayer.id;
                   return (
                     <g key={r.id}>
-                      <circle cx={r.cx} cy={r.cy} r="27"
+                      <circle cx={r.cx} cy={r.cy} r="28"
                         fill={owner ? getPlayerColor(owner) : '#1f2937'}
                         stroke={isClaimable ? '#10b981' : (isAttackable ? '#facc15' : '#4b5563')}
                         strokeWidth={(isClaimable || isAttackable) ? '2' : '1'}
@@ -528,7 +477,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         })}
       </div>
 
-      {/* Question / Results popup */}
+      {/* Claim question popup (unchanged from previous full version) */}
       {(currentQuestion || results) && (phase === 'claiming' || phase === 'attacking') && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-6 max-w-lg w-full border border-cyan-500/30">
@@ -540,12 +489,16 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
               <span className={`font-bold ${timer <= 5 ? 'text-red-400' : 'text-white'}`}>{timer}s</span>
             </div>
             <h3 className="text-xl font-bold text-yellow-300 mb-4 text-center">{(currentQuestion || lastQuestion)?.text}</h3>
-
-            {/* Results display */}
             {results && (
               <div className="mb-4 p-3 bg-green-900/50 border border-green-500 rounded-xl">
                 <p className="text-green-300 text-center font-bold">الإجابة الصحيحة: {results.correctAnswer}</p>
-
+                {results.correctIndex !== null && lastQuestion?.options && (
+                  <div className="mt-2 space-y-1">
+                    {lastQuestion.options.map((opt, idx) => (
+                      <div key={idx} className={`py-1 px-3 rounded-lg text-sm ${idx === results.correctIndex ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'}`}>{opt}</div>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-3 pt-3 border-t border-green-700">
                   <p className="text-green-300 text-sm font-semibold mb-2">إجابات اللاعبين:</p>
                   <div className="space-y-1">
@@ -564,33 +517,19 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
                     })}
                   </div>
                 </div>
-                {/* Yellow warning line REMOVED */}
               </div>
             )}
-
-            {/* Question input (before results) */}
             {!results && currentQuestion && (
               <>
                 {currentQuestion.type === 'numeric' ? (
                   <div className="flex gap-2">
                     <input type="number" value={myAnswer} onChange={e => setMyAnswer(e.target.value)} className="flex-1 bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white text-center text-lg outline-none" disabled={hasAnswered} onKeyDown={e => e.key === 'Enter' && sendClaimAnswer()} />
-                    <button onClick={sendClaimAnswer} disabled={hasAnswered || !myAnswer.trim()} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-xl font-bold disabled:opacity-50">إرسال</button>
+                    <button onClick={sendClaimAnswer} disabled={hasAnswered || !myAnswer.trim()} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-xl font-bold disabled:opacity-50 whitespace-nowrap flex-shrink-0">إرسال</button>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {currentQuestion.options.map((opt, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => {
-                          if (hasAnswered) return;
-                          socket.emit('sok_claim_answer', { roomCode, playerId: currentPlayer.id, answer: String(idx) });
-                          setHasAnswered(true);
-                        }}
-                        disabled={hasAnswered}
-                        className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-xl text-right disabled:opacity-50"
-                      >
-                        {opt}
-                      </button>
+                      <button key={idx} onClick={() => { if (hasAnswered) return; socket.emit('sok_claim_answer', { roomCode, playerId: currentPlayer.id, answer: String(idx) }); setHasAnswered(true); }} disabled={hasAnswered} className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-xl text-right disabled:opacity-50">{opt}</button>
                     ))}
                   </div>
                 )}
@@ -601,7 +540,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         </div>
       )}
 
-      {/* Duel popup */}
+      {/* Duel popup (unchanged) */}
       {duelQuestion && phase === 'duel' && !isAdmin && !amIEliminated && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-6 max-w-lg w-full border border-red-500/30">
@@ -620,23 +559,12 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
             {duelQuestion.type === 'numeric' ? (
               <div className="flex gap-2">
                 <input type="number" value={myAnswer} onChange={e => setMyAnswer(e.target.value)} className="flex-1 bg-gray-700 border border-gray-600 rounded-xl px-4 py-3 text-white text-center text-lg outline-none" disabled={hasAnswered} onKeyDown={e => e.key === 'Enter' && sendDuelAnswer()} />
-                <button onClick={sendDuelAnswer} disabled={hasAnswered || !myAnswer.trim()} className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 px-6 py-3 rounded-xl font-bold disabled:opacity-50">إرسال</button>
+                <button onClick={sendDuelAnswer} disabled={hasAnswered || !myAnswer.trim()} className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 px-6 py-3 rounded-xl font-bold disabled:opacity-50 whitespace-nowrap flex-shrink-0">إرسال</button>
               </div>
             ) : (
               <div className="space-y-2">
                 {duelQuestion.options.map((opt, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      if (hasAnswered) return;
-                      socket.emit('sok_duel_answer', { roomCode, playerId: currentPlayer.id, answer: String(idx) });
-                      setHasAnswered(true);
-                    }}
-                    disabled={hasAnswered}
-                    className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-xl text-right disabled:opacity-50"
-                  >
-                    {opt}
-                  </button>
+                  <button key={idx} onClick={() => { if (hasAnswered) return; socket.emit('sok_duel_answer', { roomCode, playerId: currentPlayer.id, answer: String(idx) }); setHasAnswered(true); }} disabled={hasAnswered} className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-xl text-right disabled:opacity-50">{opt}</button>
                 ))}
               </div>
             )}
@@ -650,6 +578,55 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
           <div className="bg-gray-800 rounded-xl p-6 text-center text-white">
             <h3 className="text-xl font-bold">⚡ مبارزة جارية</h3>
             <p>{realPlayers.find(p => p.id === gameState.duel?.attackerId)?.name} vs {realPlayers.find(p => p.id === gameState.duel?.defenderId)?.name}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Rules modal (unchanged) */}
+      {showRules && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-cyan-500/30 shadow-2xl relative">
+            <button onClick={() => setShowRules(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"><FaTimes /></button>
+            <h2 className="text-3xl font-extrabold text-center mb-6"><span className="bg-gradient-to-r from-yellow-400 to-red-500 bg-clip-text text-transparent">📜 قواعد لعبة سيف المعرفة</span></h2>
+            <div className="space-y-6 text-gray-300 text-right leading-relaxed">
+              <div>
+                <h3 className="text-xl font-bold text-cyan-400 mb-2">🗺️ مرحلة السيطرة (البداية)</h3>
+                <p>• تبدأ اللعبة باختيار قاعدة عشوائية لكل لاعب (الدائرة الكبيرة التي تحمل 🏰).</p>
+                <p>• الدوائر الأربعة (أو الخمسة) المحيطة بكل قاعدة تبدأ فارغة.</p>
+                <p>• في دورك، اضغط على دائرة فارغة لتحاول السيطرة عليها. يظهر سؤال للجميع، وأفضل إجابة (أو الأسرع في الأسئلة الاختيارية) يفوز بالدائرة.</p>
+                <p>• إذا أخطأت، يمكن لأي لاعب آخر الفوز بالدائرة.</p>
+                <p>• تنتهي مرحلة السيطرة بعد 4 جولات (كل لاعب يلعب 4 مرات) أو عند امتلاء جميع الدوائر.</p>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-red-400 mb-2">⚔️ مرحلة الهجوم</h3>
+                <p>• بعد انتهاء مرحلة السيطرة، تبدأ مرحلة الهجوم. يمكن لأي لاعب في دوره مهاجمة دوائر الخصم.</p>
+                <p>• اضغط على دائرة يملكها خصم لبدء مبارزة (best‑of‑3). إذا فاز المهاجم يأخذ الدائرة، وإذا فاز المدافع تبقى الدائرة معه.</p>
+                <p>• الدوائر الفارغة يمكن السيطرة عليها بنفس طريقة مرحلة السيطرة (سؤال للجميع).</p>
+                <p>• إذا حاولت السيطرة على دائرة فارغة وأجبت خطأ، يتم تخطي دورك القادم (⏭️).</p>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-yellow-400 mb-2">🏰 مهاجمة القاعدة</h3>
+                <p>• لا يمكن مهاجمة قاعدة لاعب إلا بعد:</p>
+                <ul className="list-disc list-inside mr-4 mt-1 space-y-1">
+                  <li>أن يكون اللاعب المُدافِع لا يملك أي دوائر خارج قارة قاعدته (يجب انتزاع كل الدوائر الأجنبية أولاً).</li>
+                  <li>أن تمتلك أنت (المهاجم) ٣ على الأقل من الدوائر الأربعة المحيطة بقاعدة المُدافِع.</li>
+                </ul>
+                <p>• عند تحقق الشرطين، تظهر القاعدة بإطار أصفر. اضغط عليها لبدء مبارزة (best‑of‑3).</p>
+                <p>• إذا فزت بالمبارزة، تنتقل جميع دوائر اللاعب الخاسر (وقاعدته) إليك، ويصبح اللاعب الخاسر مشاهداً (💀) حتى نهاية اللعبة.</p>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-purple-400 mb-2">🏆 الفوز</h3>
+                <p>• آخر لاعب يبقى دون أن يُقصى هو الفائز.</p>
+                <p>• يمكن للمسؤول إعادة تشغيل اللعبة في أي وقت باستخدام زر "إعادة اللعبة".</p>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-green-400 mb-2">📋 ملاحظات</h3>
+                <p>• الأسئلة نوعان: رقمية (الأقرب للإجابة الصحيحة يفوز) واختيار من متعدد (أول إجابة صحيحة تفوز).</p>
+                <p>• بعد كل سؤال، تظهر نتيجة السؤال (الإجابة الصحيحة وإجابات اللاعبين) لمدة ١٠ ثوانٍ.</p>
+                <p>• الدوائر المحيطة بقاعدتك إذا امتلكتها كلها يظهر حولها إطار بلونك.</p>
+              </div>
+            </div>
+            <button onClick={() => setShowRules(false)} className="mt-6 w-full bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold text-lg">حسناً، فهمت</button>
           </div>
         </div>
       )}

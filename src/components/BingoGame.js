@@ -9,6 +9,8 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
   const [grid, setGrid] = useState(emptyGrid);
   const [marks, setMarks] = useState(emptyMarks);
   const [penActive, setPenActive] = useState(false);
+  const [calledNumbers, setCalledNumbers] = useState([]);
+
 
   useEffect(() => {
     if (!socket || !playerId) return;
@@ -54,6 +56,20 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
     setGrid(emptyGrid);
     setMarks(emptyMarks);
     socket.emit('bingo_reset', { roomCode, playerId });
+  };
+
+// const [calledNumbers, setCalledNumbers] = useState([]);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('bingo_called_numbers', (numbers) => {
+      setCalledNumbers(numbers);
+    });
+    return () => socket.off('bingo_called_numbers');
+  }, [socket]);
+
+  const callNumber = () => {
+    socket.emit('bingo_call_number', { roomCode });
   };
 
   const handleCellClick = (row, col) => {
@@ -120,6 +136,31 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
           </button>
         </div>
       </div>
+
+      {/* Shared number display */}
+      <div className="flex items-center justify-center gap-4 mb-4">
+        <div className="bg-gray-800/70 rounded-xl p-3 text-center flex-1 max-w-md">
+          <p className="text-sm text-gray-400 mb-1">آخر رقم تم استدعاؤه</p>
+          <p className="text-3xl font-bold text-yellow-400">
+            {calledNumbers.length > 0 ? calledNumbers[calledNumbers.length - 1] : '—'}
+          </p>
+        </div>
+        <button
+          onClick={callNumber}
+          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 px-6 py-3 rounded-xl font-bold shadow-lg shadow-green-500/20"
+        >
+          🎲 استدعاء رقم
+        </button>
+      </div>
+
+      {/* Called numbers list */}
+      {calledNumbers.length > 0 && (
+        <div className="flex flex-wrap gap-1 justify-center mb-4">
+          {calledNumbers.map((num, idx) => (
+            <span key={idx} className="bg-gray-700 text-white text-xs px-2 py-1 rounded-full">{num}</span>
+          ))}
+        </div>
+      )}
 
       <div className="overflow-auto max-h-[70vh] rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
         {/* ❌ removed dir="rtl" from the table */}
