@@ -18,6 +18,38 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   const [orientation, setOrientation] = useState('horizontal');
   const [destroyMode, setDestroyMode] = useState(false);
 
+  // 👇 Preload audio files once using refs
+  const waterAudioRef = useRef(null);
+  const explosionAudioRef = useRef(null);
+
+  useEffect(() => {
+    // Create Audio objects and preload them
+    waterAudioRef.current = new Audio('/audio/water.mp3');
+    explosionAudioRef.current = new Audio('/audio/explosion.mp3');
+
+    // Preload (optional but helps on mobile)
+    waterAudioRef.current.load();
+    explosionAudioRef.current.load();
+
+    return () => {
+      // Cleanup: pause and remove references
+      waterAudioRef.current.pause();
+      explosionAudioRef.current.pause();
+      waterAudioRef.current = null;
+      explosionAudioRef.current = null;
+    };
+  }, []);
+
+  // Reusable, reliable sound player
+  const playSound = useCallback((sound) => {
+    const audio = sound === 'water' ? waterAudioRef.current : explosionAudioRef.current;
+    if (!audio) return;
+    // Reset playback position so it plays from start every time
+    audio.currentTime = 0;
+    // Play and catch any errors (e.g. if user hasn't interacted yet – should be fine)
+    audio.play().catch(err => console.warn('Audio play failed:', err));
+  }, []);
+
   // Load state from server (unchanged)
   useEffect(() => {
     if (!socket || !playerId) return;
@@ -46,12 +78,6 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     setSelectedShip(null);
   };
 
-  // Play sound directly (like the buzzer)
-  const playSound = (soundFile) => {
-    const audio = new Audio(soundFile);
-    audio.play().catch(() => {});
-  };
-
   const handleCellClick = (row, col) => {
     if (row < 1 || row > playRows || col < 1 || col > playCols) return;
     const cellValue = grid[row][col];
@@ -59,15 +85,13 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     // ----- DESTROY MODE -----
     if (destroyMode) {
       if (cellValue === null) {
-        // Empty cell – water sound + white miss
-        playSound('/audio/water.mp3');
+        playSound('water');            // ✅ fixed
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = 'miss';
         setGrid(newGrid);
         socket.emit('battleship_miss', { roomCode, playerId, row, col });
       } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
-        // Ship cell – explosion sound + red X overlay
-        playSound('/audio/explosion.mp3');
+        playSound('explosion');       // ✅ fixed
         const shipId = cellValue;
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = `hit-${shipId}`;

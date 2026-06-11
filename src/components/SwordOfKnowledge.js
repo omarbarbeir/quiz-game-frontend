@@ -114,15 +114,15 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
   const [showRules, setShowRules] = useState(false);
   const [showClaimMsg, setShowClaimMsg] = useState(null);
   const [showDuelMsg, setShowDuelMsg] = useState(null);
-  const [duelRoundResult, setDuelRoundResult] = useState(null);   // ★ new
+  const [duelRoundResult, setDuelRoundResult] = useState(null);
 
   const claimingMsgShown = useRef(false);
   const prevPhaseRef = useRef(null);
-  const pendingAttackingMsg = useRef(false);   // ★ new
+  const pendingAttackingMsg = useRef(false);
 
   useEffect(() => {
     if (!socket) return;
-    socket.emit('sok_init', { roomCode });
+    socket.emit('sok_init', { roomCode, playerId: currentPlayer.id, playerName: currentPlayer.name, isAdmin });
 
     socket.on('sok_state', (state) => {
       if (state.phase === 'claiming' && !claimingMsgShown.current) {
@@ -130,9 +130,8 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         setShowClaimingMsg(true);
         setTimeout(() => setShowClaimingMsg(false), 5000);
       }
-      // Attacking message – delay until results are dismissed
       if (prevPhaseRef.current !== 'attacking' && state.phase === 'attacking') {
-        pendingAttackingMsg.current = true;   // will be shown after results clear
+        pendingAttackingMsg.current = true;
       }
       prevPhaseRef.current = state.phase;
       setGameState(state);
@@ -156,13 +155,13 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       setTimer(20);
       setHasAnswered(false);
       setMyAnswer('');
-      setDuelRoundResult(null);   // clear previous round result
+      setDuelRoundResult(null);
     });
 
     socket.on('sok_duel_status', (s) => setDuelScores(s.scores));
     socket.on('sok_duel_round_result', (data) => {
       setDuelScores(data.scores);
-      setDuelRoundResult(data);   // show result for a few seconds
+      setDuelRoundResult(data);
       setTimeout(() => setDuelRoundResult(null), 4000);
     });
 
@@ -180,7 +179,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       setTimeout(() => {
         setResults(null);
         setLastQuestion(null);
-        // Show attacking message if pending
+        // Show the attack phase message after results are gone
         if (pendingAttackingMsg.current) {
           setAttackingMsgVisible(true);
           setTimeout(() => setAttackingMsgVisible(false), 5000);
@@ -392,7 +391,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         {phase === 'duel' && <p>⚡ مبارزة بين لاعبين</p>}
       </div>
 
-      {/* Map – unchanged from previous full version, included here for completeness */}
+      {/* Map */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {continentsData.map(cont => {
           const baseRegion = cont.regions[0];
@@ -447,37 +446,13 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
                     </g>
                   );
                 })}
-
-                {cont.regions[5] && (
-                  (() => {
-                    const r = cont.regions[5];
-                    const owner = ownership[cont.id]?.[r.id];
-                    const isClaimable = (phase === 'claiming' || phase === 'attacking') && myTurn && !owner;
-                    const isAttackable = phase === 'attacking' && myTurn && owner && owner !== currentPlayer.id;
-                    return (
-                      <g key={r.id}>
-                        <circle cx={r.cx} cy={r.cy} r="14"
-                          fill={owner ? getPlayerColor(owner) : '#1f2937'}
-                          stroke={isClaimable ? '#10b981' : (isAttackable ? '#facc15' : '#4b5563')}
-                          strokeWidth={(isClaimable || isAttackable) ? '2' : '1'}
-                          strokeDasharray={isClaimable ? '4' : '0'}
-                          className={(isClaimable || isAttackable) ? 'cursor-pointer' : ''}
-                          onClick={() => {
-                            if (isClaimable) claimRegion(cont.id, r.id);
-                            else if (isAttackable) attackHub(cont.id, r.id);
-                          }} />
-                        <text x={r.cx} y={r.cy} dy=".35em" textAnchor="middle" fill="white" fontSize="8">{r.name}</text>
-                      </g>
-                    );
-                  })()
-                )}
               </svg>
             </div>
           );
         })}
       </div>
 
-      {/* Claim question popup (unchanged from previous full version) */}
+      {/* Claim question popup */}
       {(currentQuestion || results) && (phase === 'claiming' || phase === 'attacking') && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-6 max-w-lg w-full border border-cyan-500/30">
@@ -491,14 +466,8 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
             <h3 className="text-xl font-bold text-yellow-300 mb-4 text-center">{(currentQuestion || lastQuestion)?.text}</h3>
             {results && (
               <div className="mb-4 p-3 bg-green-900/50 border border-green-500 rounded-xl">
-                <p className="text-green-300 text-center font-bold">الإجابة الصحيحة: {results.correctAnswer}</p>
-                {results.correctIndex !== null && lastQuestion?.options && (
-                  <div className="mt-2 space-y-1">
-                    {lastQuestion.options.map((opt, idx) => (
-                      <div key={idx} className={`py-1 px-3 rounded-lg text-sm ${idx === results.correctIndex ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'}`}>{opt}</div>
-                    ))}
-                  </div>
-                )}
+                <p className="text-green-300 text-center font-bold text-lg mb-2">الإجابة الصحيحة: {results.correctAnswer}</p>
+                {/* ⬇️ REMOVED the list of all options – only the correct answer is shown ⬇️ */}
                 <div className="mt-3 pt-3 border-t border-green-700">
                   <p className="text-green-300 text-sm font-semibold mb-2">إجابات اللاعبين:</p>
                   <div className="space-y-1">
@@ -540,7 +509,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         </div>
       )}
 
-      {/* Duel popup (unchanged) */}
+      {/* Duel popup */}
       {duelQuestion && phase === 'duel' && !isAdmin && !amIEliminated && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-6 max-w-lg w-full border border-red-500/30">
@@ -582,7 +551,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         </div>
       )}
 
-      {/* Rules modal (unchanged) */}
+      {/* Rules modal */}
       {showRules && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-cyan-500/30 shadow-2xl relative">
