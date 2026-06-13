@@ -195,4 +195,4 @@ const swordOfKnowledgeQuestions = [
   // … add as many as you like
 ];
 
-export default swordOfKnowledgeQuestions;
+module.exports = swordOfKnowledgeQuestions;

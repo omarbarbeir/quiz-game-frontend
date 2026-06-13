@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaShip, FaClock, FaTrophy, FaTimes } from 'react-icons/fa';
+import { FaShip, FaClock, FaTrophy } from 'react-icons/fa';
 import swordOfKnowledgeQuestions from '../data/swordOfKnowledgeQuestions';
 
 const playerColors = [
@@ -16,7 +16,7 @@ const continentsData = [
       { id: 'africa1', name: 'مصر',            cx: 30,  cy: 30 },
       { id: 'africa2', name: 'نيجيريا',        cx: 170, cy: 30 },
       { id: 'africa3', name: 'جنوب أفريقيا',   cx: 170, cy: 170 },
-      { id: 'africa4', name: 'كينيا',          cx: 30,  cy: 170 },
+      { id: 'africa4', name: 'تونس',          cx: 30,  cy: 170 },
       { id: 'africa5', name: 'الجزائر',        cx: 30,  cy: 30 },
     ],
   },
@@ -110,28 +110,33 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
   const [results, setResults] = useState(null);
   const [lastQuestion, setLastQuestion] = useState(null);
   const [showClaimingMsg, setShowClaimingMsg] = useState(false);
+  const [showAttackingMsg, setShowAttackingMsg] = useState(false);
   const [attackingMsgVisible, setAttackingMsgVisible] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showClaimMsg, setShowClaimMsg] = useState(null);
   const [showDuelMsg, setShowDuelMsg] = useState(null);
+  const [showAttackStageModal, setShowAttackStageModal] = useState(false);
+  const attackStageModalShown = useRef(false);
   const [duelRoundResult, setDuelRoundResult] = useState(null);
 
   const claimingMsgShown = useRef(false);
   const prevPhaseRef = useRef(null);
-  const pendingAttackingMsg = useRef(false);
 
   useEffect(() => {
     if (!socket) return;
-    socket.emit('sok_init', { roomCode, playerId: currentPlayer.id, playerName: currentPlayer.name, isAdmin });
+    socket.emit('sok_init', { roomCode });
 
     socket.on('sok_state', (state) => {
-      if (state.phase === 'claiming' && !claimingMsgShown.current) {
+      // One‑time claiming message
+      if (state.phase === 'claiming' && !claimingMsgShown.current && !showClaimingMsg) {
         claimingMsgShown.current = true;
         setShowClaimingMsg(true);
         setTimeout(() => setShowClaimingMsg(false), 5000);
       }
+      // Attacking message – only when phase actually changes to attacking
       if (prevPhaseRef.current !== 'attacking' && state.phase === 'attacking') {
-        pendingAttackingMsg.current = true;
+        setAttackingMsgVisible(true);
+        setTimeout(() => setAttackingMsgVisible(false), 5000);
       }
       prevPhaseRef.current = state.phase;
       setGameState(state);
@@ -155,18 +160,28 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       setTimer(20);
       setHasAnswered(false);
       setMyAnswer('');
-      setDuelRoundResult(null);
     });
 
     socket.on('sok_duel_status', (s) => setDuelScores(s.scores));
     socket.on('sok_duel_round_result', (data) => {
       setDuelScores(data.scores);
-      setDuelRoundResult(data);
+      // Find winner name
+      let winnerName = null;
+      if (data.winner) {
+        const winnerPlayer = gameState?.players.find(p => p.id === data.winner);
+        winnerName = winnerPlayer?.name;
+      }
+      setDuelRoundResult({
+        round: data.round,
+        correctAnswer: data.correctAnswer,
+        winnerName: winnerName,
+      });
+      // Auto-hide after 4 seconds
       setTimeout(() => setDuelRoundResult(null), 4000);
     });
-
     socket.on('sok_game_over', (d) => alert(`اللاعب ${d.name} فاز!`));
 
+    // Attacker provides question for subsequent duel rounds
     socket.on('sok_request_duel_question', () => {
       const qs = swordOfKnowledgeQuestions;
       if (!qs?.length) return;
@@ -179,23 +194,38 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       setTimeout(() => {
         setResults(null);
         setLastQuestion(null);
-        // Show the attack phase message after results are gone
-        if (pendingAttackingMsg.current) {
+        // Show attacking message if it was pending
+        if (showAttackingMsg) {
           setAttackingMsgVisible(true);
-          setTimeout(() => setAttackingMsgVisible(false), 5000);
-          pendingAttackingMsg.current = false;
+          setTimeout(() => {
+            setAttackingMsgVisible(false);
+            setShowAttackingMsg(false);
+          }, 5000);
         }
       }, 10000);
     });
 
+    // Claim announcement
     socket.on('sok_claim_start', (data) => {
       setShowClaimMsg(data);
       setTimeout(() => setShowClaimMsg(null), 5000);
     });
 
+    // Duel announcement
     socket.on('sok_duel_start', (data) => {
       setShowDuelMsg(data);
       setTimeout(() => setShowDuelMsg(null), 5000);
+    });
+
+    socket.on('sok_stage_changed', ({ stage }) => {
+    if (stage === 'attacking' && !attackStageModalShown.current) {
+        attackStageModalShown.current = true;
+        // Wait for the results modal to disappear (10 seconds)
+        setTimeout(() => {
+          setShowAttackStageModal(true);
+          setTimeout(() => setShowAttackStageModal(false), 4000);
+        }, 10000);
+      }
     });
 
     return () => {
@@ -204,7 +234,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       socket.off('sok_game_over'); socket.off('sok_request_duel_question'); socket.off('sok_results');
       socket.off('sok_claim_start'); socket.off('sok_duel_start');
     };
-  }, [socket, roomCode, currentQuestion]);
+  }, [socket, roomCode, currentQuestion, showAttackingMsg]);
 
   useEffect(() => {
     if (!currentQuestion && !duelQuestion) return;
@@ -341,23 +371,38 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         </div>
       )}
 
-      {/* Duel round result overlay */}
-      {duelRoundResult && (
+      {showAttackStageModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-gray-900 rounded-2xl p-6 text-center border border-yellow-500 shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-2">نتيجة الجولة {duelRoundResult.round}</h3>
-            <p className="text-green-300 font-bold mb-1">الإجابة الصحيحة: {duelRoundResult.correctAnswer}</p>
-            {duelRoundResult.winner && (
-              <p className="text-yellow-400 font-bold text-lg">
-                🏆 فاز بالجولة: {realPlayers.find(p => p.id === duelRoundResult.winner)?.name || '---'}
-              </p>
-            )}
-            <div className="mt-2 text-white text-sm">
-              ⚔️ {realPlayers.find(p => p.id === gameState.duel?.attackerId)?.name}: {duelRoundResult.scores[gameState.duel?.attackerId]} |
-              🛡️ {realPlayers.find(p => p.id === gameState.duel?.defenderId)?.name}: {duelRoundResult.scores[gameState.duel?.defenderId]}
-            </div>
+          <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-10 text-center border-2 border-cyan-500">
+            <span className="text-6xl">⚔️</span>
+            <h2 className="text-4xl font-extrabold mt-4 text-yellow-400">مرحلة الهجوم</h2>
+            <p className="text-gray-300 mt-2">استعد لمهاجمة خصومك!</p>
           </div>
         </div>
+      )}
+
+
+      {duelRoundResult && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
+            <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-8 max-w-md w-full mx-4 text-center border-2 border-cyan-500 shadow-2xl">
+              <h3 className="text-2xl font-bold text-yellow-400 mb-4">نتيجة الجولة {duelRoundResult.round}</h3>
+              {duelRoundResult.winnerName ? (
+                <p className="text-xl text-green-400 mb-2">الفائز: {duelRoundResult.winnerName}</p>
+              ) : (
+                <p className="text-xl text-red-400 mb-2">لا فائز في هذه الجولة</p>
+              )}
+              <div className="bg-gray-800 rounded-xl p-4 mt-2">
+                <p className="text-gray-300 text-sm mb-1">الإجابة الصحيحة:</p>
+                <p className="text-white text-lg font-bold">{duelRoundResult.correctAnswer}</p>
+              </div>
+              <button
+                onClick={() => setDuelRoundResult(null)}
+                className="mt-6 bg-cyan-600 hover:bg-cyan-500 px-6 py-2 rounded-xl font-bold"
+              >
+                متابعة
+              </button>
+            </div>
+          </div>
       )}
 
       <div className="flex justify-between items-center mb-4">
@@ -391,7 +436,6 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
         {phase === 'duel' && <p>⚡ مبارزة بين لاعبين</p>}
       </div>
 
-      {/* Map */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {continentsData.map(cont => {
           const baseRegion = cont.regions[0];
@@ -418,13 +462,13 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
                   );
                 })}
 
-                <circle cx={cont.base.cx} cy={cont.base.cy} r="35"
+                <circle cx={cont.base.cx} cy={cont.base.cy} r="37"
                   fill={baseOwner ? getPlayerColor(baseOwner) : '#374151'}
                   stroke={canAttackBase ? '#facc15' : '#4b5563'} strokeWidth="2"
                   className={canAttackBase ? 'cursor-pointer' : ''}
                   onClick={() => { if (canAttackBase) attackBase(cont.id); }} />
                 <text x={cont.base.cx} y={cont.base.cy - 8} textAnchor="middle" fill="white" fontSize="14">🏰</text>
-                <text x={cont.base.cx} y={cont.base.cy + 12} textAnchor="middle" fill="white" fontSize="17" fontWeight="bold">{baseRegion.name}</text>
+                <text x={cont.base.cx} y={cont.base.cy + 12} textAnchor="middle" fill="white" fontSize="16" fontWeight="bold">{baseRegion.name}</text>
 
                 {cont.regions.slice(1, 5).map(r => {
                   const owner = ownership[cont.id]?.[r.id];
@@ -432,7 +476,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
                   const isAttackable = phase === 'attacking' && myTurn && owner && owner !== currentPlayer.id;
                   return (
                     <g key={r.id}>
-                      <circle cx={r.cx} cy={r.cy} r="28"
+                      <circle cx={r.cx} cy={r.cy} r="30"
                         fill={owner ? getPlayerColor(owner) : '#1f2937'}
                         stroke={isClaimable ? '#10b981' : (isAttackable ? '#facc15' : '#4b5563')}
                         strokeWidth={(isClaimable || isAttackable) ? '2' : '1'}
@@ -446,6 +490,30 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
                     </g>
                   );
                 })}
+
+                {cont.regions[5] && (
+                  (() => {
+                    const r = cont.regions[5];
+                    const owner = ownership[cont.id]?.[r.id];
+                    const isClaimable = (phase === 'claiming' || phase === 'attacking') && myTurn && !owner;
+                    const isAttackable = phase === 'attacking' && myTurn && owner && owner !== currentPlayer.id;
+                    return (
+                      <g key={r.id}>
+                        <circle cx={r.cx} cy={r.cy} r="14"
+                          fill={owner ? getPlayerColor(owner) : '#1f2937'}
+                          stroke={isClaimable ? '#10b981' : (isAttackable ? '#facc15' : '#4b5563')}
+                          strokeWidth={(isClaimable || isAttackable) ? '2' : '1'}
+                          strokeDasharray={isClaimable ? '4' : '0'}
+                          className={(isClaimable || isAttackable) ? 'cursor-pointer' : ''}
+                          onClick={() => {
+                            if (isClaimable) claimRegion(cont.id, r.id);
+                            else if (isAttackable) attackHub(cont.id, r.id);
+                          }} />
+                        <text x={r.cx} y={r.cy} dy=".35em" textAnchor="middle" fill="white" fontSize="8">{r.name}</text>
+                      </g>
+                    );
+                  })()
+                )}
               </svg>
             </div>
           );
@@ -466,8 +534,14 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
             <h3 className="text-xl font-bold text-yellow-300 mb-4 text-center">{(currentQuestion || lastQuestion)?.text}</h3>
             {results && (
               <div className="mb-4 p-3 bg-green-900/50 border border-green-500 rounded-xl">
-                <p className="text-green-300 text-center font-bold text-lg mb-2">الإجابة الصحيحة: {results.correctAnswer}</p>
-                {/* ⬇️ REMOVED the list of all options – only the correct answer is shown ⬇️ */}
+                <p className="text-green-300 text-center font-bold">الإجابة الصحيحة: {results.correctAnswer}</p>
+                {/* {results.correctIndex !== null && lastQuestion?.options && (
+                  <div className="mt-2 space-y-1">
+                    {lastQuestion.options.map((opt, idx) => (
+                      <div key={idx} className={`py-1 px-3 rounded-lg text-sm ${idx === results.correctIndex ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'}`}>{opt}</div>
+                    ))}
+                  </div>
+                )} */}
                 <div className="mt-3 pt-3 border-t border-green-700">
                   <p className="text-green-300 text-sm font-semibold mb-2">إجابات اللاعبين:</p>
                   <div className="space-y-1">
@@ -555,7 +629,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
       {showRules && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-cyan-500/30 shadow-2xl relative">
-            <button onClick={() => setShowRules(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"><FaTimes /></button>
+            <button onClick={() => setShowRules(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"><FaTrophy className="text-gray-400" /></button>
             <h2 className="text-3xl font-extrabold text-center mb-6"><span className="bg-gradient-to-r from-yellow-400 to-red-500 bg-clip-text text-transparent">📜 قواعد لعبة سيف المعرفة</span></h2>
             <div className="space-y-6 text-gray-300 text-right leading-relaxed">
               <div>

@@ -18,39 +18,41 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   const [orientation, setOrientation] = useState('horizontal');
   const [destroyMode, setDestroyMode] = useState(false);
 
-  // 👇 Preload audio files once using refs
+  // Audio refs – will be created lazily on first use
   const waterAudioRef = useRef(null);
   const explosionAudioRef = useRef(null);
+  const unlockAudioRef = useRef(false);
 
-  useEffect(() => {
-    // Create Audio objects and preload them
-    waterAudioRef.current = new Audio('/audio/water.mp3');
-    explosionAudioRef.current = new Audio('/audio/explosion.mp3');
-
-    // Preload (optional but helps on mobile)
-    waterAudioRef.current.load();
-    explosionAudioRef.current.load();
-
-    return () => {
-      // Cleanup: pause and remove references
-      waterAudioRef.current.pause();
-      explosionAudioRef.current.pause();
-      waterAudioRef.current = null;
-      explosionAudioRef.current = null;
-    };
-  }, []);
-
-  // Reusable, reliable sound player
+  // Play sound with lazy creation (mobile‑friendly)
   const playSound = useCallback((sound) => {
-    const audio = sound === 'water' ? waterAudioRef.current : explosionAudioRef.current;
-    if (!audio) return;
-    // Reset playback position so it plays from start every time
-    audio.currentTime = 0;
-    // Play and catch any errors (e.g. if user hasn't interacted yet – should be fine)
-    audio.play().catch(err => console.warn('Audio play failed:', err));
+    if (sound === 'water') {
+      if (!waterAudioRef.current) {
+        waterAudioRef.current = new Audio('/audio/water.mp3');
+        waterAudioRef.current.load();
+      }
+      waterAudioRef.current.currentTime = 0;
+      waterAudioRef.current.play().catch(e => console.warn('Water sound failed:', e));
+    } else if (sound === 'explosion') {
+      if (!explosionAudioRef.current) {
+        explosionAudioRef.current = new Audio('/audio/explosion.mp3');
+        explosionAudioRef.current.load();
+      }
+      explosionAudioRef.current.currentTime = 0;
+      explosionAudioRef.current.play().catch(e => console.warn('Explosion sound failed:', e));
+    }
   }, []);
 
-  // Load state from server (unchanged)
+  // Mobile audio unlock on first touch
+  const handleFirstTouch = () => {
+    if (unlockAudioRef.current) return;
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume().then(() => {
+      console.log('Audio unlocked for mobile');
+    }).catch(console.warn);
+    unlockAudioRef.current = true;
+  };
+
+  // Load state from server
   useEffect(() => {
     if (!socket || !playerId) return;
     socket.emit('battleship_init', { roomCode, playerId });
@@ -82,16 +84,16 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     if (row < 1 || row > playRows || col < 1 || col > playCols) return;
     const cellValue = grid[row][col];
 
-    // ----- DESTROY MODE -----
+    // Destroy mode
     if (destroyMode) {
       if (cellValue === null) {
-        playSound('water');            // ✅ fixed
+        playSound('water');
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = 'miss';
         setGrid(newGrid);
         socket.emit('battleship_miss', { roomCode, playerId, row, col });
       } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
-        playSound('explosion');       // ✅ fixed
+        playSound('explosion');
         const shipId = cellValue;
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = `hit-${shipId}`;
@@ -101,7 +103,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
       return;
     }
 
-    // ----- PLACEMENT MODE -----
+    // Placement mode
     if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
       removeShip(cellValue);
       return;
@@ -150,7 +152,10 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   const toggleOrientation = () => setOrientation(prev => prev === 'horizontal' ? 'vertical' : 'horizontal');
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20">
+    <div 
+      className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20"
+      onTouchStart={handleFirstTouch}
+    >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-extrabold text-center flex-1">
           <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-green-400 bg-clip-text text-transparent drop-shadow-lg">
@@ -205,7 +210,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
                     const isHit = cellValue?.startsWith?.('hit-');
                     const isMiss = cellValue === 'miss';
                     const hitShipId = isHit ? cellValue.replace('hit-', '') : null;
-                    const shipObj = !isHit && !isMiss && cellValue ? ships.find(s => s.id === cellValue) : null;
+                    const shipObj = (!isHit && !isMiss && cellValue) ? ships.find(s => s.id === cellValue) : null;
                     const originalShip = hitShipId ? ships.find(s => s.id === hitShipId) : null;
 
                     return (
