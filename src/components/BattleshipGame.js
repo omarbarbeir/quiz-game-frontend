@@ -24,21 +24,37 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   const unlockAudioRef = useRef(false);
 
   // Play sound with lazy creation (mobile‑friendly)
+  // const playSound = useCallback((sound) => {
+  //   if (sound === 'water') {
+  //     if (!waterAudioRef.current) {
+  //       waterAudioRef.current = new Audio('/audio/bell.mp3');
+  //       waterAudioRef.current.load();
+  //     }
+  //     waterAudioRef.current.currentTime = 0;
+  //     waterAudioRef.current.play().catch(e => console.warn('Water sound failed:', e));
+  //   } else if (sound === 'explosion') {
+  //     if (!explosionAudioRef.current) {
+  //       explosionAudioRef.current = new Audio('/audio/bell.mp3');
+  //       explosionAudioRef.current.load();
+  //     }
+  //     explosionAudioRef.current.currentTime = 0;
+  //     explosionAudioRef.current.play().catch(e => console.warn('Explosion sound failed:', e));
+  //   }
+  // }, []);
+
+
   const playSound = useCallback((sound) => {
+    let audioPath = '';
+    
     if (sound === 'water') {
-      if (!waterAudioRef.current) {
-        waterAudioRef.current = new Audio('/audio/bell.mp3');
-        waterAudioRef.current.load();
-      }
-      waterAudioRef.current.currentTime = 0;
-      waterAudioRef.current.play().catch(e => console.warn('Water sound failed:', e));
+      audioPath = '/audio/water.mp3';
     } else if (sound === 'explosion') {
-      if (!explosionAudioRef.current) {
-        explosionAudioRef.current = new Audio('/audio/bell.mp3');
-        explosionAudioRef.current.load();
-      }
-      explosionAudioRef.current.currentTime = 0;
-      explosionAudioRef.current.play().catch(e => console.warn('Explosion sound failed:', e));
+      audioPath = '/audio/explosion.mp3';
+    }
+
+    if (audioPath) {
+      const audio = new Audio(audioPath);
+      audio.play().catch(e => console.warn(`${sound} sound failed:`, e));
     }
   }, []);
 
