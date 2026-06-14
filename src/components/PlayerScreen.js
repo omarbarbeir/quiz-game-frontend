@@ -551,7 +551,7 @@ const PlayerScreen = ({
                     <button
                       onClick={() => {
                         if (!buzzerLocked && currentQuestion && gameStatus === 'playing' && !activePlayer) {
-                          const audio = new Audio('/sounds/buzzer.mp3');
+                          const audio = new Audio('/audio/bell.mp3');
                           audio.play().catch(err => console.error('Buzzer play error:', err));
                         }
                         onBuzzerPress();

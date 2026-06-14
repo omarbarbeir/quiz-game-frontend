@@ -27,14 +27,14 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   const playSound = useCallback((sound) => {
     if (sound === 'water') {
       if (!waterAudioRef.current) {
-        waterAudioRef.current = new Audio('/audio/water.mp3');
+        waterAudioRef.current = new Audio('/audio/W.mp3');
         waterAudioRef.current.load();
       }
       waterAudioRef.current.currentTime = 0;
       waterAudioRef.current.play().catch(e => console.warn('Water sound failed:', e));
     } else if (sound === 'explosion') {
       if (!explosionAudioRef.current) {
-        explosionAudioRef.current = new Audio('/audio/explosion.mp3');
+        explosionAudioRef.current = new Audio('/audio/E.mp3');
         explosionAudioRef.current.load();
       }
       explosionAudioRef.current.currentTime = 0;
