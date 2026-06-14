@@ -108,7 +108,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
       if (cellValue === null) {
         
         // 1. Direct audio play for WATER (just like your buzzer!)
-        const waterSound = new Audio('/audio/water.mp3');
+        const waterSound = new Audio(process.env.PUBLIC_URL + '/audio/water.mp3');
         waterSound.play().catch(err => console.error('Water play error:', err));
 
         const newGrid = grid.map(r => [...r]);
@@ -119,7 +119,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
       } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
         
         // 2. Direct audio play for EXPLOSION (just like your buzzer!)
-        const explosionSound = new Audio('/audio/explosion.mp3');
+        const explosionSound = new Audio(process.env.PUBLIC_URL + '/audio/explosion.mp3');
         explosionSound.play().catch(err => console.error('Explosion play error:', err));
 
         const shipId = cellValue;
