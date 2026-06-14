@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaRedo, FaArrowsAltH, FaArrowsAltV, FaBomb, FaTimes } from 'react-icons/fa';
 
+import waterSoundFile from '../assets/water.mp3'; 
+import explosionSoundFile from '../assets/explosion.mp3';
+
 const ships = [
   { id: 'carrier',    name: 'حاملة طائرات', length: 5, color: 'bg-red-600 border-red-400' },
   { id: 'battleship', name: 'سفينة حربية',   length: 4, color: 'bg-green-600 border-green-400' },
@@ -107,8 +110,8 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     if (destroyMode) {
       if (cellValue === null) {
         
-        // 1. Direct audio play for WATER (just like your buzzer!)
-        const waterSound = new Audio(process.env.PUBLIC_URL + '/audio/water.mp3');
+        // 1. Use the imported file variable!
+        const waterSound = new Audio(waterSoundFile);
         waterSound.play().catch(err => console.error('Water play error:', err));
 
         const newGrid = grid.map(r => [...r]);
@@ -118,8 +121,8 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
         
       } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
         
-        // 2. Direct audio play for EXPLOSION (just like your buzzer!)
-        const explosionSound = new Audio(process.env.PUBLIC_URL + '/audio/explosion.mp3');
+        // 2. Use the imported file variable!
+        const explosionSound = new Audio(explosionSoundFile);
         explosionSound.play().catch(err => console.error('Explosion play error:', err));
 
         const shipId = cellValue;
