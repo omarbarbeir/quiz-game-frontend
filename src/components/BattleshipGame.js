@@ -19,9 +19,9 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   const [destroyMode, setDestroyMode] = useState(false);
 
   // Audio refs – will be created lazily on first use
-  const waterAudioRef = useRef(null);
-  const explosionAudioRef = useRef(null);
-  const unlockAudioRef = useRef(false);
+  // const waterAudioRef = useRef(null);
+  // const explosionAudioRef = useRef(null);
+  // const unlockAudioRef = useRef(false);
 
   // Play sound with lazy creation (mobile‑friendly)
   // const playSound = useCallback((sound) => {
@@ -43,30 +43,15 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   // }, []);
 
 
-  const playSound = useCallback((sound) => {
-    let audioPath = '';
-    
-    if (sound === 'water') {
-      audioPath = '/audio/water.mp3';
-    } else if (sound === 'explosion') {
-      audioPath = '/audio/explosion.mp3';
-    }
-
-    if (audioPath) {
-      const audio = new Audio(audioPath);
-      audio.play().catch(e => console.warn(`${sound} sound failed:`, e));
-    }
-  }, []);
-
   // Mobile audio unlock on first touch
-  const handleFirstTouch = () => {
-    if (unlockAudioRef.current) return;
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    ctx.resume().then(() => {
-      console.log('Audio unlocked for mobile');
-    }).catch(console.warn);
-    unlockAudioRef.current = true;
-  };
+  // const handleFirstTouch = () => {
+  //   if (unlockAudioRef.current) return;
+  //   const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  //   ctx.resume().then(() => {
+  //     console.log('Audio unlocked for mobile');
+  //   }).catch(console.warn);
+  //   unlockAudioRef.current = true;
+  // };
 
   // Load state from server
   useEffect(() => {
@@ -101,15 +86,42 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     const cellValue = grid[row][col];
 
     // Destroy mode
+    // if (destroyMode) {
+    //   if (cellValue === null) {
+    //     playSound('water');
+    //     const newGrid = grid.map(r => [...r]);
+    //     newGrid[row][col] = 'miss';
+    //     setGrid(newGrid);
+    //     socket.emit('battleship_miss', { roomCode, playerId, row, col });
+    //   } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
+    //     playSound('explosion');
+    //     const shipId = cellValue;
+    //     const newGrid = grid.map(r => [...r]);
+    //     newGrid[row][col] = `hit-${shipId}`;
+    //     setGrid(newGrid);
+    //     socket.emit('battleship_destroy', { roomCode, playerId, row, col, shipId });
+    //   }
+    //   return;
+    // }
+
     if (destroyMode) {
       if (cellValue === null) {
-        playSound('water');
+        
+        // 1. Direct audio play for WATER (just like your buzzer!)
+        const waterSound = new Audio('/audio/water.mp3');
+        waterSound.play().catch(err => console.error('Water play error:', err));
+
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = 'miss';
         setGrid(newGrid);
         socket.emit('battleship_miss', { roomCode, playerId, row, col });
+        
       } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
-        playSound('explosion');
+        
+        // 2. Direct audio play for EXPLOSION (just like your buzzer!)
+        const explosionSound = new Audio('/audio/explosion.mp3');
+        explosionSound.play().catch(err => console.error('Explosion play error:', err));
+
         const shipId = cellValue;
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = `hit-${shipId}`;
@@ -118,6 +130,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
       }
       return;
     }
+
 
     // Placement mode
     if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
@@ -170,7 +183,7 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   return (
     <div 
       className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20"
-      onTouchStart={handleFirstTouch}
+      
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-extrabold text-center flex-1">
