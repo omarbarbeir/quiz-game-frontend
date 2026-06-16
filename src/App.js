@@ -76,6 +76,18 @@ function App() {
     }
   }, [showJoinScreen]);
 
+
+  useEffect(() => {
+    // استقبال قائمة اللاعبين المحدثة بالنقاط الجديدة من السيرفر
+    socket.on('update_players', (updatedPlayers) => {
+      setPlayers(updatedPlayers); // هنا setPlayers هتعمل بدون مشاكل
+    });
+
+    return () => {
+      socket.off('update_players');
+    };
+  }, [socket]);
+
   // Socket listeners...
   useEffect(() => {
     socket.on('connect', () => console.log('Connected'));
@@ -108,6 +120,13 @@ function App() {
     
     const handleUpdateScore = (updatedPlayer) => {
       setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
+    };
+
+    // 🔥 1. دالة معالجة سكور الجاسوس (جديد)
+    const handleSpyVotingResults = (data) => {
+      if (data && data.players) {
+        setPlayers(data.players); // تحديث وحفظ النقاط لكل اللاعيبة
+      }
     };
     
     const handleResetBuzzer = () => {
@@ -151,11 +170,15 @@ function App() {
       }
     };
 
+    
+
     socket.on('room_created', handleRoomCreated);
     socket.on('player_joined', handlePlayerJoined);
     socket.on('player_left', handlePlayerLeft);
     socket.on('player_buzzed', handlePlayerBuzzed);
     socket.on('update_score', handleUpdateScore);
+    // 🔥 2. تشغيل الاستماع لحدث الجاسوس (جديد)
+    socket.on('spy_voting_results', handleSpyVotingResults);
     socket.on('reset_buzzer', handleResetBuzzer);
     socket.on('question_changed', handleQuestionChanged);
     socket.on('game_ended', handleGameEnded);
@@ -171,6 +194,8 @@ function App() {
       socket.off('player_left', handlePlayerLeft);
       socket.off('player_buzzed', handlePlayerBuzzed);
       socket.off('update_score', handleUpdateScore);
+      // 🔥 3. تنظيف الحدث عند الخروج (جديد)
+      socket.off('spy_voting_results', handleSpyVotingResults);
       socket.off('reset_buzzer', handleResetBuzzer);
       socket.off('question_changed', handleQuestionChanged);
       socket.off('game_ended', handleGameEnded);

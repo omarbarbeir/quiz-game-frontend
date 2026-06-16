@@ -590,13 +590,28 @@ const AdminPanel = ({
                       </div>
                     </>
                   ) : selectedCategory === 'spy' ? (
-                    /* ----- SPY: admin sees only a confirmation message ----- */
-                    <>
-                      <div className="bg-gray-700 p-4 rounded-lg text-center">
-                        <p className="text-lg font-bold text-yellow-300">تم توزيع الكلمة</p>
+                      <div className="bg-gray-800 p-6 rounded-lg text-center border border-gray-700 shadow-xl">
+                        <div className="bg-gray-700 p-4 rounded-lg mb-6">
+                          <p className="text-xl font-bold text-yellow-300">🕵️ تم توزيع الكلمة على اللاعبين</p>
+                        </div>
+                        
+                        <div className="flex flex-col md:flex-row gap-4 justify-center">
+                          <button
+                            onClick={() => socket.emit('start_spy_voting', roomCode)}
+                            className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all"
+                          >
+                            <FaBell /> فتح باب التصويت
+                          </button>
+                          
+                          <button
+                            onClick={() => socket.emit('end_spy_voting', roomCode)}
+                            className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all"
+                          >
+                            <FaTrophy /> إنهاء التصويت والنتيجة
+                          </button>
+                        </div>
                       </div>
-                    </>
-                  ) : selectedCategory === 'whoami' ? (
+                    ) : selectedCategory === 'whoami' ? (
                     /* ----- WHOAMI: admin sees a summary (photos assigned) ----- */
                     <div className="bg-indigo-700 p-4 rounded-lg text-center">
                       <p className="text-lg font-bold">{currentQuestion.text}</p>

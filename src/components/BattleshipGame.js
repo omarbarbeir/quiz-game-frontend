@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaRedo, FaArrowsAltH, FaArrowsAltV, FaBomb, FaTimes } from 'react-icons/fa';
 
-import waterSoundFile from '../assets/water.mp3'; 
+import waterSoundFile from '../assets/water.mp3';
 import explosionSoundFile from '../assets/explosion.mp3';
 
+// Ship definitions with enhanced glossy colors
 const ships = [
-  { id: 'carrier',    name: 'حاملة طائرات', length: 5, color: 'bg-red-600 border-red-400' },
-  { id: 'battleship', name: 'سفينة حربية',   length: 4, color: 'bg-green-600 border-green-400' },
-  { id: 'cruiser',    name: 'طراد',          length: 3, color: 'bg-orange-500 border-orange-400' },
-  { id: 'submarine',  name: 'غواصة',         length: 3, color: 'bg-blue-600 border-blue-400' },
-  { id: 'destroyer',  name: 'مدمرة بحرية',    length: 2, color: 'bg-purple-600 border-purple-400' },
+  { id: 'carrier',    name: 'حاملة طائرات', length: 5, baseColor: '#ef4444', glowColor: '#f87171' },
+  { id: 'battleship', name: 'سفينة حربية',   length: 4, baseColor: '#10b981', glowColor: '#34d399' },
+  { id: 'cruiser',    name: 'طراد',          length: 3, baseColor: '#f59e0b', glowColor: '#fbbf24' },
+  { id: 'submarine',  name: 'غواصة',         length: 3, baseColor: '#3b82f6', glowColor: '#60a5fa' },
+  { id: 'destroyer',  name: 'مدمرة بحرية',    length: 2, baseColor: '#8b5cf6', glowColor: '#a78bfa' },
 ];
 
 const BattleshipGame = ({ socket, roomCode, playerId }) => {
@@ -20,41 +21,6 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
   const [selectedShip, setSelectedShip] = useState(null);
   const [orientation, setOrientation] = useState('horizontal');
   const [destroyMode, setDestroyMode] = useState(false);
-
-  // Audio refs – will be created lazily on first use
-  // const waterAudioRef = useRef(null);
-  // const explosionAudioRef = useRef(null);
-  // const unlockAudioRef = useRef(false);
-
-  // Play sound with lazy creation (mobile‑friendly)
-  // const playSound = useCallback((sound) => {
-  //   if (sound === 'water') {
-  //     if (!waterAudioRef.current) {
-  //       waterAudioRef.current = new Audio('/audio/bell.mp3');
-  //       waterAudioRef.current.load();
-  //     }
-  //     waterAudioRef.current.currentTime = 0;
-  //     waterAudioRef.current.play().catch(e => console.warn('Water sound failed:', e));
-  //   } else if (sound === 'explosion') {
-  //     if (!explosionAudioRef.current) {
-  //       explosionAudioRef.current = new Audio('/audio/bell.mp3');
-  //       explosionAudioRef.current.load();
-  //     }
-  //     explosionAudioRef.current.currentTime = 0;
-  //     explosionAudioRef.current.play().catch(e => console.warn('Explosion sound failed:', e));
-  //   }
-  // }, []);
-
-
-  // Mobile audio unlock on first touch
-  // const handleFirstTouch = () => {
-  //   if (unlockAudioRef.current) return;
-  //   const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  //   ctx.resume().then(() => {
-  //     console.log('Audio unlocked for mobile');
-  //   }).catch(console.warn);
-  //   unlockAudioRef.current = true;
-  // };
 
   // Load state from server
   useEffect(() => {
@@ -88,43 +54,17 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
     if (row < 1 || row > playRows || col < 1 || col > playCols) return;
     const cellValue = grid[row][col];
 
-    // Destroy mode
-    // if (destroyMode) {
-    //   if (cellValue === null) {
-    //     playSound('water');
-    //     const newGrid = grid.map(r => [...r]);
-    //     newGrid[row][col] = 'miss';
-    //     setGrid(newGrid);
-    //     socket.emit('battleship_miss', { roomCode, playerId, row, col });
-    //   } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
-    //     playSound('explosion');
-    //     const shipId = cellValue;
-    //     const newGrid = grid.map(r => [...r]);
-    //     newGrid[row][col] = `hit-${shipId}`;
-    //     setGrid(newGrid);
-    //     socket.emit('battleship_destroy', { roomCode, playerId, row, col, shipId });
-    //   }
-    //   return;
-    // }
-
     if (destroyMode) {
       if (cellValue === null) {
-        
-        // 1. Use the imported file variable!
         const waterSound = new Audio(waterSoundFile);
         waterSound.play().catch(err => console.error('Water play error:', err));
-
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = 'miss';
         setGrid(newGrid);
         socket.emit('battleship_miss', { roomCode, playerId, row, col });
-        
       } else if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
-        
-        // 2. Use the imported file variable!
         const explosionSound = new Audio(explosionSoundFile);
         explosionSound.play().catch(err => console.error('Explosion play error:', err));
-
         const shipId = cellValue;
         const newGrid = grid.map(r => [...r]);
         newGrid[row][col] = `hit-${shipId}`;
@@ -133,7 +73,6 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
       }
       return;
     }
-
 
     // Placement mode
     if (cellValue && !cellValue.startsWith('hit-') && cellValue !== 'miss') {
@@ -183,11 +122,15 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
 
   const toggleOrientation = () => setOrientation(prev => prev === 'horizontal' ? 'vertical' : 'horizontal');
 
+  // Helper to get glossy style for a ship (used in button and grid cell)
+  const getGlossyStyle = (baseColor, glowColor) => ({
+    background: `linear-gradient(135deg, ${baseColor}, ${glowColor})`,
+    boxShadow: `0 2px 5px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.4)`,
+    border: 'none',
+  });
+
   return (
-    <div 
-      className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20"
-      
-    >
+    <div className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-extrabold text-center flex-1">
           <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-green-400 bg-clip-text text-transparent drop-shadow-lg">
@@ -202,23 +145,34 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
         </div>
       </div>
 
-      {!destroyMode && (
-        <div className="flex flex-wrap gap-2 mb-3 justify-center">
-          {ships.map(ship => (
-            <button key={ship.id} onClick={() => setSelectedShip(prev => prev === ship.id ? null : ship.id)}
-              disabled={placedShips.some(s => s.shipId === ship.id)}
-              className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1 ${
-                placedShips.some(s => s.shipId === ship.id) ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : selectedShip === ship.id ? `${ship.color} text-white scale-105` : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}>
-              <span className={`w-3 h-3 rounded-full ${ship.color.split(' ')[0]}`}></span>
-              {ship.name} ({ship.length})
-            </button>
-          ))}
-          <button onClick={toggleOrientation} className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-cyan-300 font-bold text-xs flex items-center gap-1">
-            {orientation === 'horizontal' ? <FaArrowsAltH /> : <FaArrowsAltV />} {orientation === 'horizontal' ? 'أفقي' : 'عمودي'}
+      {/* Ship selection buttons – ALWAYS visible (no condition on destroyMode) */}
+      <div className="flex flex-wrap gap-2 mb-3 justify-center">
+        {ships.map(ship => (
+          <button
+            key={ship.id}
+            onClick={() => setSelectedShip(prev => prev === ship.id ? null : ship.id)}
+            disabled={placedShips.some(s => s.shipId === ship.id)}
+            className="px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1 transition-all duration-200"
+            style={{
+              ...getGlossyStyle(ship.baseColor, ship.glowColor),
+              opacity: placedShips.some(s => s.shipId === ship.id) ? 0.5 : 1,
+              transform: selectedShip === ship.id ? 'scale(1.05)' : 'scale(1)',
+              boxShadow: selectedShip === ship.id ? `0 0 0 2px #22d3ee, ${getGlossyStyle(ship.baseColor, ship.glowColor).boxShadow}` : getGlossyStyle(ship.baseColor, ship.glowColor).boxShadow,
+              color: 'white',
+              textShadow: '0 1px 1px black',
+            }}
+          >
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ship.baseColor }}></span>
+            {ship.name} ({ship.length})
           </button>
-        </div>
-      )}
+        ))}
+        <button
+          onClick={toggleOrientation}
+          className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-cyan-300 font-bold text-xs flex items-center gap-1 border border-cyan-500/50"
+        >
+          {orientation === 'horizontal' ? <FaArrowsAltH /> : <FaArrowsAltV />} {orientation === 'horizontal' ? 'أفقي' : 'عمودي'}
+        </button>
+      </div>
 
       <div className="overflow-auto rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
         <table className="w-full border-collapse" style={{ minWidth: '400px' }}>
@@ -245,20 +199,30 @@ const BattleshipGame = ({ socket, roomCode, playerId }) => {
                     const shipObj = (!isHit && !isMiss && cellValue) ? ships.find(s => s.id === cellValue) : null;
                     const originalShip = hitShipId ? ships.find(s => s.id === hitShipId) : null;
 
+                    let cellStyle = {};
+                    if (isMiss) {
+                      cellStyle = { backgroundColor: 'white' };
+                    } else if (isHit && originalShip) {
+                      cellStyle = { background: `linear-gradient(135deg, ${originalShip.baseColor}, ${originalShip.glowColor})`, opacity: 0.7 };
+                    } else if (shipObj) {
+                      cellStyle = { background: `linear-gradient(135deg, ${shipObj.baseColor}, ${shipObj.glowColor})`, boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.3)' };
+                    } else {
+                      cellStyle = { backgroundColor: '#1f2937' };
+                    }
+
                     return (
-                      <td key={c} onClick={() => handleCellClick(r, c)}
-                        className={`h-8 w-8 sm:h-10 sm:w-10 border border-purple-500/20 cursor-pointer transition-all duration-150 hover:opacity-80 relative ${
-                          isMiss ? 'bg-white' :
-                          isHit ? (originalShip ? `${originalShip.color} bg-opacity-80` : 'bg-gray-950') :
-                          shipObj ? `${shipObj.color} bg-opacity-80` :
-                          'bg-gray-900/70'
-                        }`}>
+                      <td
+                        key={c}
+                        onClick={() => handleCellClick(r, c)}
+                        className="h-8 w-8 sm:h-10 sm:w-10 border border-purple-500/20 cursor-pointer transition-all duration-150 hover:opacity-80 relative"
+                        style={cellStyle}
+                      >
                         {isMiss && (
                           <div className="absolute inset-0 flex items-center justify-center">
                             <span className="text-black font-bold text-lg">✕</span>
                           </div>
                         )}
-                        {isHit && (
+                        {isHit && originalShip && (
                           <div className="absolute inset-0 flex items-center justify-center bg-white/40 rounded-sm">
                             <span className="text-red-600 font-bold text-lg">✕</span>
                           </div>

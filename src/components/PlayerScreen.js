@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo } from 'react-icons/fa';
+import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo, FaTimes, FaCrown } from 'react-icons/fa';
 import Whiteboard from './Whiteboard';
 import CardGame from './CardGame';
 import TicTacToe from './TicTacToe';
@@ -35,6 +35,11 @@ const PlayerScreen = ({
   const audioRef = useRef(null);
   const isActivePlayer = activePlayer === playerId;
   const [pausedTime, setPausedTime] = useState(0);
+
+  const [showSpyVoteModal, setShowSpyVoteModal] = useState(false);
+  const [showScoreModal, setShowScoreModal] = useState(false);
+  const [votedFor, setVotedFor] = useState(null);
+  const [spyResult, setSpyResult] = useState(null);
 
   const publicUrl = process.env.PUBLIC_URL || '';
 
@@ -110,6 +115,26 @@ const PlayerScreen = ({
     socket.on('player_photo_question', handlePlayerPhotoQuestion);
     socket.on('card_game_state_update', handleCardGameStateUpdate);
     socket.on('tic_tac_toe_state', handleTicTacToeState);
+
+
+    const handleOpenSpyVoting = () => {
+      setShowSpyVoteModal(true);
+      setVotedFor(null);
+      setSpyResult(null);
+    };
+
+    const handleSpyVotingResults = (result) => {
+      setShowSpyVoteModal(false);
+      setSpyResult(result);
+      // لو السيرفر بيبعت قائمة اللاعبين بالنقاط الجديدة ممكن تعملها Set هنا
+    };
+
+    socket.on('open_spy_voting', handleOpenSpyVoting);
+    socket.on('spy_voting_results', handleSpyVotingResults);
+
+    // ولا تنسى تحطهم في الـ return جوا הـ useEffect عشان يتمسحوا مع الـ unmount
+    // socket.off('open_spy_voting', handleOpenSpyVoting);
+    // socket.off('spy_voting_results', handleSpyVotingResults);
     
     return () => {
       socket.off('play_audio', handlePlayAudio);
@@ -131,6 +156,23 @@ const PlayerScreen = ({
       setPausedTime(0);
     }
   }, [currentQuestion, publicUrl]);
+
+  useEffect(() => {
+    setSpyResult(null);
+    setShowSpyVoteModal(false);
+    setVotedFor(null);
+  }, [currentQuestion]);
+
+  // useEffect(() => {
+  //   // استقبال قائمة اللاعبين المحدثة بالنقاط الجديدة من السيرفر
+  //   socket.on('update_players', (updatedPlayers) => {
+  //     setPlayers(updatedPlayers); // هنا setPlayers هتعمل بدون مشاكل
+  //   });
+
+  //   return () => {
+  //     socket.off('update_players');
+  //   };
+  // }, [socket]);;
 
   // Render TicTacToe when in tic-tac-toe mode
   if (currentQuestion?.category === 'tic-tac-toe') {
@@ -320,6 +362,12 @@ const PlayerScreen = ({
       </div>
     );
   }
+
+
+  const handleVoteSubmit = (targetId) => {
+    setVotedFor(targetId);
+    socket.emit('submit_spy_vote', { roomCode, voterId: playerId, votedForId: targetId });
+  };
 
   // ========== MAIN QUIZ VIEW ==========
   return (
@@ -656,6 +704,136 @@ const PlayerScreen = ({
             ))}
           </div>
         </div> */}
+
+        {/* زرار لوحة السكور (عائم عشان ماياخدش مساحة) */}
+      <button 
+        onClick={() => setShowScoreModal(true)}
+        className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-transform z-40"
+      >
+        <FaTrophy size={24} />
+      </button>
+
+      {/* نافذة التصويت المنبثقة */}
+      {/* نافذة التصويت المنبثقة */}
+      {showSpyVoteModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 p-6 rounded-xl border border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.5)] w-full max-w-md text-center">
+            <h2 className="text-2xl font-bold text-cyan-300 mb-6">صوّت: مين الجاسوس؟ 🕵️</h2>
+            
+            {/* --- بداية الكود المطلوب --- */}
+            <div className="grid grid-cols-2 gap-3">
+              {players && players.length > 0 ? (
+                players
+                  .filter(p => p.id !== playerId) // بيشيل اسمك أنت من القائمة عشان ما تصوتش لنفسك
+                  .map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleVoteSubmit(p.id)}
+                      disabled={votedFor !== null}
+                      className={`p-3 rounded-lg font-semibold transition-all shadow-md ${
+                        votedFor === p.id 
+                          ? 'bg-green-500 text-white scale-95' 
+                          : votedFor 
+                            ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' 
+                            : 'bg-gray-700 hover:bg-cyan-600 text-white active:scale-95'
+                      }`}
+                    >
+                      {p.name}
+                    </button>
+                  ))
+              ) : (
+                <p className="col-span-2 text-gray-400 italic">لا يوجد لاعبين متاحين للتصويت حالياً</p>
+              )}
+            </div>
+            {/* --- نهاية الكود المطلوب --- */}
+
+            {votedFor && (
+              <div className="mt-4 animate-pulse">
+                <p className="text-green-400 font-medium">تم تسجيل تصويتك بنجاح!</p>
+                <p className="text-gray-400 text-sm">في انتظار إنهاء الآدمن للتصويت...</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* نافذة نتيجة الجاسوس */}
+      {/* نافذة نتيجة الجاسوس المحدثة */}
+      {spyResult && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className={`bg-gray-900 p-6 rounded-xl border-2 shadow-2xl w-full max-w-md text-center relative max-h-[90vh] overflow-y-auto
+            ${spyResult.spyCaught ? 'border-green-500 shadow-green-500/50' : 'border-red-500 shadow-red-500/50'}`}>
+            
+            {/* زرار القفل اليدوي (لو حابب يقفلها قبل الأدمن) */}
+            <button onClick={() => setSpyResult(null)} className="absolute top-3 right-3 text-gray-400 hover:text-white">
+              <FaTimes size={20} />
+            </button>
+
+            {/* عرض صورة المكسب أو الخسارة */}
+            <div className="flex justify-center mb-4">
+              <img 
+                src={spyResult.spyCaught 
+                  ? `${process.env.PUBLIC_URL}/SPYIMAGES/spy-caught.png` 
+                  : `${process.env.PUBLIC_URL}/SPYIMAGES/spy-escaped.png`} 
+                alt={spyResult.spyCaught ? 'Caught' : 'Escaped'} 
+                className="w-[500px] h-[200px] object-contain drop-shadow-lg"
+                // لو الصور مش موجودة لسه في مجلد public هيتم إخفاء الخطأ برمجياً
+                onError={(e) => e.target.style.display = 'none'} 
+              />
+            </div>
+
+            {spyResult.spyCaught ? (
+              <h2 className="text-3xl font-bold text-green-400 mb-2">الجاسوس اتكشف! 🎉</h2>
+            ) : (
+              <h2 className="text-3xl font-bold text-red-500 mb-2">الجاسوس هرب! 😈</h2>
+            )}
+
+            <p className="text-yellow-300 mt-2 mb-4 text-xl">الجاسوس كان: <span className="font-bold">{players.find(p => p.id === spyResult.spyId)?.name}</span></p>
+
+            {/* مربع ملخص نقاط الجولة */}
+            <div className="bg-gray-800 p-4 rounded-xl mt-4 border border-gray-600 text-right">
+              <h3 className="text-cyan-300 font-bold mb-3 border-b border-gray-600 pb-2 text-center text-lg">📊 نقاط هذه الجولة</h3>
+              <div className="space-y-2">
+                {spyResult.roundScores.map((score, index) => (
+                  <div key={index} className="flex justify-between items-center bg-gray-700/60 p-3 rounded-lg">
+                    <span className="text-white font-semibold flex items-center gap-2">
+                      {score.isSpy ? '🕵️' : '👨‍💼'} {score.name}
+                    </span>
+                    <span className={`font-bold px-3 py-1 rounded-md shadow-sm ${
+                      score.pointsEarned > 0 ? 'bg-green-500 text-white' : 'bg-gray-600 text-gray-300'
+                    }`}>
+                      {score.pointsEarned > 0 ? '+1 نقطة' : '0 نقطة'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* نافذة السكور المنبثقة */}
+      {showScoreModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowScoreModal(false)}>
+          <div className="bg-gradient-to-b from-gray-800 to-gray-900 p-6 rounded-2xl border border-purple-500 shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-yellow-400 flex items-center gap-2"><FaTrophy /> الترتيب</h2>
+              <button onClick={() => setShowScoreModal(false)} className="text-gray-400 hover:text-white"><FaTimes size={24}/></button>
+            </div>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+              {sortedPlayers.map((p, index) => (
+                <div key={p.id} className="flex justify-between bg-gray-800/80 p-3 rounded-lg border border-gray-700">
+                  <span className="font-bold text-white flex items-center gap-2">
+                    {index === 0 && <FaCrown className="text-yellow-400" />} {p.name}
+                  </span>
+                  <span className="bg-purple-600 text-white px-3 py-1 rounded-md font-bold">{p.score}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>
