@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FaPen, FaEraser, FaRedo } from 'react-icons/fa';
 
 const BingoGame = ({ socket, roomCode, playerId }) => {
@@ -10,9 +10,6 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
   const [marks, setMarks] = useState(emptyMarks);
   const [penActive, setPenActive] = useState(false);
   const [calledNumbers, setCalledNumbers] = useState([]);
-
-  // 🔥 عمل مصفوفة Refs لكل الخانات للتحكم المباشر في الـ Focus
-  const inputRefs = useRef([]);
 
   useEffect(() => {
     if (!socket || !playerId) return;
@@ -78,29 +75,21 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
     }
   };
 
-  // 🔥 الانتقال الفوري والمباشر عن طريق الـ Ref الافتراضي
-  const focusNextCell = (linearIndex) => {
-    let nextIdx = linearIndex + 1;
-    if (nextIdx >= size * size) nextIdx = 0; // يرجع لأول خانة لو خلص
-
-    const nextInput = inputRefs.current[nextIdx];
-    if (nextInput) {
-      nextInput.focus();
-      nextInput.select();
-    }
-  };
-
-  const handleKeyDown = (e, linearIndex) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !penActive) {
       e.preventDefault();
-      if (!penActive) {
-        focusNextCell(linearIndex);
+      const inputs = Array.from(document.querySelectorAll('.bingo-input'));
+      const currentIdx = inputs.indexOf(e.target);
+      if (currentIdx !== -1) {
+        const nextInput = inputs[(currentIdx + 1) % inputs.length];
+        nextInput.focus();
+        nextInput.select();
       }
     }
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20">
+    <div dir="rtl" className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-3xl font-extrabold text-center flex-1">
           <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 bg-clip-text text-transparent drop-shadow-lg">
@@ -152,54 +141,43 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
       )}
 
       <div className="overflow-auto max-h-[70vh] rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
-        {/* رجعنا الـ table الـ المستقر وبنحسب الـ index يمين لشمال بدقة */}
         <table className="w-full border-collapse" style={{ minWidth: '400px' }}>
           <tbody>
             {Array.from({ length: size }, (_, rowIdx) => (
               <tr key={rowIdx} className="bg-gray-900/60 hover:bg-gray-800/80 transition-all">
-                {Array.from({ length: size }, (_, i) => {
-                  const colIdx = size - 1 - i;
-                  // الترتيب الخطي بيبدأ من أقصى اليمين للشمال في السطر
-                  const linearIndex = (rowIdx * size) + i;
-
-                  return (
-                    <td key={colIdx} className="p-1 border border-purple-500/10">
-                      <div
-                        className={`relative w-full h-16 sm:h-20 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 ${
-                          marks[rowIdx][colIdx]
-                            ? 'bg-gradient-to-br from-yellow-400/30 to-orange-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-500/20'
-                            : penActive
-                              ? 'bg-gray-800/50 hover:bg-gray-700/60 border border-dashed border-gray-600'
-                              : 'bg-gray-800/50 border border-transparent hover:bg-gray-700/60'
+                {Array.from({ length: size }, (_, colIdx) => (
+                  <td key={colIdx} className="p-1 border border-purple-500/10">
+                    <div
+                      className={`relative w-full h-16 sm:h-20 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 ${
+                        marks[rowIdx][colIdx]
+                          ? 'bg-gradient-to-br from-yellow-400/30 to-orange-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-500/20'
+                          : penActive
+                            ? 'bg-gray-800/50 hover:bg-gray-700/60 border border-dashed border-gray-600'
+                            : 'bg-gray-800/50 border border-transparent hover:bg-gray-700/60'
+                      }`}
+                      onClick={() => handleCellClick(rowIdx, colIdx)}
+                    >
+                      {marks[rowIdx][colIdx] && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-4 border-yellow-400 opacity-80"></div>
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={2}
+                        value={grid[rowIdx][colIdx]}
+                        onChange={(e) => updateCell(rowIdx, colIdx, e.target.value.replace(/[^0-9]/g, ''))}
+                        onKeyDown={handleKeyDown}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`bingo-input w-full bg-transparent text-white text-center font-bold outline-none text-lg sm:text-2xl ${
+                          marks[rowIdx][colIdx] ? 'text-yellow-300' : ''
                         }`}
-                        onClick={() => handleCellClick(rowIdx, colIdx)}
-                      >
-                        {marks[rowIdx][colIdx] && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-4 border-yellow-400 opacity-80"></div>
-                          </div>
-                        )}
-                        <input
-                          id={`bingo-${rowIdx}-${colIdx}`}
-                          ref={(el) => (inputRefs.current[linearIndex] = el)} // تخزين الـ Ref
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={2}
-                          value={grid[rowIdx][colIdx]}
-                          onChange={(e) => updateCell(rowIdx, colIdx, e.target.value.replace(/[^0-9]/g, ''))}
-                          onKeyDown={(e) => handleKeyDown(e, linearIndex)}
-                          onClick={(e) => e.stopPropagation()}
-                          className={`w-full bg-transparent text-white text-center font-bold outline-none text-lg sm:text-2xl ${
-                            marks[rowIdx][colIdx] ? 'text-yellow-300' : ''
-                          }`}
-                          placeholder=""
-                          dir="rtl"
-                          disabled={penActive}
-                        />
-                      </div>
-                    </td>
-                  );
-                })}
+                        disabled={penActive}
+                      />
+                    </div>
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>

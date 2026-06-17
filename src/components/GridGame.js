@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaTimes } from 'react-icons/fa';
 
 const GridGame = ({ socket, roomCode, playerId }) => {
-  const rows = 29;          // 1 header + 28 data rows
+  const rows = 29;          
   const cols = 9;
 
   const emptyGrid = Array.from({ length: rows }, () => Array(cols).fill(''));
@@ -11,9 +11,6 @@ const GridGame = ({ socket, roomCode, playerId }) => {
   const [popupCell, setPopupCell] = useState(null);
 
   const lastClick = useRef({ time: 0, row: -1, col: -1 });
-  
-  // 🔥 مصفوفة الـ Refs المضمونة للجدول بالكامل
-  const gridRefs = useRef([]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -47,23 +44,16 @@ const GridGame = ({ socket, roomCode, playerId }) => {
     [socket, roomCode, playerId]
   );
 
-  // 🔥 تحريك الفوكس فورياً للـ Ref التالي مباشرة من اليمين للشمال
-  const focusNextCell = (linearIndex) => {
-    let nextIdx = linearIndex + 1;
-    const totalCells = rows * cols;
-    if (nextIdx >= totalCells) nextIdx = 0;
-
-    const nextInput = gridRefs.current[nextIdx];
-    if (nextInput) {
-      nextInput.focus();
-      nextInput.select();
-    }
-  };
-
-  const handleKeyDown = (e, linearIndex) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      focusNextCell(linearIndex);
+      const inputs = Array.from(document.querySelectorAll('.grid-input'));
+      const currentIdx = inputs.indexOf(e.target);
+      if (currentIdx !== -1) {
+        const nextInput = inputs[(currentIdx + 1) % inputs.length];
+        nextInput.focus();
+        nextInput.select();
+      }
     }
   };
 
@@ -82,7 +72,7 @@ const GridGame = ({ socket, roomCode, playerId }) => {
   const closePopup = () => setPopupCell(null);
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20">
+    <div dir="rtl" className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl w-full border border-cyan-500/20">
       <h2 className="text-3xl font-extrabold mb-6 text-center">
         <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow-lg">
           ⚔️ تحدي الجدول ⚔️
@@ -93,28 +83,19 @@ const GridGame = ({ socket, roomCode, playerId }) => {
         <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
           <thead>
             <tr className="bg-gradient-to-r from-cyan-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm sticky top-0 z-10">
-              {Array.from({ length: cols }, (_, i) => {
-                const col = cols - 1 - i;
-                // الهيدر بياخد أول 9 خانات من اليمين للشمال
-                const linearIndex = i; 
-
-                return (
-                  <th key={col} className="p-2 border border-cyan-500/20">
-                    <input
-                      id={`cell-0-${col}`}
-                      ref={(el) => (gridRefs.current[linearIndex] = el)}
-                      type="text"
-                      value={grid[0][col]}
-                      onChange={(e) => updateCell(0, col, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, linearIndex)}
-                      onClick={(e) => handleCellClick(e, 0, col, grid[0][col])}
-                      className="w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded"
-                      placeholder="اسماء الخانات"
-                      dir="rtl"
-                    />
-                  </th>
-                );
-              })}
+              {Array.from({ length: cols }, (_, colIdx) => (
+                <th key={colIdx} className="p-2 border border-cyan-500/20">
+                  <input
+                    type="text"
+                    value={grid[0][colIdx]}
+                    onChange={(e) => updateCell(0, colIdx, e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onClick={(e) => handleCellClick(e, 0, colIdx, grid[0][colIdx])}
+                    className="grid-input w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded"
+                    placeholder="اسماء الخانات"
+                  />
+                </th>
+              ))}
             </tr>
           </thead>
 
@@ -131,31 +112,21 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                       : 'bg-indigo-950/40 hover:bg-indigo-900/60'
                   }`}
                 >
-                  {Array.from({ length: cols }, (_, i) => {
-                    const col = cols - 1 - i;
-                    // باقي الصفوف بتكمل الترتيب الخطي بشكل متسلسل من اليمين للشمال
-                    const linearIndex = (actualRow * cols) + i;
-
-                    return (
-                      <td key={col} className="p-1 border border-purple-500/10">
-                        <input
-                          id={`cell-${actualRow}-${col}`}
-                          ref={(el) => (gridRefs.current[linearIndex] = el)}
-                          type="text"
-                          value={grid[actualRow][col]}
-                          onChange={(e) => updateCell(actualRow, col, e.target.value)}
-                          onKeyDown={(e) => handleKeyDown(e, linearIndex)}
-                          onClick={(e) => handleCellClick(e, actualRow, col, grid[actualRow][col])}
-                          className="w-full bg-gray-800/50 text-white text-center outline-none rounded-lg px-2 py-1.5 transition-all duration-200
-                                     focus:bg-gradient-to-r focus:from-purple-600/40 focus:to-cyan-600/40 focus:scale-105 focus:shadow-lg focus:shadow-cyan-500/20
-                                     hover:bg-gray-700/60 hover:shadow-md hover:shadow-cyan-500/10
-                                     border border-transparent focus:border-cyan-400/50"
-                          placeholder=""
-                          dir="rtl"
-                        />
-                      </td>
-                    );
-                  })}
+                  {Array.from({ length: cols }, (_, colIdx) => (
+                    <td key={colIdx} className="p-1 border border-purple-500/10">
+                      <input
+                        type="text"
+                        value={grid[actualRow][colIdx]}
+                        onChange={(e) => updateCell(actualRow, colIdx, e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onClick={(e) => handleCellClick(e, actualRow, colIdx, grid[actualRow][colIdx])}
+                        className="grid-input w-full bg-gray-800/50 text-white text-center outline-none rounded-lg px-2 py-1.5 transition-all duration-200
+                                   focus:bg-gradient-to-r focus:from-purple-600/40 focus:to-cyan-600/40 focus:scale-105 focus:shadow-lg focus:shadow-cyan-500/20
+                                   hover:bg-gray-700/60 hover:shadow-md hover:shadow-cyan-500/10
+                                   border border-transparent focus:border-cyan-400/50"
+                      />
+                    </td>
+                  ))}
                 </tr>
               );
             })}
