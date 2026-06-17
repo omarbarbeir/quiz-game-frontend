@@ -75,18 +75,17 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
     }
   };
 
-  // 🔥 المعادلة الجديدة: بتمشي من اليمين للشمال إجبارياً
   const focusNextUsingTabIndex = (currentIdx) => {
     setTimeout(() => {
       let nextIdx = currentIdx + 1;
-      if (nextIdx > 25) nextIdx = 1; // لو خلص الجدول يرجع لأول خانة يمين فوق
+      if (nextIdx > 25) nextIdx = 1;
       
       const nextEl = document.querySelector(`[data-index="${nextIdx}"]`);
       if (nextEl) {
         nextEl.focus();
         nextEl.select();
       }
-    }, 10);
+    }, 30); // زيادة الـ delay سيكة عشان كيبورد الموبايل يلحق يستوعب الانتقال
   };
 
   const handleKeyDown = (e, currentIdx) => {
@@ -150,59 +149,55 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
         </div>
       )}
 
+      {/* حلينا المشكلة هنا بـ flex وعكس الصفوف بالـ CSS لضمان توافق كيبورد الموبايل */}
       <div className="overflow-auto max-h-[70vh] rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
-        <table className="w-full border-collapse" style={{ minWidth: '400px' }}>
-          <tbody>
-            {Array.from({ length: size }, (_, rowIdx) => (
-              <tr key={rowIdx} className="bg-gray-900/60 hover:bg-gray-800/80 transition-all">
-                {Array.from({ length: size }, (_, i) => {
-                  const colIdx = size - 1 - i;
-                  
-                  // 🔥 التعديل السحري: بندي أصغر رقم للخانة اللي في أقصى اليمين عشان يبدأ منها ويمشي شمال
-                  const uniqueIndex = (rowIdx * size) + (size - i);
+        <div className="flex flex-col gap-1 w-full p-1" style={{ minWidth: '400px' }}>
+          {Array.from({ length: size }, (_, rowIdx) => (
+            <div key={rowIdx} className="flex flex-row-reverse gap-1 w-full">
+              {Array.from({ length: size }, (_, colIdx) => {
+                // الترتيب البرمجي بيمشي طبيعي جداً من اليمين للشمال مع الـ flex-row-reverse
+                const uniqueIndex = (rowIdx * size) + colIdx + 1;
 
-                  return (
-                    <td key={colIdx} className="p-1 border border-purple-500/10">
-                      <div
-                        className={`relative w-full h-16 sm:h-20 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 ${
-                          marks[rowIdx][colIdx]
-                            ? 'bg-gradient-to-br from-yellow-400/30 to-orange-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-500/20'
-                            : penActive
-                              ? 'bg-gray-800/50 hover:bg-gray-700/60 border border-dashed border-gray-600'
-                              : 'bg-gray-800/50 border border-transparent hover:bg-gray-700/60'
-                        }`}
-                        onClick={() => handleCellClick(rowIdx, colIdx)}
-                      >
-                        {marks[rowIdx][colIdx] && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-4 border-yellow-400 opacity-80"></div>
-                          </div>
-                        )}
-                        <input
-                          id={`bingo-${rowIdx}-${colIdx}`}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={2}
-                          value={grid[rowIdx][colIdx]}
-                          onChange={(e) => updateCell(rowIdx, colIdx, e.target.value.replace(/[^0-9]/g, ''))}
-                          onKeyDown={(e) => handleKeyDown(e, uniqueIndex)}
-                          onClick={(e) => e.stopPropagation()}
-                          data-index={uniqueIndex}
-                          className={`w-full bg-transparent text-white text-center font-bold outline-none text-lg sm:text-2xl ${
-                            marks[rowIdx][colIdx] ? 'text-yellow-300' : ''
-                          }`}
-                          placeholder=""
-                          dir="rtl"
-                          disabled={penActive}
-                        />
+                return (
+                  <div
+                    key={colIdx}
+                    className={`relative flex-1 h-16 sm:h-20 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 ${
+                      marks[rowIdx][colIdx]
+                        ? 'bg-gradient-to-br from-yellow-400/30 to-orange-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-500/20'
+                        : penActive
+                          ? 'bg-gray-800/50 hover:bg-gray-700/60 border border-dashed border-gray-600'
+                          : 'bg-gray-800/50 border border-transparent hover:bg-gray-700/60'
+                    }`}
+                    onClick={() => handleCellClick(rowIdx, colIdx)}
+                  >
+                    {marks[rowIdx][colIdx] && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-4 border-yellow-400 opacity-80"></div>
                       </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    )}
+                    <input
+                      id={`bingo-${rowIdx}-${colIdx}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={2}
+                      value={grid[rowIdx][colIdx]}
+                      onChange={(e) => updateCell(rowIdx, colIdx, e.target.value.replace(/[^0-9]/g, ''))}
+                      onKeyDown={(e) => handleKeyDown(e, uniqueIndex)}
+                      onClick={(e) => e.stopPropagation()}
+                      data-index={uniqueIndex}
+                      className={`w-full bg-transparent text-white text-center font-bold outline-none text-lg sm:text-2xl ${
+                        marks[rowIdx][colIdx] ? 'text-yellow-300' : ''
+                      }`}
+                      placeholder=""
+                      dir="rtl"
+                      disabled={penActive}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       <p className="text-sm text-cyan-400/70 mt-3 text-center">

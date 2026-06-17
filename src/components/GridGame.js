@@ -44,11 +44,10 @@ const GridGame = ({ socket, roomCode, playerId }) => {
     [socket, roomCode, playerId]
   );
 
-  // 🔥 بيمشي من اليمين للشمال
   const focusNextUsingTabIndex = (currentIdx) => {
     setTimeout(() => {
       let nextIdx = currentIdx + 1;
-      const totalCells = rows * cols; // 29 * 9 = 261
+      const totalCells = rows * cols;
       if (nextIdx > totalCells) nextIdx = 1;
 
       const nextEl = document.querySelector(`[data-index="grid-${nextIdx}"]`);
@@ -56,7 +55,7 @@ const GridGame = ({ socket, roomCode, playerId }) => {
         nextEl.focus();
         nextEl.select();
       }
-    }, 10);
+    }, 30);
   };
 
   const handleKeyDown = (e, currentIdx) => {
@@ -88,80 +87,73 @@ const GridGame = ({ socket, roomCode, playerId }) => {
         </span>
       </h2>
 
+      {/* الاعتماد هنا بالكامل على الهيكلة المرنة الفليكس لضمان استجابة كيبورد الجوال */}
       <div className="overflow-auto max-h-[70vh] rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
-        <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
-          <thead>
-            <tr className="bg-gradient-to-r from-cyan-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm sticky top-0 z-10">
-              {Array.from({ length: cols }, (_, i) => {
-                const col = cols - 1 - i;
-                
-                // 🔥 الصف الأول (الهيدر): اليمين بياخد رقم 1 وبيمشي شمال
-                const uniqueIdx = cols - i; 
-
-                return (
-                  <th key={col} className="p-2 border border-cyan-500/20">
-                    <input
-                      id={`cell-0-${col}`}
-                      type="text"
-                      value={grid[0][col]}
-                      onChange={(e) => updateCell(0, col, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, uniqueIdx)}
-                      onClick={(e) => handleCellClick(e, 0, col, grid[0][col])}
-                      data-index={`grid-${uniqueIdx}`}
-                      className="w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded"
-                      placeholder="اسماء الخانات"
-                      dir="rtl"
-                    />
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-
-          <tbody>
-            {Array.from({ length: rows - 1 }, (_, rowIdx) => {
-              const actualRow = rowIdx + 1;
-              const isEvenRow = actualRow % 2 === 0;
+        <div className="flex flex-col w-full p-1" style={{ minWidth: '800px' }}>
+          
+          {/* الهيدر (العناوين) */}
+          <div className="flex flex-row-reverse bg-gradient-to-r from-cyan-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm sticky top-0 z-10 p-2 border-b border-cyan-500/20">
+            {Array.from({ length: cols }, (_, colIdx) => {
+              const uniqueIdx = colIdx + 1;
               return (
-                <tr
-                  key={actualRow}
-                  className={`transition-all duration-300 ${
-                    isEvenRow
-                      ? 'bg-gray-900/60 hover:bg-gray-800/80'
-                      : 'bg-indigo-950/40 hover:bg-indigo-900/60'
-                  }`}
-                >
-                  {Array.from({ length: cols }, (_, i) => {
-                    const col = cols - 1 - i;
-                    
-                    // 🔥 باقي الصفوف: اليمين بياخد الرقم الأصغر ويمشي شمال
-                    const uniqueIdx = (actualRow * cols) + (cols - i);
-
-                    return (
-                      <td key={col} className="p-1 border border-purple-500/10">
-                        <input
-                          id={`cell-${actualRow}-${col}`}
-                          type="text"
-                          value={grid[actualRow][col]}
-                          onChange={(e) => updateCell(actualRow, col, e.target.value)}
-                          onKeyDown={(e) => handleKeyDown(e, uniqueIdx)}
-                          onClick={(e) => handleCellClick(e, actualRow, col, grid[actualRow][col])}
-                          data-index={`grid-${uniqueIdx}`}
-                          className="w-full bg-gray-800/50 text-white text-center outline-none rounded-lg px-2 py-1.5 transition-all duration-200
-                                     focus:bg-gradient-to-r focus:from-purple-600/40 focus:to-cyan-600/40 focus:scale-105 focus:shadow-lg focus:shadow-cyan-500/20
-                                     hover:bg-gray-700/60 hover:shadow-md hover:shadow-cyan-500/10
-                                     border border-transparent focus:border-cyan-400/50"
-                          placeholder=""
-                          dir="rtl"
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
+                <div key={colIdx} className="flex-1 px-1">
+                  <input
+                    id={`cell-0-${colIdx}`}
+                    type="text"
+                    value={grid[0][colIdx]}
+                    onChange={(e) => updateCell(0, colIdx, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, uniqueIdx)}
+                    onClick={(e) => handleCellClick(e, 0, colIdx, grid[0][colIdx])}
+                    data-index={`grid-${uniqueIdx}`}
+                    className="w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded"
+                    placeholder="اسماء الخانات"
+                    dir="rtl"
+                  />
+                </div>
               );
             })}
-          </tbody>
-        </table>
+          </div>
+
+          {/* صفوف البيانات */}
+          {Array.from({ length: rows - 1 }, (_, rowIdx) => {
+            const actualRow = rowIdx + 1;
+            const isEvenRow = actualRow % 2 === 0;
+            return (
+              <div
+                key={actualRow}
+                className={`flex flex-row-reverse p-1 border-b border-purple-500/10 transition-all duration-300 ${
+                  isEvenRow
+                    ? 'bg-gray-900/60 hover:bg-gray-800/80'
+                    : 'bg-indigo-950/40 hover:bg-indigo-900/60'
+                }`}
+              >
+                {Array.from({ length: cols }, (_, colIdx) => {
+                  const uniqueIdx = (actualRow * cols) + colIdx + 1;
+
+                  return (
+                    <div key={colIdx} className="flex-1 px-1">
+                      <input
+                        id={`cell-${actualRow}-${colIdx}`}
+                        type="text"
+                        value={grid[actualRow][colIdx]}
+                        onChange={(e) => updateCell(actualRow, colIdx, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, uniqueIdx)}
+                        onClick={(e) => handleCellClick(e, actualRow, colIdx, grid[actualRow][colIdx])}
+                        data-index={`grid-${uniqueIdx}`}
+                        className="w-full bg-gray-800/50 text-white text-center outline-none rounded-lg px-2 py-1.5 transition-all duration-200
+                                   focus:bg-gradient-to-r focus:from-purple-600/40 focus:to-cyan-600/40 focus:scale-105 focus:shadow-lg focus:shadow-cyan-500/20
+                                   hover:bg-gray-700/60 hover:shadow-md hover:shadow-cyan-500/10
+                                   border border-transparent focus:border-cyan-400/50"
+                        placeholder=""
+                        dir="rtl"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <p className="text-sm text-cyan-400/70 mt-3 text-center flex items-center justify-center gap-2">
