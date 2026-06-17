@@ -44,31 +44,25 @@ const GridGame = ({ socket, roomCode, playerId }) => {
     [socket, roomCode, playerId]
   );
 
-  // Focus next cell in reading order: right → left, top → bottom
-  const focusNext = (row, col) => {
-    let nextRow = row;
-    let nextCol = col + 1;   // higher index = visually to the left (because DOM is reversed)
-    if (nextCol >= cols) {
-      nextCol = 0;           // wrap to rightmost cell of the next row
-      nextRow += 1;
-      if (nextRow >= rows) {
-        nextRow = rows - 1;
-        nextCol = cols - 1;
-      }
-    }
+  // 🔥 بيمشي من اليمين للشمال
+  const focusNextUsingTabIndex = (currentIdx) => {
     setTimeout(() => {
-      const el = document.getElementById(`cell-${nextRow}-${nextCol}`);
-      if (el) {
-        el.focus();
-        el.select();
+      let nextIdx = currentIdx + 1;
+      const totalCells = rows * cols; // 29 * 9 = 261
+      if (nextIdx > totalCells) nextIdx = 1;
+
+      const nextEl = document.querySelector(`[data-index="grid-${nextIdx}"]`);
+      if (nextEl) {
+        nextEl.focus();
+        nextEl.select();
       }
-    }, 0);
+    }, 10);
   };
 
-  const handleKeyDown = (e, row, col) => {
+  const handleKeyDown = (e, currentIdx) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      focusNext(row, col);
+      focusNextUsingTabIndex(currentIdx);
     }
   };
 
@@ -95,13 +89,15 @@ const GridGame = ({ socket, roomCode, playerId }) => {
       </h2>
 
       <div className="overflow-auto max-h-[70vh] rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
-        {/* ❌ removed dir="rtl" from the table */}
         <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
           <thead>
             <tr className="bg-gradient-to-r from-cyan-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm sticky top-0 z-10">
-              {/* Columns reversed: rightmost first, leftmost last */}
               {Array.from({ length: cols }, (_, i) => {
                 const col = cols - 1 - i;
+                
+                // 🔥 الصف الأول (الهيدر): اليمين بياخد رقم 1 وبيمشي شمال
+                const uniqueIdx = cols - i; 
+
                 return (
                   <th key={col} className="p-2 border border-cyan-500/20">
                     <input
@@ -109,8 +105,9 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                       type="text"
                       value={grid[0][col]}
                       onChange={(e) => updateCell(0, col, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, 0, col)}
+                      onKeyDown={(e) => handleKeyDown(e, uniqueIdx)}
                       onClick={(e) => handleCellClick(e, 0, col, grid[0][col])}
+                      data-index={`grid-${uniqueIdx}`}
                       className="w-full bg-transparent text-cyan-300 text-center font-bold outline-none placeholder-cyan-700 px-2 py-1 transition-all duration-200 focus:bg-cyan-900/40 focus:scale-105 rounded"
                       placeholder="اسماء الخانات"
                       dir="rtl"
@@ -136,6 +133,10 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                 >
                   {Array.from({ length: cols }, (_, i) => {
                     const col = cols - 1 - i;
+                    
+                    // 🔥 باقي الصفوف: اليمين بياخد الرقم الأصغر ويمشي شمال
+                    const uniqueIdx = (actualRow * cols) + (cols - i);
+
                     return (
                       <td key={col} className="p-1 border border-purple-500/10">
                         <input
@@ -143,8 +144,9 @@ const GridGame = ({ socket, roomCode, playerId }) => {
                           type="text"
                           value={grid[actualRow][col]}
                           onChange={(e) => updateCell(actualRow, col, e.target.value)}
-                          onKeyDown={(e) => handleKeyDown(e, actualRow, col)}
+                          onKeyDown={(e) => handleKeyDown(e, uniqueIdx)}
                           onClick={(e) => handleCellClick(e, actualRow, col, grid[actualRow][col])}
+                          data-index={`grid-${uniqueIdx}`}
                           className="w-full bg-gray-800/50 text-white text-center outline-none rounded-lg px-2 py-1.5 transition-all duration-200
                                      focus:bg-gradient-to-r focus:from-purple-600/40 focus:to-cyan-600/40 focus:scale-105 focus:shadow-lg focus:shadow-cyan-500/20
                                      hover:bg-gray-700/60 hover:shadow-md hover:shadow-cyan-500/10
@@ -163,7 +165,7 @@ const GridGame = ({ socket, roomCode, playerId }) => {
       </div>
 
       <p className="text-sm text-cyan-400/70 mt-3 text-center flex items-center justify-center gap-2">
-        <span>⌨️ اضغط Enter للانتقال للخلية السابقة</span>
+        <span>⌨️ اضغط Enter للانتقال للخلية التالية</span>
         {isMobile && <span className="text-purple-400">• 📱 اسحب أفقياً</span>}
       </p>
 

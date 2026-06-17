@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FaPen, FaEraser, FaRedo } from 'react-icons/fa';
 
 const BingoGame = ({ socket, roomCode, playerId }) => {
@@ -10,7 +10,6 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
   const [marks, setMarks] = useState(emptyMarks);
   const [penActive, setPenActive] = useState(false);
   const [calledNumbers, setCalledNumbers] = useState([]);
-
 
   useEffect(() => {
     if (!socket || !playerId) return;
@@ -58,8 +57,6 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
     socket.emit('bingo_reset', { roomCode, playerId });
   };
 
-// const [calledNumbers, setCalledNumbers] = useState([]);
-
   useEffect(() => {
     if (!socket) return;
     socket.on('bingo_called_numbers', (numbers) => {
@@ -78,32 +75,25 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
     }
   };
 
-  // Focus next cell in reading order: right → left, top → bottom
-  const focusNext = (row, col) => {
-    let nextRow = row;
-    let nextCol = col + 1;   // higher index = visually to the left (DOM reversed)
-    if (nextCol >= size) {
-      nextCol = 0;
-      nextRow += 1;
-      if (nextRow >= size) {
-        nextRow = size - 1;
-        nextCol = size - 1;
-      }
-    }
+  // 🔥 المعادلة الجديدة: بتمشي من اليمين للشمال إجبارياً
+  const focusNextUsingTabIndex = (currentIdx) => {
     setTimeout(() => {
-      const el = document.getElementById(`bingo-${nextRow}-${nextCol}`);
-      if (el) {
-        el.focus();
-        el.select();
+      let nextIdx = currentIdx + 1;
+      if (nextIdx > 25) nextIdx = 1; // لو خلص الجدول يرجع لأول خانة يمين فوق
+      
+      const nextEl = document.querySelector(`[data-index="${nextIdx}"]`);
+      if (nextEl) {
+        nextEl.focus();
+        nextEl.select();
       }
-    }, 0);
+    }, 10);
   };
 
-  const handleKeyDown = (e, row, col) => {
+  const handleKeyDown = (e, currentIdx) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (!penActive) {
-        focusNext(row, col);
+        focusNextUsingTabIndex(currentIdx);
       }
     }
   };
@@ -137,7 +127,6 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
         </div>
       </div>
 
-      {/* Shared number display */}
       <div className="flex items-center justify-center gap-4 mb-4">
         <div className="bg-gray-800/70 rounded-xl p-3 text-center flex-1 max-w-md">
           <p className="text-sm text-gray-400 mb-1">آخر رقم تم استدعاؤه</p>
@@ -153,7 +142,6 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
         </button>
       </div>
 
-      {/* Called numbers list */}
       {calledNumbers.length > 0 && (
         <div className="flex flex-wrap gap-1 justify-center mb-4">
           {calledNumbers.map((num, idx) => (
@@ -163,14 +151,16 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
       )}
 
       <div className="overflow-auto max-h-[70vh] rounded-xl border border-purple-500/30 shadow-inner shadow-purple-500/10">
-        {/* ❌ removed dir="rtl" from the table */}
         <table className="w-full border-collapse" style={{ minWidth: '400px' }}>
           <tbody>
             {Array.from({ length: size }, (_, rowIdx) => (
               <tr key={rowIdx} className="bg-gray-900/60 hover:bg-gray-800/80 transition-all">
-                {/* Columns reversed: rightmost first, leftmost last */}
                 {Array.from({ length: size }, (_, i) => {
                   const colIdx = size - 1 - i;
+                  
+                  // 🔥 التعديل السحري: بندي أصغر رقم للخانة اللي في أقصى اليمين عشان يبدأ منها ويمشي شمال
+                  const uniqueIndex = (rowIdx * size) + (size - i);
+
                   return (
                     <td key={colIdx} className="p-1 border border-purple-500/10">
                       <div
@@ -195,8 +185,9 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
                           maxLength={2}
                           value={grid[rowIdx][colIdx]}
                           onChange={(e) => updateCell(rowIdx, colIdx, e.target.value.replace(/[^0-9]/g, ''))}
-                          onKeyDown={(e) => handleKeyDown(e, rowIdx, colIdx)}
+                          onKeyDown={(e) => handleKeyDown(e, uniqueIndex)}
                           onClick={(e) => e.stopPropagation()}
+                          data-index={uniqueIndex}
                           className={`w-full bg-transparent text-white text-center font-bold outline-none text-lg sm:text-2xl ${
                             marks[rowIdx][colIdx] ? 'text-yellow-300' : ''
                           }`}
@@ -215,7 +206,7 @@ const BingoGame = ({ socket, roomCode, playerId }) => {
       </div>
 
       <p className="text-sm text-cyan-400/70 mt-3 text-center">
-        ⌨️ اضغط Enter للانتقال للخلية السابقة {penActive ? '• القلم نشط – اضغط على الخلية لتحديدها' : '• اكتب الأرقام من 1 إلى 25'}
+        ⌨️ اضغط Enter للانتقال للخلية التالية {penActive ? '• القلم نشط – اضغط على الخلية لتحديدها' : '• اكتب الأرقام من 1 إلى 25'}
       </p>
     </div>
   );
