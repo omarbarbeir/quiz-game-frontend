@@ -10,6 +10,7 @@ import BingoGame from './BingoGame';
 import BattleshipGame from './BattleshipGame';
 import SwordOfKnowledge from './SwordOfKnowledge';
 import BracketGame from './BracketGame';
+import CrimeGameAdmin from './CrimeGameAdmin';
 
 const AdminPanel = ({ 
   roomCode, players, activePlayer, currentQuestion, onScoreChange, onPlayQuestion,
@@ -205,6 +206,13 @@ const AdminPanel = ({
     }
   }, [selectedCategory, currentQuestion, onPlayQuestion]);
 
+  useEffect(() => {
+    if (selectedCategory === 'crime-game' && currentQuestion?.category !== 'crime-game') {
+      onPlayQuestion({ id: 'crime-game', category: 'crime-game', text: 'حل الجرائم', answer: '' });
+      socket.emit('crime_start', { roomCode });
+    }
+  }, [selectedCategory, currentQuestion, socket, roomCode, onPlayQuestion]);
+
 
   // ====== Tic Tac Toe Mode ======
   if (selectedCategory === 'tic-tac-toe') {
@@ -311,6 +319,29 @@ const AdminPanel = ({
     );
   }
 
+
+  if (selectedCategory === 'crime-game') {
+    const adminPlayer = players.find(p => p.isAdmin);
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div className="flex items-center gap-3">
+            <FaCrown className="text-yellow-400 text-2xl" />
+            <h1 className="text-2xl font-bold">لوحة المسؤول – حل الجرائم</h1>
+          </div>
+          <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl">{roomCode}</span>
+          </div>
+        </div>
+        <button onClick={handleBackToCategories} className="mb-4 bg-gray-700 hover:bg-gray-600 py-2 px-4 rounded-lg flex items-center gap-2">
+          <FaArrowLeft /> العودة للفئات
+        </button>
+        <CrimeGameAdmin socket={socket} roomCode={roomCode} />
+      </div>
+    );
+  }
+
 // ====== Sword of Knowledge Mode ======
   if (selectedCategory === 'sword-of-knowledge') {
     const adminPlayer = players.find(p => p.isAdmin);
@@ -371,6 +402,7 @@ const AdminPanel = ({
       </div>
     );
   }
+
 
 
   // ====== Card Game Mode ======

@@ -9,6 +9,7 @@ import BingoGame from './BingoGame';
 import BattleshipGame from './BattleshipGame';
 import SwordOfKnowledge from './SwordOfKnowledge';
 import BracketGame from './BracketGame';
+import CrimeGamePlayer from './CrimeGamePlayer';
 
 const PlayerScreen = ({ 
   playerId,
@@ -40,6 +41,16 @@ const PlayerScreen = ({
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [votedFor, setVotedFor] = useState(null);
   const [spyResult, setSpyResult] = useState(null);
+
+
+  const [crimeHorror, setCrimeHorror] = useState(false);
+  const [crimeHeadline, setCrimeHeadline] = useState(null);
+  const [crimeStatement, setCrimeStatement] = useState(null);
+  const [crimeVotingOpen, setCrimeVotingOpen] = useState(false);
+  const [crimeSuspects, setCrimeSuspects] = useState([]);
+  const [crimeVote, setCrimeVote] = useState(null);
+  const [crimeVotingComplete, setCrimeVotingComplete] = useState(false);
+  const [crimeSolution, setCrimeSolution] = useState(null);
 
   const publicUrl = process.env.PUBLIC_URL || '';
 
@@ -135,6 +146,32 @@ const PlayerScreen = ({
     // ولا تنسى تحطهم في الـ return جوا הـ useEffect عشان يتمسحوا مع الـ unmount
     // socket.off('open_spy_voting', handleOpenSpyVoting);
     // socket.off('spy_voting_results', handleSpyVotingResults);
+
+
+    socket.on('crime_horror_message', ({ message }) => {
+      setCrimeHorror(true);
+      setTimeout(() => setCrimeHorror(false), 4000);
+    });
+    socket.on('crime_headline', ({ headline, description }) => {
+      setCrimeHeadline({ headline, description });
+    });
+    socket.on('crime_statement', ({ suspect, statement, number, total }) => {
+      setCrimeStatement({ suspect, statement, number, total });
+    });
+    socket.on('crime_voting_open', ({ suspects }) => {
+      setCrimeSuspects(suspects);
+      setCrimeVotingOpen(true);
+      setCrimeVote(null);
+      setCrimeVotingComplete(false);
+    });
+    socket.on('crime_voting_complete', ({ votes }) => {
+      setCrimeVotingOpen(false);
+      setCrimeVotingComplete(true);
+    });
+    socket.on('crime_solution', ({ solution, votes }) => {
+      setCrimeSolution(solution);
+      setCrimeVotingComplete(false);
+    });
     
     return () => {
       socket.off('play_audio', handlePlayAudio);
@@ -300,6 +337,9 @@ const PlayerScreen = ({
     );
   }
 
+
+  
+
   if (currentQuestion?.category === 'round16') {
     const currentPlayer = players.find(p => p.id === playerId);
     return (
@@ -321,6 +361,28 @@ const PlayerScreen = ({
           currentPlayer={currentPlayer}
           isAdmin={false}
         />
+        <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
+          <FaSignOutAlt /> مغادرة الغرفة
+        </button>
+      </div>
+    );
+  }
+
+  
+  if (currentQuestion?.category === 'crime-game') {
+    return (
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-right">🕵️ حل الجرائم</h1>
+            <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
+          </div>
+          <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
+            <span className="font-medium">رمز الغرفة:</span>
+            <span className="font-mono text-xl">{roomCode}</span>
+          </div>
+        </div>
+        <CrimeGamePlayer socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={isAdmin} />
         <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
           <FaSignOutAlt /> مغادرة الغرفة
         </button>

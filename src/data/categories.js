@@ -212,7 +212,14 @@ const categories = [
     icon: "🏆",
     color: "from-yellow-500 to-orange-600",
     subcategories: []
+  },
+
+  { id: 'crime-game',
+    name: 'حل الجرائم',
+    description: 'اكتشف الجاني',
+    subcategories: []
   }
+
 ];
 
 export default categories;

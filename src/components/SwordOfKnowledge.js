@@ -243,7 +243,7 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
     return () => clearInterval(id);
   }, [currentQuestion, duelQuestion, hasAnswered]);
 
-  const realPlayers = gameState?.players || [];
+  const realPlayers = (gameState?.players || []).filter(p => !p.isAdmin);
   const amIEliminated = realPlayers.find(p => p.id === currentPlayer?.id)?.eliminated;
   const myTurn = gameState?.turn === currentPlayer?.id && !isAdmin;
   const getPlayerColor = (id) => realPlayers.find(p => p.id === id)?.color || '#ccc';
