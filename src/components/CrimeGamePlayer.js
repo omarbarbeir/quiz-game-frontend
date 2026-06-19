@@ -78,6 +78,7 @@ const CrimeGamePlayer = ({ socket, roomCode, playerId, onScoreUpdate }) => {
 
     // 1️⃣ الخطوة 1: عرض الجريمة -> تفتح المشتبه بيهم
     socket.on('crime_headline', ({ headline, description }) => {
+      console.log("✅ وصلت بيانات الجريمة من السيرفر:", headline);
       setHeadline({ headline, description });
       setCurrentStep(prev => Math.max(prev, 1));
     });
