@@ -78,7 +78,6 @@ const CrimeGamePlayer = ({ socket, roomCode, playerId, onScoreUpdate }) => {
 
     // 1️⃣ الخطوة 1: عرض الجريمة -> تفتح المشتبه بيهم
     socket.on('crime_headline', ({ headline, description }) => {
-      console.log("✅ وصلت بيانات الجريمة من السيرفر:", headline);
       setHeadline({ headline, description });
       setCurrentStep(prev => Math.max(prev, 1));
     });
@@ -202,15 +201,11 @@ const CrimeGamePlayer = ({ socket, roomCode, playerId, onScoreUpdate }) => {
         
         {/* 🟢 Step 0: متاح دائماً */}
         <button
-        onClick={() => {
-          const payload = { roomCode };
-          console.log("📤 جاري إرسال الطلب للسيرفر بالبيانات التالية:", payload);
-          socket.emit('crime_show_headline', payload);
-        }}
-        className="p-4 bg-blue-600 ... "
-      >
-        عرض الجريمة
-      </button>
+          onClick={() => socket.emit('crime_show_headline', { roomCode })}
+          className="p-4 bg-blue-600 hover:bg-blue-500 rounded-xl flex items-center justify-center gap-2 font-bold text-white transition duration-200"
+        >
+          <FaFileAlt /> عرض الجريمة
+        </button>
 
         {/* 🟡 Step 1: يفتح بعد الجريمة */}
         <button
