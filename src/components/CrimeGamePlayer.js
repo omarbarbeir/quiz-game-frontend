@@ -202,7 +202,12 @@ const CrimeGamePlayer = ({ socket, roomCode, playerId, onScoreUpdate }) => {
         
         {/* 🟢 Step 0: متاح دائماً */}
         <button
-          onClick={() => socket.emit('crime_show_headline', { roomCode })}
+          onClick={() => {
+            console.log("🔘 تم الضغط على الزرار!");
+            console.log("🔌 حالة الاتصال بالسيرفر:", socket.connected);
+            console.log("🏠 كود الغرفة:", roomCode);
+            socket.emit('crime_show_headline', { roomCode });
+          }}
           className="p-4 bg-blue-600 hover:bg-blue-500 rounded-xl flex items-center justify-center gap-2 font-bold text-white transition duration-200"
         >
           <FaFileAlt /> عرض الجريمة
