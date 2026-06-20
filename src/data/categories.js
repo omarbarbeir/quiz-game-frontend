@@ -214,11 +214,12 @@ const categories = [
     subcategories: []
   },
 
-  { id: 'crime-game',
-    name: 'حل الجرائم',
-    description: 'اكتشف الجاني',
-    subcategories: []
-  }
+{ id: 'hangman', 
+  name: 'الرجل المشنوق', 
+  icon: "🥷🏻",
+  description: 'خمن الكلمة', 
+  subcategories: [] 
+}
 
 ];
 
