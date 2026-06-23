@@ -27,12 +27,41 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const typingTimeoutRef = useRef(null);
 
   // السماع للأحداث القادمة من السيرفر
-  useEffect(() => {
+useEffect(() => {
+    console.log("🟢 [Client Debug] Mafiosa Component Mounted! Room:", roomCode);
+
+    if (!socket) {
+      console.error("🔴 [Client Debug] Socket object is NULL!");
+      return;
+    }
+
+    // دالة إرسال الطلب للسيرفر
+    const requestCaseData = () => {
+      console.log(`🚀 [Client Debug] Emitting 'mafiosa_start' for room: "${roomCode}"`);
+      socket.emit('mafiosa_start', { roomCode });
+    };
+
+    // 1. لو السوكيت واصل وجاهز حالاً -> ابعت فوراً
+    if (socket.connected) {
+      console.log("⚡ [Client Debug] Socket is already connected. Firing request...");
+      requestCaseData();
+    } else {
+      // 2. لو لسه بيعمل Handshake -> استناه أول ما ينطق وقوله ابعت!
+      console.warn("⚠️ [Client Debug] Socket not connected yet! Queuing request on 'connect'...");
+      socket.on('connect', () => {
+        console.log("⚡ [Client Debug] Socket JUST connected! Firing queued request...");
+        requestCaseData();
+      });
+    }
+
+    // --- استقبال الردود من السيرفر ---
     socket.on('mafiosa_case_data', (data) => {
+      console.log("📥 [Client Debug] WOW! Received case_data:", data);
       setCaseData(data);
     });
 
     socket.on('mafiosa_state', (data) => {
+      console.log("📥 [Client Debug] Received state:", data);
       setState(data);
       if (data) {
         setInventory(data.inventory || []);
@@ -44,83 +73,27 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     });
 
     socket.on('mafiosa_inventory_update', ({ inventory }) => setInventory(inventory));
-    
     socket.on('mafiosa_notification', ({ message, type }) => {
-      const id = Date.now();
-      setNotifications(prev => [...prev, { message, type, id }]);
-      setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 5000);
+      setNotifications(prev => [...prev, { message, type, id: Date.now() }]);
     });
-
-    socket.on('mafiosa_dialogue', ({ text, options }) => {
-      setIsTyping(true);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      
-      typingTimeoutRef.current = setTimeout(() => {
-        setIsTyping(false);
-        setMessagesBySuspect(prev => ({
-          ...prev,
-          [selectedSuspect]: [...(prev[selectedSuspect] || []), { type: 'npc', text }]
-        }));
-        setCurrentOptions(options || []);
-      }, 1200);
-    });
-
-    socket.on('mafiosa_dialogue_update', ({ suspectId, nextNode }) => {
-      setIsTyping(true);
-      typingTimeoutRef.current = setTimeout(() => {
-        setIsTyping(false);
-        if (nextNode) {
-          setMessagesBySuspect(prev => ({
-            ...prev,
-            [suspectId]: [...(prev[suspectId] || []), { type: 'npc', text: nextNode.text }]
-          }));
-          setCurrentOptions(nextNode.options || []);
-        }
-      }, 1200);
-    });
-
     socket.on('mafiosa_solution', (data) => {
       setSolution(data);
-      if (data.finalPoints && data.finalPoints[playerId] !== undefined) {
-        setPoints(data.finalPoints[playerId]);
-      }
     });
-
     socket.on('mafiosa_error', ({ message }) => {
-      const id = Date.now();
-      setNotifications(prev => [...prev, { message, type: 'error', id }]);
-      setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
-      setIsTyping(false);
+      console.error("❌ [Client Error from Server]:", message);
+      setNotifications(prev => [...prev, { message, type: 'error', id: Date.now() }]);
     });
-
-    socket.on('mafiosa_investigation_started', ({ suspectId, points, cost }) => {
-      setPoints(points);
-      setInvestigationCost(cost);
-      setInvestigatingSuspect(null);
-      setSelectedSuspect(suspectId);
-      socket.emit('mafiosa_get_dialogue', { roomCode, suspectId });
-    });
-
-    socket.on('mafiosa_accusation_phase', () => {
-      setAccusationPhase(true);
-    });
-
-    socket.emit('mafiosa_start', { roomCode });
 
     return () => {
+      socket.off('connect');
       socket.off('mafiosa_case_data');
       socket.off('mafiosa_state');
       socket.off('mafiosa_inventory_update');
       socket.off('mafiosa_notification');
-      socket.off('mafiosa_dialogue');
-      socket.off('mafiosa_dialogue_update');
       socket.off('mafiosa_solution');
       socket.off('mafiosa_error');
-      socket.off('mafiosa_investigation_started');
-      socket.off('mafiosa_accusation_phase');
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
-  }, [socket, roomCode, playerId, selectedSuspect]);
+  }, [socket, roomCode, playerId]);
 
   useEffect(() => {
     if (chatEndRef.current) {
