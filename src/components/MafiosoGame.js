@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaSearch, FaBox, FaUser, FaClock, FaMapPin, FaUsers, FaTimes, FaStar, FaFileMedical } from 'react-icons/fa';
+import { FaSearch, FaBox, FaUser, FaMapPin, FaUsers, FaTimes, FaFileMedical } from 'react-icons/fa';
 
 const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const [caseData, setCaseData] = useState(null);
@@ -11,7 +11,7 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const [investigationCost, setInvestigationCost] = useState(10);
   const [selectedSuspect, setSelectedSuspect] = useState(null);
   const [messagesBySuspect, setMessagesBySuspect] = useState({});
-  const [currentNodeIdBySuspect, setCurrentNodeIdBySuspect] = useState({});
+  const [currentOptions, setCurrentOptions] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [accusationPhase, setAccusationPhase] = useState(false);
   const [vote, setVote] = useState({ suspect: '', weapon: '', motive: '' });
@@ -26,39 +26,12 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const chatEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // Helpers
-  const getSuspectDialogue = (suspectId) => {
-    if (!caseData) return null;
-    const suspect = caseData.suspects.find(s => s.id === suspectId);
-    return suspect ? suspect.dialogue : null;
-  };
-
-  const getInitialNode = (suspectId) => {
-    const dialogue = getSuspectDialogue(suspectId);
-    if (!dialogue || dialogue.length === 0) return null;
-    return dialogue.find(d => d.id === 'start') || dialogue[0];
-  };
-
-  const showNpcResponse = (suspectId, node) => {
-    setIsTyping(true);
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      if (node) {
-        setMessagesBySuspect(prev => ({
-          ...prev,
-          [suspectId]: [...(prev[suspectId] || []), { type: 'npc', text: node.text }]
-        }));
-        setCurrentNodeIdBySuspect(prev => ({ ...prev, [suspectId]: node.id }));
-      }
-    }, 1500);
-  };
-
-  // Socket listeners
+  // السماع للأحداث القادمة من السيرفر
   useEffect(() => {
     socket.on('mafiosa_case_data', (data) => {
       setCaseData(data);
     });
+
     socket.on('mafiosa_state', (data) => {
       setState(data);
       if (data) {
@@ -69,24 +42,67 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
         }
       }
     });
+
     socket.on('mafiosa_inventory_update', ({ inventory }) => setInventory(inventory));
+    
     socket.on('mafiosa_notification', ({ message, type }) => {
-      setNotifications(prev => [...prev, { message, type, id: Date.now() }]);
-      setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== Date.now())), 5000);
+      const id = Date.now();
+      setNotifications(prev => [...prev, { message, type, id }]);
+      setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 5000);
     });
+
+    socket.on('mafiosa_dialogue', ({ text, options }) => {
+      setIsTyping(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        setMessagesBySuspect(prev => ({
+          ...prev,
+          [selectedSuspect]: [...(prev[selectedSuspect] || []), { type: 'npc', text }]
+        }));
+        setCurrentOptions(options || []);
+      }, 1200);
+    });
+
+    socket.on('mafiosa_dialogue_update', ({ suspectId, nextNode }) => {
+      setIsTyping(true);
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        if (nextNode) {
+          setMessagesBySuspect(prev => ({
+            ...prev,
+            [suspectId]: [...(prev[suspectId] || []), { type: 'npc', text: nextNode.text }]
+          }));
+          setCurrentOptions(nextNode.options || []);
+        }
+      }, 1200);
+    });
+
     socket.on('mafiosa_solution', (data) => {
       setSolution(data);
       if (data.finalPoints && data.finalPoints[playerId] !== undefined) {
         setPoints(data.finalPoints[playerId]);
       }
     });
+
     socket.on('mafiosa_error', ({ message }) => {
-      setNotifications(prev => [...prev, { message, type: 'error', id: Date.now() }]);
+      const id = Date.now();
+      setNotifications(prev => [...prev, { message, type: 'error', id }]);
+      setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
+      setIsTyping(false);
     });
+
     socket.on('mafiosa_investigation_started', ({ suspectId, points, cost }) => {
       setPoints(points);
       setInvestigationCost(cost);
       setInvestigatingSuspect(null);
+      setSelectedSuspect(suspectId);
+      socket.emit('mafiosa_get_dialogue', { roomCode, suspectId });
+    });
+
+    socket.on('mafiosa_accusation_phase', () => {
+      setAccusationPhase(true);
     });
 
     socket.emit('mafiosa_start', { roomCode });
@@ -96,12 +112,15 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
       socket.off('mafiosa_state');
       socket.off('mafiosa_inventory_update');
       socket.off('mafiosa_notification');
+      socket.off('mafiosa_dialogue');
+      socket.off('mafiosa_dialogue_update');
       socket.off('mafiosa_solution');
       socket.off('mafiosa_error');
       socket.off('mafiosa_investigation_started');
+      socket.off('mafiosa_accusation_phase');
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
-  }, [socket, roomCode, playerId]);
+  }, [socket, roomCode, playerId, selectedSuspect]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -109,22 +128,10 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     }
   }, [messagesBySuspect, isTyping]);
 
-  // Start investigation (deduct points)
   const startInvestigation = (suspectId) => {
     if (investigatingSuspect) return;
     setInvestigatingSuspect(suspectId);
-    socket.emit('mafiosa_start_investigation', { roomCode, suspectId });
-    setSelectedSuspect(suspectId);
-    if (!messagesBySuspect[suspectId] || messagesBySuspect[suspectId].length === 0) {
-      const startNode = getInitialNode(suspectId);
-      if (startNode) {
-        setMessagesBySuspect(prev => ({
-          ...prev,
-          [suspectId]: [{ type: 'npc', text: startNode.text }]
-        }));
-        setCurrentNodeIdBySuspect(prev => ({ ...prev, [suspectId]: startNode.id }));
-      }
-    }
+    socket.emit('mafiosa_start_investigation', { roomCode, suspectId, playerId });
     setInvestigationOpen(true);
   };
 
@@ -132,45 +139,26 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     setInvestigationOpen(false);
     setSelectedSuspect(null);
     setInvestigatingSuspect(null);
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    setCurrentOptions([]);
     setIsTyping(false);
   };
 
-  const handleChooseOption = (suspectId, option) => {
+  const handleChooseOption = (suspectId, option, index) => {
     if (isTyping) return;
-    const currentDialogue = getSuspectDialogue(suspectId);
-    if (!currentDialogue) return;
-    const currentNodeId = currentNodeIdBySuspect[suspectId];
-    const currentNode = currentDialogue.find(d => d.id === currentNodeId);
-    if (!currentNode) return;
+
+    if (option.requiredEvidence && !inventory.includes(option.requiredEvidence)) {
+      const id = Date.now();
+      setNotifications(prev => [...prev, { message: 'ليس لديك الدليل المطلوب لمواجهته!', type: 'error', id }]);
+      setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
+      return;
+    }
 
     setMessagesBySuspect(prev => ({
       ...prev,
       [suspectId]: [...(prev[suspectId] || []), { type: 'player', text: option.text }]
     }));
 
-    if (option.requiredEvidence) {
-      if (!inventory.includes(option.requiredEvidence)) {
-        setNotifications(prev => [...prev, { message: 'ليس لديك الدليل المطلوب!', type: 'error', id: Date.now() }]);
-        return;
-      }
-    }
-
-    const nextNode = currentDialogue.find(d => d.id === option.nextNodeId);
-    if (nextNode) {
-      if (nextNode.unlockedBy) {
-        socket.emit('mafiosa_confront', { roomCode, evidenceId: nextNode.unlockedBy });
-      }
-      if (nextNode.reward) {
-        const rewardId = nextNode.reward.split(' ').join('_').toLowerCase();
-        if (!inventory.includes(rewardId)) {
-          socket.emit('mafiosa_add_evidence', { roomCode, evidenceId: rewardId });
-        }
-      }
-      showNpcResponse(suspectId, nextNode);
-    } else {
-      setNotifications(prev => [...prev, { message: 'انتهى الحوار.', type: 'info', id: Date.now() }]);
-    }
+    socket.emit('mafiosa_choose_option', { roomCode, suspectId, optionIndex: index });
   };
 
   const handleSearch = (location) => {
@@ -179,16 +167,15 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
       setSearching(false);
       setSearchModalOpen(false);
       socket.emit('mafiosa_search', { roomCode, location });
-    }, 2000);
+    }, 1500);
   };
 
   const handleGetAutopsy = () => {
     socket.emit('mafiosa_get_autopsy', { roomCode });
   };
 
-  // Open accusation modal ONLY for this player
-  const handleAccuse = () => {
-    setAccusationPhase(true);
+  const handleAccuseClick = () => {
+    socket.emit('mafiosa_accuse', { roomCode });
     setVote({ suspect: '', weapon: '', motive: '' });
     setHasVoted(false);
   };
@@ -204,34 +191,29 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   }
 
   if (solution) {
-    const isWinner = solution.winners && solution.winners.includes(playerId);
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-gray-800/70 rounded-xl p-6 border border-cyan-500/20 text-center">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-gray-800/70 rounded-xl p-6 border border-cyan-500/20 text-center text-white">
         {solution.image && (
-          <img src={solution.image} alt="الفائز" className="w-[220px] h-[220px] mx-auto mb-4 object-fill rounded-full border-2 border-yellow-400" />
+          <img src={solution.image} alt="الحل" className="w-[220px] h-[220px] mx-auto mb-4 object-cover rounded-full border-2 border-yellow-400" />
         )}
-        <h2 className="text-2xl font-bold text-green-400">تم حل القضية!</h2>
-        <p>القاتل: {solution.culprit}</p>
-        <p>الأداة: {solution.weapon}</p>
-        <p>الدافع: {solution.motive}</p>
+        <h2 className="text-2xl font-bold text-green-400 mb-2">تم فك طلاسم القضية!</h2>
+        <div className="bg-gray-900/60 p-4 rounded-xl text-right inline-block max-w-md space-y-2">
+          <p><span className="text-yellow-400 font-bold">القاتل الحقيقي:</span> {solution.culprit}</p>
+          <p><span className="text-cyan-400 font-bold">الأسلوب والأداة:</span> {solution.weapon}</p>
+          <p><span className="text-purple-400 font-bold">الدافع الخلفي:</span> {solution.motive}</p>
+        </div>
         {solution.winners && solution.winners.length > 0 && (
-          <div className="mt-4 p-3 bg-green-900/50 border border-green-500 rounded-lg">
-            <p className="text-green-300 font-bold">الفائزون: {solution.winners.join('، ')}</p>
+          <div className="mt-4 p-3 bg-green-900/40 border border-green-500 rounded-lg max-w-sm mx-auto">
+            <p className="text-green-300 font-bold">المحققون الفائزون: {solution.winners.join('، ')}</p>
           </div>
         )}
-        {solution.finalPoints && (
-          <div className="mt-2 text-yellow-300">نقاطك النهائية: {solution.finalPoints[playerId] || 0}</div>
-        )}
-        <button onClick={() => socket.emit('mafiosa_start', { roomCode })} className="mt-4 bg-cyan-600 px-4 py-2 rounded-lg">قضية جديدة</button>
+        <button onClick={() => window.location.reload()} className="mt-6 bg-cyan-600 hover:bg-cyan-500 px-6 py-2 rounded-lg font-bold">قضية جديدة 🔄</button>
       </motion.div>
     );
   }
 
-  const currentMessages = selectedSuspect ? messagesBySuspect[selectedSuspect] || [] : [];
-  const currentNodeId = selectedSuspect ? currentNodeIdBySuspect[selectedSuspect] : null;
-
   return (
-    <div className="bg-gray-800/70 rounded-xl p-4 border border-cyan-500/20 relative">
+    <div className="bg-gray-800/70 rounded-xl p-4 border border-cyan-500/20 relative text-white text-right" dir="rtl">
       <AnimatePresence>
         {notifications.map(n => (
           <motion.div
@@ -239,225 +221,178 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`p-2 rounded-lg mb-2 ${n.type === 'success' ? 'bg-green-600' : n.type === 'error' ? 'bg-red-600' : 'bg-cyan-600'}`}
+            className={`p-3 rounded-lg mb-2 text-center text-sm font-bold shadow-lg ${n.type === 'success' ? 'bg-green-600' : n.type === 'error' ? 'bg-red-600' : 'bg-cyan-600'}`}
           >
             {n.message}
           </motion.div>
         ))}
       </AnimatePresence>
 
-      {/* Points & Cost */}
-      <div className="bg-gray-900/50 p-2 rounded-lg mb-4 border border-yellow-500/20 flex justify-between flex-wrap gap-2">
-        <span className="text-yellow-300 font-bold">نقاطك: {points}</span>
-        <span className="text-gray-400 text-sm">تكلفة التحقيق الحالية: {investigationCost}</span>
+      <div className="bg-gray-900/50 p-3 rounded-lg mb-4 border border-yellow-500/20 flex justify-between items-center">
+        <span className="text-yellow-300 font-bold">رصيدك: {points} نقطة</span>
+        <span className="text-gray-400 text-xs">تكلفة بدء التحقيق: {investigationCost} ن</span>
       </div>
 
-      {/* Title and Description */}
       {caseData.title && (
-        <div className="bg-gray-900/50 p-3 rounded-lg mb-4 border border-amber-500/20">
-          <h2 className="text-2xl font-bold text-yellow-300">{caseData.title}</h2>
-          <p className="text-gray-300 text-sm mt-1">{caseData.description}</p>
+        <div className="bg-gray-900/50 p-4 rounded-lg mb-4 border border-amber-500/20">
+          <h2 className="text-xl font-bold text-yellow-300 mb-2">{caseData.title}</h2>
+          <p className="text-gray-300 text-sm leading-relaxed">{caseData.description}</p>
         </div>
       )}
 
-      {/* Autopsy Report – show only if NOT key (given for free) */}
       {caseData.autopsy && !caseData.autopsy.isKey && (
-        <div className="bg-gray-900/50 p-3 rounded-lg mb-4 border border-amber-500/20">
-          <h3 className="text-amber-400 font-bold">📋 التقرير الطبي</h3>
-          <p className="text-gray-300 text-sm">{caseData.autopsy.text}</p>
+        <div className="bg-gray-900/50 p-3 rounded-lg mb-4 border border-blue-500/20">
+          <h3 className="text-blue-400 font-bold mb-1">📋 التقرير الطبي الأولي:</h3>
+          <p className="text-gray-300 text-xs leading-relaxed">{caseData.autopsy.text}</p>
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-4">
-          <span className="text-gray-300">نقاط الطاقة: <span className="text-cyan-300 font-bold">{state.ap}</span></span>
-          <button onClick={() => setInventory(inventory)} className="text-purple-400 hover:text-purple-300">
-            <FaBox className="inline mr-1" /> {inventory.length}
-          </button>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <div className="flex gap-4 items-center">
+          <span className="text-sm text-gray-300">نقاط الـ AP: <span className="text-cyan-300 font-bold">{state.ap}</span></span>
+          <span className="text-sm text-purple-300"><FaBox className="inline ml-1" /> الأدلة المكتشفة: {inventory.length}</span>
         </div>
-        <button onClick={() => setSearchModalOpen(true)} disabled={state.ap < 1} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg disabled:opacity-50">
-          <FaSearch /> فحص (-1 AP)
+        <button onClick={() => setSearchModalOpen(true)} disabled={state.ap < 1} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg font-bold flex items-center gap-1 text-sm disabled:opacity-50">
+          <FaSearch size={12} /> فحص موقع (-1 AP)
         </button>
       </div>
 
-      {/* Key Autopsy Button – separate */}
       {caseData.autopsy && caseData.autopsy.isKey && (
         <button
           onClick={handleGetAutopsy}
           disabled={state.ap < 1 || inventory.includes('autopsy_report')}
-          className={`w-full mb-4 p-2 rounded-lg font-bold flex items-center justify-center gap-2 ${
-            state.ap < 1 || inventory.includes('autopsy_report')
-              ? 'bg-gray-600 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-500'
+          className={`w-full mb-4 p-2.5 rounded-lg font-bold flex items-center justify-center gap-2 text-sm transition-all ${
+            state.ap < 1 || inventory.includes('autopsy_report') ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
           }`}
         >
-          <FaFileMedical /> {inventory.includes('autopsy_report') ? 'تم الحصول على التقرير' : 'طلب التقرير الطبي الكامل (-1 AP)'}
+          <FaFileMedical /> {inventory.includes('autopsy_report') ? 'تمت إضافة تقرير المشرحة المتقدم للأدلة' : 'شراء التقرير الطبي التشريحي المغلق (-1 AP)'}
         </button>
       )}
 
-      <button onClick={() => setSuspectsModalOpen(true)} className="w-full bg-indigo-600 hover:bg-indigo-500 p-2 rounded-lg font-bold mb-4">
-        <FaUsers className="inline mr-2" /> عرض المشتبه بهم وعلاقتهم
-      </button>
+      <div className="space-y-2">
+        <button onClick={() => setSuspectsModalOpen(true)} className="w-full bg-indigo-600 hover:bg-indigo-500 p-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2">
+          <FaUsers /> ملفات المشتبه بهم وإفادتهم الأولية
+        </button>
 
-      <button onClick={() => setInvestigationOpen(true)} className="w-full bg-purple-600 hover:bg-purple-500 p-2 rounded-lg font-bold mb-4">
-        <FaUser className="inline mr-2" /> تحقيق مع المشتبهين
-      </button>
+        <button onClick={() => setInvestigationOpen(true)} className="w-full bg-purple-600 hover:bg-purple-500 p-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2">
+          <FaUser /> غرف استجواب المشتبه بهم
+        </button>
 
-      <button onClick={handleAccuse} className="w-full bg-red-600 hover:bg-red-500 p-2 rounded-lg font-bold">
-        توجيه اتهام
-      </button>
+        <button onClick={handleAccuseClick} className="w-full bg-red-600 hover:bg-red-500 p-2.5 rounded-lg font-bold text-sm">
+          ⚖️ تقديم لائحة الاتهام النهائية
+        </button>
+      </div>
 
-      {/* Suspects Modal */}
+      {/* مودال المشتبه بهم */}
       {suspectsModalOpen && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
-        >
-          <div className="bg-gray-900 rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] border border-indigo-500/30 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl p-5 max-w-2xl w-full max-h-[80vh] border border-indigo-500/30 overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-indigo-300 font-bold text-xl">المشتبه بهم وعلاقتهم بالضحية</h3>
+              <h3 className="text-indigo-400 font-bold text-lg">سجلات المشتبه بهم</h3>
               <button onClick={() => setSuspectsModalOpen(false)} className="text-gray-400 hover:text-white">✕</button>
             </div>
             <div className="space-y-3">
               {caseData.suspects.map(s => (
-                <div key={s.id} className="bg-gray-800 p-3 rounded-lg border border-indigo-500/20">
-                  <p className="text-white font-bold">{s.name}</p>
-                  <p className="text-gray-300 text-sm">العلاقة: {s.relationship}</p>
-                  <p className="text-gray-400 text-xs mt-1">"{s.statement}"</p>
+                <div key={s.id} className="bg-gray-800 p-3 rounded-lg border border-indigo-500/10">
+                  <p className="text-yellow-400 font-bold text-sm">{s.name}</p>
+                  <p className="text-gray-300 text-xs mt-1"><span className="text-indigo-300">صلته بالضحية:</span> {s.relationship}</p>
+                  <p className="text-gray-400 text-xs italic mt-1">" {s.statement} "</p>
                 </div>
               ))}
             </div>
-            <button onClick={() => setSuspectsModalOpen(false)} className="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 p-2 rounded-lg font-bold">
-              إغلاق
-            </button>
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* Investigation Modal */}
+      {/* مودال الاستجواب والدردشة */}
       {investigationOpen && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
-        >
-          <div className="bg-gray-900 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] border border-purple-500/30 flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-purple-300 font-bold text-xl">تحقيق مع المشتبهين</h3>
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl p-5 max-w-2xl w-full h-[85vh] border border-purple-500/30 flex flex-col">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-purple-400 font-bold text-lg">غرفة الاستجواب وعرض الأدلة</h3>
               <button onClick={closeInvestigation} className="text-gray-400 hover:text-white">✕</button>
             </div>
 
             {!selectedSuspect ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto p-1">
                 {caseData.suspects.map(s => (
                   <button
                     key={s.id}
                     onClick={() => startInvestigation(s.id)}
                     disabled={investigatingSuspect !== null}
-                    className={`bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white text-right ${investigatingSuspect ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl text-right border border-gray-700/50 transition-all flex flex-col justify-between"
                   >
-                    {s.name} ({points >= investigationCost ? investigationCost + ' نقاط' : 'نقاط غير كافية'})
+                    <span className="font-bold text-white text-sm">{s.name}</span>
+                    <span className="text-xs text-purple-300 mt-2">فتح الاستجواب: {investigationCost} نقطة</span>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col h-96">
-                <div className="flex justify-between items-center mb-2">
-                  <button onClick={() => { setSelectedSuspect(null); if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current); setIsTyping(false); }} className="text-purple-400 hover:text-purple-300 text-sm">
-                    ← العودة للقائمة
+              <div className="flex flex-col flex-1 h-full overflow-hidden">
+                <div className="flex justify-between items-center pb-2 border-b border-gray-800 mb-2">
+                  <button onClick={() => { setSelectedSuspect(null); setCurrentOptions([]); }} className="text-purple-400 hover:text-purple-300 text-xs font-bold">
+                    ← قائمة المتهمين
                   </button>
-                  <span className="text-purple-300 font-bold">{caseData.suspects.find(s => s.id === selectedSuspect)?.name}</span>
-                  <span className="text-gray-500 text-xs">العلاقة: {caseData.suspects.find(s => s.id === selectedSuspect)?.relationship}</span>
+                  <span className="text-yellow-400 font-bold text-sm">{caseData.suspects.find(s => s.id === selectedSuspect)?.name}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-2 p-2 bg-gray-800/50 rounded-lg">
-                  {currentMessages.map((msg, idx) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, x: msg.type === 'player' ? 20 : -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className={`flex ${msg.type === 'player' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[80%] p-2 rounded-lg ${msg.type === 'player' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-200'}`}>
+                
+                <div className="flex-1 overflow-y-auto space-y-3 p-3 bg-gray-950/40 rounded-xl border border-gray-800/60">
+                  {(messagesBySuspect[selectedSuspect] || []).map((msg, idx) => (
+                    <div key={idx} className={`flex ${msg.type === 'player' ? 'justify-start' : 'justify-end'}`}>
+                      <div className={`max-w-[85%] p-2.5 rounded-xl text-xs leading-relaxed ${msg.type === 'player' ? 'bg-cyan-700 text-white rounded-bl-none' : 'bg-gray-800 text-gray-200 rounded-br-none'}`}>
                         {msg.text}
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                   {isTyping && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex justify-start"
-                    >
-                      <div className="bg-gray-700 text-gray-200 p-2 rounded-lg flex gap-1">
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '600ms' }}></span>
+                    <div className="flex justify-end">
+                      <div className="bg-gray-800 p-3 rounded-xl flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '200ms' }}></span>
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
                   <div ref={chatEndRef} />
                 </div>
 
-                {currentNodeId && !isTyping && (
-                  <div className="mt-2 space-y-1">
-                    {(() => {
-                      const currentDialogue = getSuspectDialogue(selectedSuspect);
-                      if (!currentDialogue) return null;
-                      const currentNode = currentDialogue.find(d => d.id === currentNodeId);
-                      if (!currentNode || !currentNode.options) return null;
-                      const validOptions = currentNode.options.filter(opt => {
-                        if (opt.requiredEvidence) {
-                          return inventory.includes(opt.requiredEvidence);
-                        }
-                        return true;
-                      });
-                      if (validOptions.length === 0) {
-                        return <div className="text-gray-400 text-center">لا توجد خيارات متاحة</div>;
-                      }
-                      return validOptions.map((opt, idx) => (
-                        <motion.button
+                {!isTyping && currentOptions.length > 0 && (
+                  <div className="mt-3 space-y-1.5 max-h-[40%] overflow-y-auto p-1">
+                    {currentOptions.map((opt, idx) => {
+                      const hasClue = opt.requiredEvidence ? inventory.includes(opt.requiredEvidence) : true;
+                      return (
+                        <button
                           key={idx}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => handleChooseOption(selectedSuspect, opt)}
-                          className="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded-lg text-sm text-right"
+                          disabled={!hasClue}
+                          onClick={() => handleChooseOption(selectedSuspect, opt, idx)}
+                          className={`w-full p-2.5 rounded-xl text-xs text-right border transition-all flex justify-between items-center ${
+                            hasClue 
+                              ? 'bg-gray-800 hover:bg-gray-700 text-white border-gray-700' 
+                              : 'bg-gray-900 text-gray-500 border-gray-800 cursor-not-allowed opacity-40'
+                          }`}
                         >
-                          {opt.text}
-                        </motion.button>
-                      ));
-                    })()}
+                          <span>{opt.text}</span>
+                          {opt.requiredEvidence && !hasClue && <span className="text-[10px] bg-red-950 text-red-400 px-2 py-0.5 rounded-md">مغلق: يتطلب دليل</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* Search Modal */}
+      {/* مودال البحث عن الأدلة */}
       {searchModalOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
-        >
-          <div className="bg-gray-900 rounded-2xl p-6 max-w-md w-full border border-emerald-500/30">
-            <h3 className="text-emerald-400 font-bold text-xl mb-4 text-center">اختر مكان البحث</h3>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl p-5 max-w-md w-full border border-emerald-500/30">
+            <h3 className="text-emerald-400 font-bold text-base mb-4 text-center">انقر على الموقع لإرسال فريق البحث والرفع</h3>
             {searching ? (
-              <div className="flex flex-col items-center py-8">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                  className="text-6xl text-emerald-400"
-                >
-                  <FaSearch />
-                </motion.div>
-                <p className="text-gray-300 mt-4">جاري البحث...</p>
+              <div className="flex flex-col items-center py-6">
+                <div className="text-4xl text-emerald-400 animate-spin">⏳</div>
+                <p className="text-gray-300 text-sm mt-3">جاري تمشيط ورفع البصمات من الموقع...</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -466,81 +401,79 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                     key={key}
                     onClick={() => handleSearch(key)}
                     disabled={searchedLocations.includes(key)}
-                    className={`w-full bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-right text-white flex items-center gap-2 ${
-                      searchedLocations.includes(key) ? 'opacity-50 cursor-not-allowed' : ''
+                    className={`w-full bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-right text-xs text-white flex items-center justify-between ${
+                      searchedLocations.includes(key) ? 'opacity-40 cursor-not-allowed' : ''
                     }`}
                   >
-                    <FaMapPin /> {loc.name}
+                    <span>📍 {loc.name}</span>
+                    {searchedLocations.includes(key) && <span className="text-[10px] text-gray-500">تم فحصها</span>}
                   </button>
                 ))}
-                <button onClick={() => setSearchModalOpen(false)} className="w-full bg-red-600 hover:bg-red-500 p-2 rounded-lg font-bold mt-2">
-                  إلغاء
-                </button>
+                <button onClick={() => setSearchModalOpen(false)} className="w-full bg-red-900/50 text-red-300 p-2 rounded-lg font-bold text-xs mt-2">إلغاء</button>
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* Accusation Modal – opens only for this player */}
+      {/* مودال لستة توجيه الاتهامات النهائي */}
       {accusationPhase && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
-        >
-          <div className="bg-gray-900 rounded-2xl p-6 max-w-md w-full border-2 border-red-500">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl p-5 max-w-md w-full border-2 border-red-600 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-yellow-400">⚖️ توجيه الاتهام</h2>
-              <button
-                onClick={() => setAccusationPhase(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <FaTimes size={24} />
-              </button>
+              <h2 className="text-lg font-bold text-red-500">⚖️ صياغة التقرير الجنائي والنيابة</h2>
+              <button onClick={() => setAccusationPhase(false)} className="text-gray-400 hover:text-white">✕</button>
             </div>
 
             {hasVoted ? (
-              <div className="text-center py-8">
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 1.5 }}
-                  className="text-4xl mb-4"
-                >
-                  ⏳
-                </motion.div>
-                <h3 className="text-xl text-green-400 font-bold mb-2">تم تسجيل تصويتك!</h3>
-                <p className="text-gray-300">في انتظار باقي المحققين لإنهاء التصويت...</p>
+              <div className="text-center py-6">
+                <div className="text-3xl mb-3 animate-pulse">⏳</div>
+                <h3 className="text-base text-green-400 font-bold mb-1">تم إرسال اتهامك للمحكمة بنجاح!</h3>
+                <p className="text-gray-400 text-xs">ننتظر اكتمال تقارير بقية المحققين في الغرفة لإغلاق ملف القضية وصرف النقاط...</p>
               </div>
             ) : (
               <div className="space-y-3">
-                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white" value={vote.suspect} onChange={e => setVote({...vote, suspect: e.target.value})}>
-                  <option value="">القاتل</option>
-                  {caseData.suspects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                </select>
-                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white" value={vote.weapon} onChange={e => setVote({...vote, weapon: e.target.value})}>
-                  <option value="">الأداة</option>
-                  <option value="سكين">سكين</option>
-                  <option value="سم">سم</option>
-                  <option value="خنق">خنق</option>
-                </select>
-                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white" value={vote.motive} onChange={e => setVote({...vote, motive: e.target.value})}>
-                  <option value="">الدافع</option>
-                  <option value="مالي">مالي</option>
-                  <option value="غيرة">غيرة</option>
-                  <option value="انتقام">انتقام</option>
-                </select>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">المتهم الرئيسي:</label>
+                  <select className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-xs" value={vote.suspect} onChange={e => setVote({...vote, suspect: e.target.value})}>
+                    <option value="">اختر القاتل</option>
+                    {caseData.suspects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">أداة/أسلوب الجريمة الفيزيائي والكيميائي:</label>
+                  <input 
+                    type="text" 
+                    placeholder="مثال: سكين جليد جاف، موجات صوتية، سم" 
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-xs text-right"
+                    value={vote.weapon} 
+                    onChange={e => setVote({...vote, weapon: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">الدافع والسبب وراء التصفية:</label>
+                  <input 
+                    type="text" 
+                    placeholder="مثال: حماية الذات، منع المعاهدة، السرقة" 
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-xs text-right"
+                    value={vote.motive} 
+                    onChange={e => setVote({...vote, motive: e.target.value})}
+                  />
+                </div>
+
                 <button
                   onClick={handleVoteSubmit}
                   disabled={!vote.suspect || !vote.weapon || !vote.motive}
-                  className="w-full bg-red-600 hover:bg-red-500 p-2 rounded-lg font-bold disabled:opacity-50"
+                  className="w-full bg-red-600 hover:bg-red-500 p-2.5 rounded-lg font-bold text-xs mt-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  تأكيد
+                  إرسال التقارير ورفع الجلسة ⚖️
                 </button>
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   );
