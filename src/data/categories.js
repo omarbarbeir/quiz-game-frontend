@@ -219,7 +219,13 @@ const categories = [
   icon: "🥷🏻",
   description: 'خمن الكلمة', 
   subcategories: [] 
-}
+},
+
+{ id: 'mafiosa', 
+  name: 'مافيوسو',
+  icon: "👨🏻‍✈️", 
+  description: 'تحقيق في قضية', 
+  subcategories: [] }
 
 ];
 

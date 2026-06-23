@@ -10,6 +10,7 @@ import BattleshipGame from './BattleshipGame';
 import SwordOfKnowledge from './SwordOfKnowledge';
 import BracketGame from './BracketGame';
 import HangmanGame from './HangmanGame';
+import MafiosaGame from './MafiosoGame';
 
 const PlayerScreen = ({ 
   playerId,
@@ -307,6 +308,28 @@ const PlayerScreen = ({
       </div>
     );
   }
+
+
+  if (currentQuestion?.category === 'mafiosa') {
+  return (
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-right">🕵️ مافوزا</h1>
+          <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
+        </div>
+        <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
+          <span className="font-medium">رمز الغرفة:</span>
+          <span className="font-mono text-xl">{roomCode}</span>
+        </div>
+      </div>
+      <MafiosaGame socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={false} />
+      <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
+        <FaSignOutAlt /> مغادرة الغرفة
+      </button>
+    </div>
+  );
+}
 
   // Render Sword of Knowledge when in sword-of-knowledge mode
   if (currentQuestion?.category === 'sword-of-knowledge') {

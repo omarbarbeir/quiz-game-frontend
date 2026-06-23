@@ -43,32 +43,22 @@ code {
   animation: scaleIn 0.5s ease-out;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Creepster&display=swap');
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-/* Blood drip text effect */
-.blood-drip {
-  font-family: 'Creepster', cursive;
-  font-size: 5rem;
-  color: #b91c1c;
-  text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 40px #ff0000, 2px 2px 0 #7f1d1d, 4px 4px 0 #450a0a;
+.typing-indicator {
   display: inline-block;
-  animation: bloodPulse 1.5s ease-in-out infinite;
+  animation: typing 1.4s infinite;
 }
-
-@keyframes bloodPulse {
-  0% { text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 40px #ff0000, 2px 2px 0 #7f1d1d, 4px 4px 0 #450a0a; }
-  50% { text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000, 0 0 80px #ff0000, 2px 2px 0 #7f1d1d, 4px 4px 0 #450a0a; }
-  100% { text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 40px #ff0000, 2px 2px 0 #7f1d1d, 4px 4px 0 #450a0a; }
-}
-
-/* Optional drop animation (for emojis) */
-@keyframes drop {
-  0% { transform: translateY(-20px); opacity: 0; }
-  50% { opacity: 1; }
-  100% { transform: translateY(80px); opacity: 0; }
-}
-.animate-drop {
-  animation: drop 1.5s ease-in infinite;
+@keyframes typing {
+  0% { content: '.'; }
+  33% { content: '..'; }
+  66% { content: '...'; }
 }
 @tailwind base;
 @tailwind components;
