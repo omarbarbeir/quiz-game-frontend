@@ -55,11 +55,19 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   };
 
   // Socket listeners
+// Socket listeners with Debug Logs
   useEffect(() => {
+    console.log("=== [Mafiosa] Component Mounted ===");
+    console.log("RoomCode sent from props:", roomCode);
+    console.log("PlayerId sent from props:", playerId);
+
     socket.on('mafiosa_case_data', (data) => {
+      console.log("🎯 [FRONTEND] Received mafiosa_case_data from server:", data);
       setCaseData(data);
     });
+
     socket.on('mafiosa_state', (data) => {
+      console.log("🎯 [FRONTEND] Received mafiosa_state from server:", data);
       setState(data);
       if (data) {
         setInventory(data.inventory || []);
@@ -69,29 +77,48 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
         }
       }
     });
-    socket.on('mafiosa_inventory_update', ({ inventory }) => setInventory(inventory));
+
+    socket.on('mafiosa_inventory_update', ({ inventory }) => {
+      console.log("[FRONTEND] Inventory Update:", inventory);
+      setInventory(inventory);
+    });
+
     socket.on('mafiosa_notification', ({ message, type }) => {
+      console.log("[FRONTEND] Notification:", message, type);
       setNotifications(prev => [...prev, { message, type, id: Date.now() }]);
       setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== Date.now())), 5000);
     });
+
     socket.on('mafiosa_solution', (data) => {
+      console.log("[FRONTEND] Solution Received:", data);
       setSolution(data);
       if (data.finalPoints && data.finalPoints[playerId] !== undefined) {
         setPoints(data.finalPoints[playerId]);
       }
     });
+
     socket.on('mafiosa_error', ({ message }) => {
+      console.error("❌ [FRONTEND] Error from server:", message);
       setNotifications(prev => [...prev, { message, type: 'error', id: Date.now() }]);
     });
+
     socket.on('mafiosa_investigation_started', ({ suspectId, points, cost }) => {
+      console.log("[FRONTEND] Investigation Started for:", suspectId);
       setPoints(points);
       setInvestigationCost(cost);
       setInvestigatingSuspect(null);
     });
 
-    socket.emit('mafiosa_start', { roomCode });
+    // إرسال طلب بدء اللعبة للسيرفر
+    if (roomCode) {
+      console.log("🚀 [FRONTEND] Emitting mafiosa_start to server for room:", roomCode);
+      socket.emit('mafiosa_start', { roomCode });
+    } else {
+      console.error("⚠️ [FRONTEND] Cannot emit mafiosa_start because roomCode is missing/undefined!");
+    }
 
     return () => {
+      console.log("=== [Mafiosa] Component Unmounted ===");
       socket.off('mafiosa_case_data');
       socket.off('mafiosa_state');
       socket.off('mafiosa_inventory_update');
