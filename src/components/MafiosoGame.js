@@ -136,42 +136,42 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     setIsTyping(false);
   };
 
-  const handleChooseOption = (suspectId, option) => {
-    if (isTyping) return;
-    const currentDialogue = getSuspectDialogue(suspectId);
-    if (!currentDialogue) return;
-    const currentNodeId = currentNodeIdBySuspect[suspectId];
-    const currentNode = currentDialogue.find(d => d.id === currentNodeId);
-    if (!currentNode) return;
+const handleChooseOption = (suspectId, option) => {
+  if (isTyping) return;
+  const currentDialogue = getSuspectDialogue(suspectId);
+  if (!currentDialogue) return;
+  const currentNodeId = currentNodeIdBySuspect[suspectId];
+  const currentNode = currentDialogue.find(d => d.id === currentNodeId);
+  if (!currentNode) return;
 
-    setMessagesBySuspect(prev => ({
-      ...prev,
-      [suspectId]: [...(prev[suspectId] || []), { type: 'player', text: option.text }]
-    }));
+  setMessagesBySuspect(prev => ({
+    ...prev,
+    [suspectId]: [...(prev[suspectId] || []), { type: 'player', text: option.text }]
+  }));
 
-    if (option.requiredEvidence) {
-      if (!inventory.includes(option.requiredEvidence)) {
-        setNotifications(prev => [...prev, { message: 'ليس لديك الدليل المطلوب!', type: 'error', id: Date.now() }]);
-        return;
+  if (option.requiredEvidence && !inventory.includes(option.requiredEvidence)) {
+    setNotifications(prev => [...prev, { message: 'ليس لديك الدليل المطلوب!', type: 'error', id: Date.now() }]);
+    return;
+  }
+
+  const nextNode = currentDialogue.find(d => d.id === option.nextNodeId);
+  if (nextNode) {
+    // لو الخيار بيفتح مواجهة، بنبلغ السيرفر فوراً عشان يحدث الـ AP والنوتفكيشن
+    if (nextNode.unlockedBy) {
+      socket.emit('mafiosa_confront', { roomCode, evidenceId: nextNode.unlockedBy });
+    }
+    // لو الخيار بيدي دليل مكافأة
+    if (nextNode.reward) {
+      const rewardId = nextNode.reward.split(' ').join('_').toLowerCase();
+      if (!inventory.includes(rewardId)) {
+        socket.emit('mafiosa_add_evidence', { roomCode, evidenceId: rewardId });
       }
     }
-
-    const nextNode = currentDialogue.find(d => d.id === option.nextNodeId);
-    if (nextNode) {
-      if (nextNode.unlockedBy) {
-        socket.emit('mafiosa_confront', { roomCode, evidenceId: nextNode.unlockedBy });
-      }
-      if (nextNode.reward) {
-        const rewardId = nextNode.reward.split(' ').join('_').toLowerCase();
-        if (!inventory.includes(rewardId)) {
-          socket.emit('mafiosa_add_evidence', { roomCode, evidenceId: rewardId });
-        }
-      }
-      showNpcResponse(suspectId, nextNode);
-    } else {
-      setNotifications(prev => [...prev, { message: 'انتهى الحوار.', type: 'info', id: Date.now() }]);
-    }
-  };
+    showNpcResponse(suspectId, nextNode);
+  } else {
+    setNotifications(prev => [...prev, { message: 'انتهى الحوار.', type: 'info', id: Date.now() }]);
+  }
+};
 
   const handleSearch = (location) => {
     setSearching(true);
