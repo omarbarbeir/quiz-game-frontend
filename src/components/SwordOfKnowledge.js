@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaShip, FaClock, FaTrophy } from 'react-icons/fa';
 import swordOfKnowledgeQuestions from '../data/swordOfKnowledgeQuestions';
-
 const playerColors = [
   '#ef4444', '#3b82f6', '#10b981', '#f59e0b',
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',

@@ -553,7 +553,7 @@ const PlayerScreen = ({
                         {currentQuestion.text}
                       </p>
                       {currentQuestion.text?.includes('Spy') && (
-                        <p className="text-red-400 mt-4 text-lg">أنت الجاسوس! حاول التخفي!</p>
+                        <p className="text-red-600 font-bold mt-4 text-3xl">أنت الجاسوس! حاول التخفي!</p>
                       )}
                     </div>
                   </div>
