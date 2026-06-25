@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaShip, FaClock, FaTrophy } from 'react-icons/fa';
-import swordOfKnowledgeQuestions from '../data/swordOfKnowledgeQuestions';
+// ⚠️ تم حذف import swordOfKnowledgeQuestions من هنا
+
 const playerColors = [
   '#ef4444', '#3b82f6', '#10b981', '#f59e0b',
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
@@ -180,11 +181,10 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
     });
     socket.on('sok_game_over', (d) => alert(`اللاعب ${d.name} فاز!`));
 
-    // Attacker provides question for subsequent duel rounds
+    // Attacker provides question for subsequent duel rounds – we now just notify readiness
     socket.on('sok_request_duel_question', () => {
-      const qs = swordOfKnowledgeQuestions;
-      if (!qs?.length) return;
-      socket.emit('sok_provide_duel_question', { roomCode, question: qs[Math.floor(Math.random() * qs.length)] });
+      // No longer selecting a question; server will pick one after receiving this acknowledgement
+      socket.emit('sok_provide_duel_question', { roomCode });
     });
 
     socket.on('sok_results', (res) => {
@@ -251,34 +251,26 @@ const SwordOfKnowledge = ({ socket, roomCode, currentPlayer, isAdmin, onExit }) 
     if (isAdmin || amIEliminated) return;
     if (gameState?.phase === 'claiming' && !myTurn) return;
     if (gameState?.phase === 'attacking' && !myTurn) return;
-    const qs = swordOfKnowledgeQuestions;
-    if (!qs?.length) return;
+    // No longer sending a question; server will select one
     socket.emit('sok_claim', {
       roomCode, continentId, regionName: regionId,
       playerId: currentPlayer.id,
-      question: qs[Math.floor(Math.random() * qs.length)]
     });
   };
 
   const attackHub = (continentId, regionId) => {
     if (!myTurn || gameState?.phase !== 'attacking') return;
-    const qs = swordOfKnowledgeQuestions;
-    if (!qs?.length) return;
     socket.emit('sok_attack_hub', {
       roomCode, continentId, regionName: regionId,
       attackerId: currentPlayer.id,
-      question: qs[Math.floor(Math.random() * qs.length)]
     });
   };
 
   const attackBase = (continentId) => {
     if (!myTurn || gameState?.phase !== 'attacking') return;
-    const qs = swordOfKnowledgeQuestions;
-    if (!qs?.length) return;
     socket.emit('sok_attack_base', {
       roomCode, continentId,
       attackerId: currentPlayer.id,
-      question: qs[Math.floor(Math.random() * qs.length)]
     });
   };
 
