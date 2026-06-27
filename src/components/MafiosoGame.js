@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaSearch, FaBox, FaUser, FaClock, FaMapPin, FaUsers, FaTimes, FaStar, FaFileMedical } from 'react-icons/fa';
+import { FaSearch, FaBox, FaUser, FaMapPin, FaUsers, FaTimes, FaFileMedical, FaRedo } from 'react-icons/fa';
 
 const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const [caseData, setCaseData] = useState(null);
@@ -23,10 +23,11 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const [suspectsModalOpen, setSuspectsModalOpen] = useState(false);
   const [investigatingSuspect, setInvestigatingSuspect] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
+  const [showNewGameOverlay, setShowNewGameOverlay] = useState(false);
+
   const chatEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // Helpers
   const getSuspectDialogue = (suspectId) => {
     if (!caseData) return null;
     const suspect = caseData.suspects.find(s => s.id === suspectId);
@@ -43,7 +44,6 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     setIsTyping(true);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
       if (node) {
         setMessagesBySuspect(prev => ({
           ...prev,
@@ -51,23 +51,49 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
         }));
         setCurrentNodeIdBySuspect(prev => ({ ...prev, [suspectId]: node.id }));
       }
+      setIsTyping(false);
     }, 1500);
   };
 
-  // Socket listeners
-// Socket listeners with Debug Logs
+  // مسح كل الحالة المحلية تماماً
+  const resetLocalState = () => {
+    setCaseData(null);
+    setState(null);
+    setInventory([]);
+    setSearchedLocations([]);
+    setPoints(100);
+    setInvestigationCost(10);
+    setSelectedSuspect(null);
+    setMessagesBySuspect({});
+    setCurrentNodeIdBySuspect({});
+    setNotifications([]);
+    setAccusationPhase(false);
+    setVote({ suspect: '', weapon: '', motive: '' });
+    setSolution(null);
+    setInvestigationOpen(false);
+    setIsTyping(false);
+    setSearchModalOpen(false);
+    setSearching(false);
+    setSuspectsModalOpen(false);
+    setInvestigatingSuspect(null);
+    setHasVoted(false);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+  };
+
   useEffect(() => {
-    console.log("=== [Mafiosa] Component Mounted ===");
-    console.log("RoomCode sent from props:", roomCode);
-    console.log("PlayerId sent from props:", playerId);
+    // لما السيرفر يبعت إن قضية جديدة بدأت — بيتنادى لكل اللاعيبة
+    socket.on('mafiosa_new_game_starting', () => {
+      resetLocalState();
+      setShowNewGameOverlay(true);
+      // الـ overlay بيختفي لما mafiosa_case_data توصل (مش بـ timeout)
+    });
 
     socket.on('mafiosa_case_data', (data) => {
-      console.log("🎯 [FRONTEND] Received mafiosa_case_data from server:", data);
+      setShowNewGameOverlay(false); // اخفي الـ overlay لما البيانات الجديدة توصل
       setCaseData(data);
     });
 
     socket.on('mafiosa_state', (data) => {
-      console.log("🎯 [FRONTEND] Received mafiosa_state from server:", data);
       setState(data);
       if (data) {
         setInventory(data.inventory || []);
@@ -79,18 +105,16 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     });
 
     socket.on('mafiosa_inventory_update', ({ inventory }) => {
-      console.log("[FRONTEND] Inventory Update:", inventory);
       setInventory(inventory);
     });
 
     socket.on('mafiosa_notification', ({ message, type }) => {
-      console.log("[FRONTEND] Notification:", message, type);
-      setNotifications(prev => [...prev, { message, type, id: Date.now() }]);
-      setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== Date.now())), 5000);
+      const id = Date.now() + Math.random();
+      setNotifications(prev => [...prev, { message, type, id }]);
+      setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 5000);
     });
 
     socket.on('mafiosa_solution', (data) => {
-      console.log("[FRONTEND] Solution Received:", data);
       setSolution(data);
       if (data.finalPoints && data.finalPoints[playerId] !== undefined) {
         setPoints(data.finalPoints[playerId]);
@@ -98,27 +122,22 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     });
 
     socket.on('mafiosa_error', ({ message }) => {
-      console.error("❌ [FRONTEND] Error from server:", message);
-      setNotifications(prev => [...prev, { message, type: 'error', id: Date.now() }]);
+      const id = Date.now() + Math.random();
+      setNotifications(prev => [...prev, { message, type: 'error', id }]);
     });
 
     socket.on('mafiosa_investigation_started', ({ suspectId, points, cost }) => {
-      console.log("[FRONTEND] Investigation Started for:", suspectId);
       setPoints(points);
       setInvestigationCost(cost);
       setInvestigatingSuspect(null);
     });
 
-    // إرسال طلب بدء اللعبة للسيرفر
     if (roomCode) {
-      console.log("🚀 [FRONTEND] Emitting mafiosa_start to server for room:", roomCode);
       socket.emit('mafiosa_start', { roomCode });
-    } else {
-      console.error("⚠️ [FRONTEND] Cannot emit mafiosa_start because roomCode is missing/undefined!");
     }
 
     return () => {
-      console.log("=== [Mafiosa] Component Unmounted ===");
+      socket.off('mafiosa_new_game_starting');
       socket.off('mafiosa_case_data');
       socket.off('mafiosa_state');
       socket.off('mafiosa_inventory_update');
@@ -136,7 +155,11 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     }
   }, [messagesBySuspect, isTyping]);
 
-  // Start investigation (deduct points)
+  // أي لاعب يقدر يطلب قضية جديدة
+  const handleNewGame = () => {
+    socket.emit('mafiosa_start', { roomCode });
+  };
+
   const startInvestigation = (suspectId) => {
     if (investigatingSuspect) return;
     setInvestigatingSuspect(suspectId);
@@ -163,42 +186,42 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     setIsTyping(false);
   };
 
-const handleChooseOption = (suspectId, option) => {
-  if (isTyping) return;
-  const currentDialogue = getSuspectDialogue(suspectId);
-  if (!currentDialogue) return;
-  const currentNodeId = currentNodeIdBySuspect[suspectId];
-  const currentNode = currentDialogue.find(d => d.id === currentNodeId);
-  if (!currentNode) return;
+  const handleChooseOption = (suspectId, option) => {
+    if (isTyping) return;
+    const currentDialogue = getSuspectDialogue(suspectId);
+    if (!currentDialogue) return;
+    const currentNodeId = currentNodeIdBySuspect[suspectId];
+    const currentNode = currentDialogue.find(d => d.id === currentNodeId);
+    if (!currentNode) return;
 
-  setMessagesBySuspect(prev => ({
-    ...prev,
-    [suspectId]: [...(prev[suspectId] || []), { type: 'player', text: option.text }]
-  }));
+    setMessagesBySuspect(prev => ({
+      ...prev,
+      [suspectId]: [...(prev[suspectId] || []), { type: 'player', text: option.text }]
+    }));
 
-  if (option.requiredEvidence && !inventory.includes(option.requiredEvidence)) {
-    setNotifications(prev => [...prev, { message: 'ليس لديك الدليل المطلوب!', type: 'error', id: Date.now() }]);
-    return;
-  }
-
-  const nextNode = currentDialogue.find(d => d.id === option.nextNodeId);
-  if (nextNode) {
-    // لو الخيار بيفتح مواجهة، بنبلغ السيرفر فوراً عشان يحدث الـ AP والنوتفكيشن
-    if (nextNode.unlockedBy) {
-      socket.emit('mafiosa_confront', { roomCode, evidenceId: nextNode.unlockedBy });
+    if (option.requiredEvidence && !inventory.includes(option.requiredEvidence)) {
+      const id = Date.now() + Math.random();
+      setNotifications(prev => [...prev, { message: 'ليس لديك الدليل المطلوب!', type: 'error', id }]);
+      return;
     }
-    // لو الخيار بيدي دليل مكافأة
-    if (nextNode.reward) {
-      const rewardId = nextNode.reward.split(' ').join('_').toLowerCase();
-      if (!inventory.includes(rewardId)) {
-        socket.emit('mafiosa_add_evidence', { roomCode, evidenceId: rewardId });
+
+    const nextNode = currentDialogue.find(d => d.id === option.nextNodeId);
+    if (nextNode) {
+      if (nextNode.unlockedBy) {
+        socket.emit('mafiosa_confront', { roomCode, evidenceId: nextNode.unlockedBy });
       }
+      if (nextNode.reward) {
+        const rewardId = nextNode.reward.split(' ').join('_').toLowerCase();
+        if (!inventory.includes(rewardId)) {
+          socket.emit('mafiosa_add_evidence', { roomCode, evidenceId: rewardId });
+        }
+      }
+      showNpcResponse(suspectId, nextNode);
+    } else {
+      const id = Date.now() + Math.random();
+      setNotifications(prev => [...prev, { message: 'انتهى الحوار.', type: 'info', id }]);
     }
-    showNpcResponse(suspectId, nextNode);
-  } else {
-    setNotifications(prev => [...prev, { message: 'انتهى الحوار.', type: 'info', id: Date.now() }]);
-  }
-};
+  };
 
   const handleSearch = (location) => {
     setSearching(true);
@@ -213,7 +236,6 @@ const handleChooseOption = (suspectId, option) => {
     socket.emit('mafiosa_get_autopsy', { roomCode });
   };
 
-  // Open accusation modal ONLY for this player
   const handleAccuse = () => {
     setAccusationPhase(true);
     setVote({ suspect: '', weapon: '', motive: '' });
@@ -224,34 +246,59 @@ const handleChooseOption = (suspectId, option) => {
     if (!vote.suspect || !vote.weapon || !vote.motive) return;
     socket.emit('mafiosa_submit_vote', { roomCode, playerId, vote });
     setHasVoted(true);
+    // مش بنمسح حاجة هنا — بس بنسجل التصويت
   };
 
-  if (!caseData || !state) {
-    return <div className="text-center text-gray-300 p-8">جاري تحميل القضية...</div>;
+  // ── الـ OVERLAY — بيظهر لكل اللاعيبة لما حد يدوس قضية جديدة ──────────────
+  if (showNewGameOverlay) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,0.93)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <style>{`
+          @keyframes criminalGlow {
+            0%, 100% {
+              text-shadow: 0 0 8px #f59e0b, 0 0 24px #f59e0b, 0 0 48px #d97706;
+            }
+            50% {
+              text-shadow: 0 0 16px #fbbf24, 0 0 48px #fbbf24, 0 0 96px #f59e0b, 0 0 140px #d97706;
+            }
+          }
+        `}</style>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 160, damping: 14 }}
+          style={{ textAlign: 'center', padding: '2rem' }}
+        >
+          <p style={{
+            fontSize: '3rem',
+            fontWeight: 700,
+            color: '#fbbf24',
+            animation: 'criminalGlow 1.6s ease-in-out infinite',
+            letterSpacing: '0.06em',
+            margin: 0,
+            lineHeight: 1.3,
+          }}>
+            جاهزين للجريمة
+          </p>
+          <motion.p
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+            style={{ color: '#9ca3af', marginTop: '1.5rem', fontSize: '1rem' }}
+          >
+            ⏳ جاري تحميل القضية الجديدة...
+          </motion.p>
+        </motion.div>
+      </div>
+    );
   }
 
-  if (solution) {
-    const isWinner = solution.winners && solution.winners.includes(playerId);
-    return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-gray-800/70 rounded-xl p-6 border border-cyan-500/20 text-center">
-        {solution.image && (
-          <img src={solution.image} alt="الفائز" className="w-[220px] h-[220px] mx-auto mb-4 object-fill rounded-full border-2 border-yellow-400" />
-        )}
-        <h2 className="text-2xl font-bold text-green-400">تم حل القضية!</h2>
-        <p>القاتل: {solution.culprit}</p>
-        <p>الأداة: {solution.weapon}</p>
-        <p>الدافع: {solution.motive}</p>
-        {solution.winners && solution.winners.length > 0 && (
-          <div className="mt-4 p-3 bg-green-900/50 border border-green-500 rounded-lg">
-            <p className="text-green-300 font-bold">الفائزون: {solution.winners.join('، ')}</p>
-          </div>
-        )}
-        {solution.finalPoints && (
-          <div className="mt-2 text-yellow-300">نقاطك النهائية: {solution.finalPoints[playerId] || 0}</div>
-        )}
-        <button onClick={() => socket.emit('mafiosa_start', { roomCode })} className="mt-4 bg-cyan-600 px-4 py-2 rounded-lg">قضية جديدة</button>
-      </motion.div>
-    );
+  // شاشة التحميل الأولى
+  if (!caseData || !state) {
+    return <div className="text-center text-gray-300 p-8">جاري تحميل القضية...</div>;
   }
 
   const currentMessages = selectedSuspect ? messagesBySuspect[selectedSuspect] || [] : [];
@@ -259,6 +306,8 @@ const handleChooseOption = (suspectId, option) => {
 
   return (
     <div className="bg-gray-800/70 rounded-xl p-4 border border-cyan-500/20 relative">
+
+      {/* Notifications */}
       <AnimatePresence>
         {notifications.map(n => (
           <motion.div
@@ -266,20 +315,32 @@ const handleChooseOption = (suspectId, option) => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`p-2 rounded-lg mb-2 ${n.type === 'success' ? 'bg-green-600' : n.type === 'error' ? 'bg-red-600' : 'bg-cyan-600'}`}
+            className={`p-2 rounded-lg mb-2 ${
+              n.type === 'success' ? 'bg-green-600'
+              : n.type === 'error' ? 'bg-red-600'
+              : 'bg-cyan-600'
+            }`}
           >
             {n.message}
           </motion.div>
         ))}
       </AnimatePresence>
 
-      {/* Points & Cost */}
-      <div className="bg-gray-900/50 p-2 rounded-lg mb-4 border border-yellow-500/20 flex justify-between flex-wrap gap-2">
-        <span className="text-yellow-300 font-bold">نقاطك: {points}</span>
-        <span className="text-gray-400 text-sm">تكلفة التحقيق الحالية: {investigationCost}</span>
+      {/* النقاط + زرار قضية جديدة — موجودين دايماً من أول لحظة */}
+      <div className="bg-gray-900/50 p-2 rounded-lg mb-4 border border-yellow-500/20 flex justify-between flex-wrap gap-2 items-center">
+        <div className="flex flex-col gap-1">
+          <span className="text-yellow-300 font-bold">نقاطك: {points}</span>
+          <span className="text-gray-400 text-xs">تكلفة التحقيق: {investigationCost}</span>
+        </div>
+        <button
+          onClick={handleNewGame}
+          className="bg-cyan-700 hover:bg-cyan-600 px-4 py-1.5 rounded-lg font-bold text-white text-sm flex items-center gap-2"
+        >
+          <FaRedo className="inline" /> قضية جديدة
+        </button>
       </div>
 
-      {/* Title and Description */}
+      {/* العنوان والوصف */}
       {caseData.title && (
         <div className="bg-gray-900/50 p-3 rounded-lg mb-4 border border-amber-500/20">
           <h2 className="text-2xl font-bold text-yellow-300">{caseData.title}</h2>
@@ -287,59 +348,438 @@ const handleChooseOption = (suspectId, option) => {
         </div>
       )}
 
-      {/* Autopsy Report – show only if NOT key (given for free) */}
-      {caseData.autopsy && !caseData.autopsy.isKey && (
-        <div className="bg-gray-900/50 p-3 rounded-lg mb-4 border border-amber-500/20">
-          <h3 className="text-amber-400 font-bold">📋 التقرير الطبي</h3>
-          <p className="text-gray-300 text-sm">{caseData.autopsy.text}</p>
+      {/* ── التقرير الطبي الشرعي ── */}
+      <style>{`
+        @keyframes scanline {
+          0%   { transform: translateY(-100%); }
+          100% { transform: translateY(400%); }
+        }
+        @keyframes stampAppear {
+          0%   { transform: scale(2.5) rotate(-20deg); opacity: 0; }
+          60%  { transform: scale(0.92) rotate(4deg);  opacity: 1; }
+          80%  { transform: scale(1.04) rotate(-2deg); }
+          100% { transform: scale(1) rotate(0deg);     opacity: 1; }
+        }
+        @keyframes typeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes redPulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+          50%     { box-shadow: 0 0 0 6px rgba(239,68,68,0.2); }
+        }
+      `}</style>
+
+      {caseData.autopsy && (
+        <div style={{ marginBottom: '1rem', position: 'relative' }}>
+
+          {/* ── حالة: التقرير مدفوع ولم يُفتح بعد ── */}
+          {caseData.autopsy.isKey && !inventory.includes('autopsy_report') && (
+            <button
+              onClick={handleGetAutopsy}
+              disabled={state.ap < 1}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: 12,
+                border: state.ap < 1 ? '1px solid #374151' : '1px dashed #dc2626',
+                background: state.ap < 1 ? 'rgba(31,41,55,0.5)' : 'rgba(127,29,29,0.2)',
+                color: state.ap < 1 ? '#6b7280' : '#fca5a5',
+                fontWeight: 700,
+                cursor: state.ap < 1 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                animation: state.ap >= 1 ? 'redPulse 2s ease-in-out infinite' : 'none',
+                fontSize: '0.95rem',
+              }}
+            >
+              <FaFileMedical style={{ fontSize: '1.1rem' }} />
+              {state.ap < 1 ? 'لا تتوفر طاقة كافية لطلب التقرير' : `طلب تقرير الطب الشرعي الكامل (−1 AP)`}
+            </button>
+          )}
+
+          {/* ── حالة: التقرير متاح (مجاني أو تم فتحه) ── */}
+          {(!caseData.autopsy.isKey || inventory.includes('autopsy_report')) && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              style={{
+                borderRadius: 14,
+                border: '1px solid rgba(239,68,68,0.35)',
+                background: 'linear-gradient(160deg, rgba(30,10,10,0.95) 0%, rgba(20,5,5,0.98) 100%)',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              {/* scanline animation */}
+              <div style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0, borderRadius: 14,
+              }}>
+                <div style={{
+                  position: 'absolute', left: 0, right: 0, height: '30%',
+                  background: 'linear-gradient(to bottom, transparent, rgba(239,68,68,0.04), transparent)',
+                  animation: 'scanline 3s linear infinite',
+                }} />
+              </div>
+
+              {/* header bar */}
+              <div style={{
+                background: 'linear-gradient(90deg, #7f1d1d, #991b1b, #7f1d1d)',
+                padding: '8px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                position: 'relative', zIndex: 1,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FaFileMedical style={{ color: '#fca5a5', fontSize: '1rem' }} />
+                  <span style={{ color: '#fecaca', fontWeight: 700, fontSize: '0.85rem', letterSpacing: '0.08em' }}>
+                    تقرير الطب الشرعي — سري
+                  </span>
+                </div>
+                <span style={{ color: '#f87171', fontSize: '0.7rem', opacity: 0.8 }}>CONFIDENTIAL</span>
+              </div>
+
+              {/* separator dots */}
+              <div style={{
+                borderTop: '1px dashed rgba(239,68,68,0.25)',
+                margin: '0 14px',
+                position: 'relative', zIndex: 1,
+              }} />
+
+              {/* body */}
+              <div style={{ padding: '14px 16px', position: 'relative', zIndex: 1 }}>
+
+                {/* CLASSIFIED stamp */}
+                {caseData.autopsy.isKey && (
+                  <motion.div
+                    initial={{ scale: 2.5, rotate: -20, opacity: 0 }}
+                    animate={{ scale: 1, rotate: -12, opacity: 0.18 }}
+                    transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
+                    style={{
+                      position: 'absolute', top: 12, left: 12,
+                      border: '3px solid #ef4444',
+                      borderRadius: 6,
+                      padding: '2px 8px',
+                      color: '#ef4444',
+                      fontWeight: 900,
+                      fontSize: '1.1rem',
+                      letterSpacing: '0.15em',
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    }}
+                  >
+                    مُحرَّر
+                  </motion.div>
+                )}
+
+                {/* text lines — typewriter feel via staggered animation */}
+                {caseData.autopsy.text.split('\n').filter(Boolean).map((line, i) => (
+                  <motion.p
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.15 + i * 0.08, duration: 0.35 }}
+                    style={{
+                      color: line.startsWith('ملاحظة') || line.startsWith('سبب') ? '#fca5a5' : '#d1d5db',
+                      fontSize: '0.82rem',
+                      lineHeight: 1.75,
+                      margin: '0 0 4px 0',
+                      borderRight: line.startsWith('ملاحظة') ? '3px solid #ef4444' : 'none',
+                      paddingRight: line.startsWith('ملاحظة') ? 8 : 0,
+                    }}
+                  >
+                    {line}
+                  </motion.p>
+                ))}
+              </div>
+
+              {/* bottom bar */}
+              <div style={{
+                background: 'rgba(127,29,29,0.3)',
+                padding: '5px 14px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                position: 'relative', zIndex: 1,
+              }}>
+                <span style={{ color: '#6b7280', fontSize: '0.65rem' }}>وحدة التحقيق الجنائي</span>
+                <span style={{ color: '#6b7280', fontSize: '0.65rem' }}>🔒 وثيقة سرية</span>
+              </div>
+            </motion.div>
+          )}
         </div>
       )}
 
+      {/* AP + بحث */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-4">
-          <span className="text-gray-300">نقاط الطاقة: <span className="text-cyan-300 font-bold">{state.ap}</span></span>
+          <span className="text-gray-300">
+            نقاط الطاقة: <span className="text-cyan-300 font-bold">{state.ap}</span>
+          </span>
           <button onClick={() => setInventory(inventory)} className="text-purple-400 hover:text-purple-300">
             <FaBox className="inline mr-1" /> {inventory.length}
           </button>
         </div>
-        <button onClick={() => setSearchModalOpen(true)} disabled={state.ap < 1} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg disabled:opacity-50">
-          <FaSearch /> فحص (-1 AP)
+        <button
+          onClick={() => setSearchModalOpen(true)}
+          disabled={state.ap < 1}
+          className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg disabled:opacity-50"
+        >
+          <FaSearch className="inline mr-1" /> فحص (-1 AP)
         </button>
       </div>
 
-      {/* Key Autopsy Button – separate */}
-      {caseData.autopsy && caseData.autopsy.isKey && (
-        <button
-          onClick={handleGetAutopsy}
-          disabled={state.ap < 1 || inventory.includes('autopsy_report')}
-          className={`w-full mb-4 p-2 rounded-lg font-bold flex items-center justify-center gap-2 ${
-            state.ap < 1 || inventory.includes('autopsy_report')
-              ? 'bg-gray-600 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-500'
-          }`}
-        >
-          <FaFileMedical /> {inventory.includes('autopsy_report') ? 'تم الحصول على التقرير' : 'طلب التقرير الطبي الكامل (-1 AP)'}
-        </button>
-      )}
-
-      <button onClick={() => setSuspectsModalOpen(true)} className="w-full bg-indigo-600 hover:bg-indigo-500 p-2 rounded-lg font-bold mb-4">
+      <button
+        onClick={() => setSuspectsModalOpen(true)}
+        className="w-full bg-indigo-600 hover:bg-indigo-500 p-2 rounded-lg font-bold mb-4"
+      >
         <FaUsers className="inline mr-2" /> عرض المشتبه بهم وعلاقتهم
       </button>
 
-      <button onClick={() => setInvestigationOpen(true)} className="w-full bg-purple-600 hover:bg-purple-500 p-2 rounded-lg font-bold mb-4">
+      <button
+        onClick={() => setInvestigationOpen(true)}
+        className="w-full bg-purple-600 hover:bg-purple-500 p-2 rounded-lg font-bold mb-4"
+      >
         <FaUser className="inline mr-2" /> تحقيق مع المشتبهين
       </button>
 
-      <button onClick={handleAccuse} className="w-full bg-red-600 hover:bg-red-500 p-2 rounded-lg font-bold">
+      <button
+        onClick={handleAccuse}
+        className="w-full bg-red-600 hover:bg-red-500 p-2 rounded-lg font-bold"
+      >
         توجيه اتهام
       </button>
 
-      {/* Suspects Modal */}
+      {/* ── WINNING MODAL — بيظهر لكل اللاعيبة بعد التصويت ── */}
+      {solution && (
+        <>
+          <style>{`
+            @keyframes confettiFall {
+              0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+              100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+            }
+            @keyframes stampIn {
+              0%   { transform: scale(3) rotate(-15deg); opacity: 0; }
+              60%  { transform: scale(0.9) rotate(3deg);  opacity: 1; }
+              80%  { transform: scale(1.05) rotate(-1deg); }
+              100% { transform: scale(1) rotate(0deg);    opacity: 1; }
+            }
+            @keyframes pulseGold {
+              0%, 100% { box-shadow: 0 0 0px #f59e0b,  0 0 0px #f59e0b; }
+              50%       { box-shadow: 0 0 30px #f59e0b, 0 0 60px #d97706; }
+            }
+            @keyframes slideUp {
+              from { opacity: 0; transform: translateY(30px); }
+              to   { opacity: 1; transform: translateY(0);    }
+            }
+            @keyframes badgeGlow {
+              0%, 100% { text-shadow: 0 0 6px #fbbf24,  0 0 12px #f59e0b; }
+              50%       { text-shadow: 0 0 16px #fbbf24, 0 0 32px #d97706; }
+            }
+            .confetti-piece {
+              position: fixed;
+              width: 10px;
+              height: 10px;
+              top: -20px;
+              border-radius: 2px;
+              animation: confettiFall linear forwards;
+              pointer-events: none;
+              z-index: 10000;
+            }
+          `}</style>
+
+          {/* confetti pieces */}
+          {Array.from({ length: 30 }).map((_, i) => (
+            <div
+              key={i}
+              className="confetti-piece"
+              style={{
+                left: `${Math.random() * 100}%`,
+                background: ['#f59e0b','#10b981','#3b82f6','#ef4444','#a855f7','#ec4899'][i % 6],
+                width:  `${6 + Math.random() * 8}px`,
+                height: `${6 + Math.random() * 8}px`,
+                animationDuration: `${2 + Math.random() * 3}s`,
+                animationDelay:    `${Math.random() * 2}s`,
+              }}
+            />
+          ))}
+
+          {/* backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(4px)' }}
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0, y: 60 }}
+              animate={{ scale: 1,   opacity: 1, y: 0  }}
+              transition={{ type: 'spring', stiffness: 180, damping: 16, delay: 0.15 }}
+              className="relative bg-gray-900 rounded-3xl max-w-md w-full text-center overflow-hidden"
+              style={{
+                border: '2px solid #f59e0b',
+                animation: 'pulseGold 2.5s ease-in-out infinite',
+              }}
+            >
+              {/* top gradient bar */}
+              <div style={{
+                background: 'linear-gradient(90deg, #92400e, #f59e0b, #92400e)',
+                height: '5px',
+              }} />
+
+              <div className="p-6 pb-8">
+
+                {/* trophy icon */}
+                <motion.div
+                  initial={{ scale: 0, rotate: -30 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.35 }}
+                  style={{ fontSize: '4rem', lineHeight: 1, marginBottom: '0.5rem' }}
+                >
+                  🏆
+                </motion.div>
+
+                {/* headline */}
+                <motion.h2
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  style={{
+                    fontSize: '1.8rem',
+                    fontWeight: 700,
+                    color: '#fbbf24',
+                    animation: 'badgeGlow 2s ease-in-out infinite',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  تم حل القضية!
+                </motion.h2>
+
+                {/* avatar */}
+                {solution.image && (
+                  <motion.img
+                    src={solution.image}
+                    alt="القاتل"
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1, animation: 'stampIn 0.6s ease forwards' }}
+                    transition={{ delay: 0.6, type: 'spring', stiffness: 200 }}
+                    style={{
+                      width: 130, height: 130,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '3px solid #f59e0b',
+                      margin: '0 auto 1rem',
+                      display: 'block',
+                      boxShadow: '0 0 20px #f59e0b88',
+                    }}
+                  />
+                )}
+
+                {/* case details */}
+                {[
+                  { label: '🔪 القاتل',  value: solution.culprit, color: '#f87171' },
+                  { label: '⚔️ الأداة',  value: solution.weapon,  color: '#fb923c' },
+                  { label: '💡 الدافع',  value: solution.motive,  color: '#facc15' },
+                ].map((row, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.65 + i * 0.12 }}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: 'rgba(255,255,255,0.05)',
+                      borderRadius: 10,
+                      padding: '8px 14px',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span style={{ color: '#9ca3af', fontSize: '0.9rem' }}>{row.label}</span>
+                    <span style={{ color: row.color, fontWeight: 700, fontSize: '1rem' }}>{row.value}</span>
+                  </motion.div>
+                ))}
+
+                {/* winners */}
+                {solution.winners && solution.winners.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 1.05, type: 'spring' }}
+                    style={{
+                      margin: '1rem 0 0.5rem',
+                      padding: '10px 16px',
+                      background: 'rgba(16,185,129,0.15)',
+                      border: '1px solid #10b981',
+                      borderRadius: 12,
+                    }}
+                  >
+                    <p style={{ color: '#6ee7b7', fontWeight: 700, margin: 0 }}>
+                      🎉 الفائزون: {solution.winners.join('، ')}
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* my points */}
+                {solution.finalPoints && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.2 }}
+                    style={{ color: '#fbbf24', fontWeight: 700, margin: '0.5rem 0 1.2rem', fontSize: '1rem' }}
+                  >
+                    ⭐ نقاطك النهائية: {solution.finalPoints[playerId] || 0}
+                  </motion.div>
+                )}
+
+                {/* new game button */}
+                <motion.button
+                  onClick={handleNewGame}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.35 }}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #0e7490, #0891b2)',
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <FaRedo /> قضية جديدة
+                </motion.button>
+              </div>
+
+              {/* bottom gradient bar */}
+              <div style={{
+                background: 'linear-gradient(90deg, #92400e, #f59e0b, #92400e)',
+                height: '5px',
+              }} />
+            </motion.div>
+          </motion.div>
+        </>
+      )}
+
+      {/* ── Suspects Modal ── */}
       {suspectsModalOpen && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
         >
           <div className="bg-gray-900 rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] border border-indigo-500/30 overflow-y-auto">
@@ -356,19 +796,21 @@ const handleChooseOption = (suspectId, option) => {
                 </div>
               ))}
             </div>
-            <button onClick={() => setSuspectsModalOpen(false)} className="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 p-2 rounded-lg font-bold">
+            <button
+              onClick={() => setSuspectsModalOpen(false)}
+              className="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 p-2 rounded-lg font-bold"
+            >
               إغلاق
             </button>
           </div>
         </motion.div>
       )}
 
-      {/* Investigation Modal */}
+      {/* ── Investigation Modal ── */}
       {investigationOpen && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
         >
           <div className="bg-gray-900 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] border border-purple-500/30 flex flex-col">
@@ -384,7 +826,9 @@ const handleChooseOption = (suspectId, option) => {
                     key={s.id}
                     onClick={() => startInvestigation(s.id)}
                     disabled={investigatingSuspect !== null}
-                    className={`bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white text-right ${investigatingSuspect ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white text-right ${
+                      investigatingSuspect ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                   >
                     {s.name} ({points >= investigationCost ? investigationCost + ' نقاط' : 'نقاط غير كافية'})
                   </button>
@@ -393,11 +837,22 @@ const handleChooseOption = (suspectId, option) => {
             ) : (
               <div className="flex flex-col h-96">
                 <div className="flex justify-between items-center mb-2">
-                  <button onClick={() => { setSelectedSuspect(null); if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current); setIsTyping(false); }} className="text-purple-400 hover:text-purple-300 text-sm">
+                  <button
+                    onClick={() => {
+                      setSelectedSuspect(null);
+                      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                      setIsTyping(false);
+                    }}
+                    className="text-purple-400 hover:text-purple-300 text-sm"
+                  >
                     ← العودة للقائمة
                   </button>
-                  <span className="text-purple-300 font-bold">{caseData.suspects.find(s => s.id === selectedSuspect)?.name}</span>
-                  <span className="text-gray-500 text-xs">العلاقة: {caseData.suspects.find(s => s.id === selectedSuspect)?.relationship}</span>
+                  <span className="text-purple-300 font-bold">
+                    {caseData.suspects.find(s => s.id === selectedSuspect)?.name}
+                  </span>
+                  <span className="text-gray-500 text-xs">
+                    العلاقة: {caseData.suspects.find(s => s.id === selectedSuspect)?.relationship}
+                  </span>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 p-2 bg-gray-800/50 rounded-lg">
                   {currentMessages.map((msg, idx) => (
@@ -408,21 +863,19 @@ const handleChooseOption = (suspectId, option) => {
                       transition={{ duration: 0.3 }}
                       className={`flex ${msg.type === 'player' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div className={`max-w-[80%] p-2 rounded-lg ${msg.type === 'player' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-200'}`}>
+                      <div className={`max-w-[80%] p-2 rounded-lg ${
+                        msg.type === 'player' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-200'
+                      }`}>
                         {msg.text}
                       </div>
                     </motion.div>
                   ))}
                   {isTyping && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex justify-start"
-                    >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
                       <div className="bg-gray-700 text-gray-200 p-2 rounded-lg flex gap-1">
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '600ms' }}></span>
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '600ms' }} />
                       </div>
                     </motion.div>
                   )}
@@ -435,27 +888,82 @@ const handleChooseOption = (suspectId, option) => {
                       const currentDialogue = getSuspectDialogue(selectedSuspect);
                       if (!currentDialogue) return null;
                       const currentNode = currentDialogue.find(d => d.id === currentNodeId);
-                      if (!currentNode || !currentNode.options) return null;
-                      const validOptions = currentNode.options.filter(opt => {
-                        if (opt.requiredEvidence) {
-                          return inventory.includes(opt.requiredEvidence);
-                        }
-                        return true;
-                      });
-                      if (validOptions.length === 0) {
-                        return <div className="text-gray-400 text-center">لا توجد خيارات متاحة</div>;
+
+                      // لو مفيش node أو options فاضية = نهاية حوار طبيعية
+                      if (!currentNode || !currentNode.options || currentNode.options.length === 0) {
+                        return (
+                          <div className="text-center py-2">
+                            <p className="text-gray-500 text-sm mb-2">— انتهى الحوار مع هذا المشتبه به —</p>
+                            <button
+                              onClick={() => setSelectedSuspect(null)}
+                              className="bg-purple-700 hover:bg-purple-600 px-4 py-1.5 rounded-lg text-sm text-white"
+                            >
+                              العودة لقائمة المشتبهين
+                            </button>
+                          </div>
+                        );
                       }
-                      return validOptions.map((opt, idx) => (
-                        <motion.button
-                          key={idx}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => handleChooseOption(selectedSuspect, opt)}
-                          className="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded-lg text-sm text-right"
-                        >
-                          {opt.text}
-                        </motion.button>
-                      ));
+
+                      // كل الاختيارات — المحجوبة بدليل + المتاحة
+                      const allOptions = currentNode.options;
+
+                      // الاختيارات المتاحة بدون شرط دليل
+                      const freeOptions = allOptions.filter(opt => !opt.requiredEvidence);
+
+                      // الاختيارات اللي محتاجة دليل
+                      const lockedOptions = allOptions.filter(opt => opt.requiredEvidence);
+
+                      // الاختيارات اللي عندي دليلها فعلاً
+                      const unlockedOptions = lockedOptions.filter(opt => inventory.includes(opt.requiredEvidence));
+
+                      // الاختيارات اللي دليلها مش عندي — بنعرضها بشكل مقفول
+                      const stillLockedOptions = lockedOptions.filter(opt => !inventory.includes(opt.requiredEvidence));
+
+                      const hasAnyOption = freeOptions.length > 0 || unlockedOptions.length > 0;
+
+                      return (
+                        <>
+                          {/* الاختيارات المتاحة */}
+                          {[...freeOptions, ...unlockedOptions].map((opt, idx) => (
+                            <motion.button
+                              key={`available-${idx}`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => handleChooseOption(selectedSuspect, opt)}
+                              className="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded-lg text-sm text-right text-white"
+                            >
+                              {opt.text}
+                            </motion.button>
+                          ))}
+
+                          {/* الاختيارات المقفولة — بتظهر باهتة مع أيقونة قفل */}
+                          {stillLockedOptions.map((opt, idx) => {
+                            const evidenceName = caseData?.evidence?.find(e => e.id === opt.requiredEvidence)?.name;
+                            return (
+                              <div
+                                key={`locked-${idx}`}
+                                className="w-full bg-gray-800/50 border border-gray-700 p-2 rounded-lg text-sm text-right text-gray-500 flex items-center gap-2 cursor-not-allowed"
+                                title={`تحتاج دليل: ${evidenceName || opt.requiredEvidence}`}
+                              >
+                                <span className="text-gray-600 flex-shrink-0">🔒</span>
+                                <span>{opt.text}</span>
+                                {evidenceName && (
+                                  <span className="text-xs text-gray-600 mr-auto flex-shrink-0">
+                                    ({evidenceName})
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {/* لو كل الاختيارات مقفولة */}
+                          {!hasAnyOption && stillLockedOptions.length > 0 && (
+                            <p className="text-gray-500 text-xs text-center pt-1">
+                              ابحث عن أدلة أولاً لفتح المزيد من الأسئلة
+                            </p>
+                          )}
+                        </>
+                      );
                     })()}
                   </div>
                 )}
@@ -465,12 +973,11 @@ const handleChooseOption = (suspectId, option) => {
         </motion.div>
       )}
 
-      {/* Search Modal */}
+      {/* ── Search Modal ── */}
       {searchModalOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
         >
           <div className="bg-gray-900 rounded-2xl p-6 max-w-md w-full border border-emerald-500/30">
@@ -500,7 +1007,10 @@ const handleChooseOption = (suspectId, option) => {
                     <FaMapPin /> {loc.name}
                   </button>
                 ))}
-                <button onClick={() => setSearchModalOpen(false)} className="w-full bg-red-600 hover:bg-red-500 p-2 rounded-lg font-bold mt-2">
+                <button
+                  onClick={() => setSearchModalOpen(false)}
+                  className="w-full bg-red-600 hover:bg-red-500 p-2 rounded-lg font-bold mt-2"
+                >
                   إلغاء
                 </button>
               </div>
@@ -509,7 +1019,7 @@ const handleChooseOption = (suspectId, option) => {
         </motion.div>
       )}
 
-      {/* Accusation Modal – opens only for this player */}
+      {/* ── Accusation Modal ── */}
       {accusationPhase && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -519,10 +1029,7 @@ const handleChooseOption = (suspectId, option) => {
           <div className="bg-gray-900 rounded-2xl p-6 max-w-md w-full border-2 border-red-500">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-yellow-400">⚖️ توجيه الاتهام</h2>
-              <button
-                onClick={() => setAccusationPhase(false)}
-                className="text-gray-400 hover:text-white"
-              >
+              <button onClick={() => setAccusationPhase(false)} className="text-gray-400 hover:text-white">
                 <FaTimes size={24} />
               </button>
             </div>
@@ -541,17 +1048,31 @@ const handleChooseOption = (suspectId, option) => {
               </div>
             ) : (
               <div className="space-y-3">
-                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white" value={vote.suspect} onChange={e => setVote({...vote, suspect: e.target.value})}>
+                <select
+                  className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white"
+                  value={vote.suspect}
+                  onChange={e => setVote({ ...vote, suspect: e.target.value })}
+                >
                   <option value="">القاتل</option>
-                  {caseData.suspects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  {caseData.suspects.map(s => (
+                    <option key={s.id} value={s.name}>{s.name}</option>
+                  ))}
                 </select>
-                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white" value={vote.weapon} onChange={e => setVote({...vote, weapon: e.target.value})}>
+                <select
+                  className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white"
+                  value={vote.weapon}
+                  onChange={e => setVote({ ...vote, weapon: e.target.value })}
+                >
                   <option value="">الأداة</option>
                   <option value="سكين">سكين</option>
                   <option value="سم">سم</option>
                   <option value="خنق">خنق</option>
                 </select>
-                <select className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white" value={vote.motive} onChange={e => setVote({...vote, motive: e.target.value})}>
+                <select
+                  className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-white"
+                  value={vote.motive}
+                  onChange={e => setVote({ ...vote, motive: e.target.value })}
+                >
                   <option value="">الدافع</option>
                   <option value="مالي">مالي</option>
                   <option value="غيرة">غيرة</option>

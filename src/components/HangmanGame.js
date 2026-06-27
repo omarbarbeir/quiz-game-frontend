@@ -14,7 +14,7 @@ const HangmanGame = ({ socket, roomCode, isAdmin }) => {
     gameOver: false,
     won: false,
     word: '',
-    hint: '', // ضفنا التلميح هنا في الـ State المبدئية 💡
+    hint: '', 
     remaining: 0,
   });
 
@@ -32,7 +32,7 @@ const HangmanGame = ({ socket, roomCode, isAdmin }) => {
     return () => {
       socket.off('hangman_state', onState);
     };
-  }, [roomCode]);
+  }, [roomCode, socket]);
 
   const handleGuess = (char) => {
     if (state.gameOver) return;
@@ -77,6 +77,8 @@ const HangmanGame = ({ socket, roomCode, isAdmin }) => {
     );
   };
 
+  const wordParts = state.display ? state.display.split('   ') : [];
+
   return (
     <div className="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-2xl border border-cyan-500/20 max-w-full" dir="rtl">
       <h2 className="text-2xl sm:text-3xl font-extrabold text-center mb-4 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
@@ -87,7 +89,6 @@ const HangmanGame = ({ socket, roomCode, isAdmin }) => {
 
       <div className="text-center my-4">
         
-        {/* عرض التلميح هنا بشكل مميز لو موجود */}
         {state.hint && (
           <div className="mb-4">
             <span className="inline-block bg-purple-900/50 text-purple-200 px-4 py-1.5 rounded-full text-sm sm:text-base font-bold border border-purple-500/30 shadow-sm shadow-purple-500/20">
@@ -96,32 +97,49 @@ const HangmanGame = ({ socket, roomCode, isAdmin }) => {
           </div>
         )}
 
-        <div className="text-2xl sm:text-4xl font-mono tracking-widest text-white bg-gray-900/60 p-4 rounded-xl border border-cyan-500/20 shadow-inner shadow-cyan-500/10 flex flex-wrap justify-center gap-2">
-          {state.display.split(' ').map((wordPart, wordIndex) => (
-            <div key={wordIndex} className="flex gap-1 mx-2">
-              {wordPart.split('').map((c, i) => (
-                <span key={i} className="min-w-[1.5rem] border-b-2 border-cyan-500/30 pb-1">
-                  {c}
-                </span>
-              ))}
-            </div>
+        <div className="flex flex-wrap justify-center items-end gap-y-6 text-white bg-gray-900/60 p-6 rounded-xl border border-cyan-500/20 shadow-inner shadow-cyan-500/10 mb-6">
+          {wordParts.map((wordPart, wordIndex, arr) => (
+            <React.Fragment key={wordIndex}>
+              <div className="flex gap-1.5 sm:gap-2 mx-1">
+                {wordPart.split(' ').map((c, i) => (
+                  <span 
+                    key={i} 
+                    className="flex justify-center items-center min-w-[2.5rem] sm:min-w-[3.5rem] h-12 sm:h-16 text-3xl sm:text-4xl font-bold border-b-4 border-cyan-500/60 bg-gray-800/40 rounded-t-lg shadow-sm pb-1"
+                  >
+                    {c === '_' ? '' : c}
+                  </span>
+                ))}
+              </div>
+              
+              {wordIndex < arr.length - 1 && (
+                <div className="flex items-center text-purple-400 font-bold text-3xl sm:text-4xl mx-2 sm:mx-4 opacity-80 select-none pb-2">
+                  /
+                </div>
+              )}
+            </React.Fragment>
           ))}
         </div>
-        <div className="mt-4 flex flex-wrap justify-center gap-4 text-gray-400 text-xs sm:text-sm">
-          <span>المحاولات: <span className={`font-bold ${state.attempts >= state.maxAttempts ? 'text-red-400' : 'text-cyan-300'}`}>{state.attempts}</span> / {state.maxAttempts}</span>
-          <span>المتبقي حله: <span className="font-bold text-yellow-300">{state.remaining}</span></span>
+
+        <div className="flex flex-wrap justify-center gap-4 text-gray-400 text-xs sm:text-sm">
+          <span className="bg-gray-800/50 px-3 py-1 rounded-lg">
+            المحاولات: <span className={`font-bold ${state.attempts >= state.maxAttempts ? 'text-red-400' : 'text-cyan-300'}`}>{state.attempts}</span> / {state.maxAttempts}
+          </span>
+          <span className="bg-gray-800/50 px-3 py-1 rounded-lg">
+            المتبقي حله: <span className="font-bold text-yellow-300">{state.remaining}</span>
+          </span>
         </div>
       </div>
 
       {state.gameOver && (
-        <div className={`p-4 rounded-xl mb-4 text-center ${state.won ? 'bg-green-600/80' : 'bg-red-600/80'} border-2 ${state.won ? 'border-green-400' : 'border-red-400'} shadow-lg`}>
+        <div className={`p-4 rounded-xl mb-4 text-center ${state.won ? 'bg-green-600/80' : 'bg-red-600/80'} border-2 ${state.won ? 'border-green-400' : 'border-red-400'} shadow-lg animate-pulse`}>
           <p className="text-white font-bold text-base sm:text-xl">
             {state.won ? '🎉 تهانينا! لقد فزت!' : '😢 للأسف، خسرت! الكلمة كانت: ' + state.word}
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-6 sm:grid-cols-7 gap-1 sm:gap-2 mb-4">
+      {/* تعديل زراير الحروف هنا كبرناها وظبطنا شكلها */}
+      <div className="grid grid-cols-6 sm:grid-cols-7 gap-2 sm:gap-3 mb-4">
         {ALL_KEYS.map(char => {
           const isNum = !ARABIC_LETTERS.includes(char);
           const isGuessed = state.guessedLetters.includes(char);
@@ -132,12 +150,12 @@ const HangmanGame = ({ socket, roomCode, isAdmin }) => {
               onClick={() => handleGuess(char)}
               disabled={state.gameOver || isGuessed}
               className={`
-                text-xs sm:text-base p-2 rounded-lg font-bold transition-all duration-200 
+                flex justify-center items-center h-12 sm:h-16 text-xl sm:text-3xl rounded-xl font-bold transition-all duration-200 shadow-md
                 ${isGuessed
-                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed opacity-30 line-through'
+                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed opacity-40 line-through'
                   : isNum
-                    ? 'bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white'
-                    : 'bg-gradient-to-br from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white'
+                    ? 'bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 hover:scale-105 text-white'
+                    : 'bg-gradient-to-br from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 hover:scale-105 text-white'
                 }
               `}
             >
@@ -150,7 +168,7 @@ const HangmanGame = ({ socket, roomCode, isAdmin }) => {
       {isAdmin && (
         <button
           onClick={handleReset}
-          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 p-3 rounded-xl font-bold text-white shadow-lg transition-all duration-200"
+          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 p-4 rounded-xl font-bold text-lg text-white shadow-lg transition-all duration-200 mt-2 hover:scale-[1.02]"
         >
           🔄 تغيير الكلمة (كلمة جديدة)
         </button>
