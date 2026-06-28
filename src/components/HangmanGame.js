@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const MAX_ATTEMPTS = 6;
 const ARABIC_LETTERS = 'أإآاإبتثجحخدذرزسشصضطظعغفقكلمنهويةىؤئء'.split(''); 
-const NUMBERS = '0123456789'.split('');
+const NUMBERS = '٠١٢٣٤٥٦٧٨٩'.split('');
 const ALL_KEYS = [...ARABIC_LETTERS, ...NUMBERS];
 
 const HangmanGame = ({ socket, roomCode, isAdmin }) => {
