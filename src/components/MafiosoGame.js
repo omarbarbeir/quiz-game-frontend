@@ -1,61 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaSearch, FaBox, FaUser, FaMapPin, FaUsers, FaTimes, FaFileMedical, FaRedo, FaSkull, FaLock } from 'react-icons/fa';
+import { FaSearch, FaBox, FaUser, FaMapPin, FaUsers, FaTimes, FaFileMedical, FaRedo, FaLock, FaBolt } from 'react-icons/fa';
 
-// ── الأنيميشنز العامة ──────────────────────────────────────────────────────
 const GLOBAL_STYLES = `
-  @keyframes scanline {
-    0%   { transform: translateY(-100%); }
-    100% { transform: translateY(400%); }
-  }
-  @keyframes redPulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-    50%     { box-shadow: 0 0 0 6px rgba(239,68,68,0.15); }
-  }
-  @keyframes greenPulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
-    50%     { box-shadow: 0 0 0 6px rgba(16,185,129,0.2); }
-  }
-  @keyframes confettiFall {
-    0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
-    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-  }
-  @keyframes pulseGold {
-    0%, 100% { box-shadow: 0 0 0px #f59e0b,  0 0 0px #f59e0b; }
-    50%       { box-shadow: 0 0 30px #f59e0b, 0 0 60px #d97706; }
-  }
-  @keyframes badgeGlow {
-    0%, 100% { text-shadow: 0 0 6px #fbbf24,  0 0 12px #f59e0b; }
-    50%       { text-shadow: 0 0 16px #fbbf24, 0 0 32px #d97706; }
-  }
-  @keyframes criminalGlow {
-    0%, 100% { text-shadow: 0 0 8px #f59e0b, 0 0 24px #f59e0b, 0 0 48px #d97706; }
-    50%       { text-shadow: 0 0 16px #fbbf24, 0 0 48px #fbbf24, 0 0 96px #f59e0b; }
-  }
-  @keyframes flickerIn {
-    0%   { opacity: 0; }
-    10%  { opacity: 1; }
-    12%  { opacity: 0; }
-    14%  { opacity: 1; }
-    100% { opacity: 1; }
-  }
-  @keyframes interrogationPulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
-    50%     { box-shadow: 0 0 20px 2px rgba(251,191,36,0.08); }
-  }
-  @keyframes evidencePing {
-    0%   { box-shadow: 0 0 0 0 rgba(234,179,8,0.6); }
-    70%  { box-shadow: 0 0 0 8px rgba(234,179,8,0); }
-    100% { box-shadow: 0 0 0 0 rgba(234,179,8,0); }
-  }
-  .confetti-piece {
-    position: fixed;
-    top: -20px;
-    border-radius: 2px;
-    animation: confettiFall linear forwards;
-    pointer-events: none;
-    z-index: 10000;
-  }
+  @keyframes scanline { 0%{transform:translateY(-100%);} 100%{transform:translateY(400%);} }
+  @keyframes redPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0);} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0.15);} }
+  @keyframes greenPulse { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0);} 50%{box-shadow:0 0 0 6px rgba(16,185,129,0.2);} }
+  @keyframes confettiFall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1;} 100%{transform:translateY(100vh) rotate(720deg);opacity:0;} }
+  @keyframes pulseGold { 0%,100%{box-shadow:0 0 0px #f59e0b,0 0 0px #f59e0b;} 50%{box-shadow:0 0 30px #f59e0b,0 0 60px #d97706;} }
+  @keyframes badgeGlow { 0%,100%{text-shadow:0 0 6px #fbbf24,0 0 12px #f59e0b;} 50%{text-shadow:0 0 16px #fbbf24,0 0 32px #d97706;} }
+  @keyframes criminalGlow { 0%,100%{text-shadow:0 0 8px #f59e0b,0 0 24px #f59e0b,0 0 48px #d97706;} 50%{text-shadow:0 0 16px #fbbf24,0 0 48px #fbbf24,0 0 96px #f59e0b;} }
+  @keyframes flickerIn { 0%{opacity:0;} 10%{opacity:1;} 12%{opacity:0;} 14%{opacity:1;} 100%{opacity:1;} }
+  @keyframes interrogationPulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0);} 50%{box-shadow:0 0 20px 2px rgba(251,191,36,0.08);} }
+  @keyframes evidencePing { 0%{box-shadow:0 0 0 0 rgba(234,179,8,0.6);} 70%{box-shadow:0 0 0 8px rgba(234,179,8,0);} 100%{box-shadow:0 0 0 0 rgba(234,179,8,0);} }
+  @keyframes lockShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-2px);} 75%{transform:translateX(2px);} }
+  @keyframes fogReveal { from{opacity:0; filter:blur(6px);} to{opacity:1; filter:blur(0);} }
+  .confetti-piece { position:fixed; top:-20px; border-radius:2px; animation:confettiFall linear forwards; pointer-events:none; z-index:10000; }
 `;
 
 const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
@@ -68,6 +28,8 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const [selectedSuspect, setSelectedSuspect] = useState(null);
   const [messagesBySuspect, setMessagesBySuspect] = useState({});
   const [currentNodeIdBySuspect, setCurrentNodeIdBySuspect] = useState({});
+  // NEW: تتبع كل العقد (nodes) اللي اللاعب زارها مع كل مشتبه — أساس شجرة الحوار المشروطة
+  const [visitedNodesBySuspect, setVisitedNodesBySuspect] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [accusationPhase, setAccusationPhase] = useState(false);
   const [vote, setVote] = useState({ suspect: '', weapon: '', motive: '' });
@@ -80,15 +42,14 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const [investigatingSuspect, setInvestigatingSuspect] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [showNewGameOverlay, setShowNewGameOverlay] = useState(false);
+  // NEW: تتبع كل النصوص اللي اتقالت في كل الحوارات — لاستخراج تلميحات الأماكن المخفية منها
+  const [allRevealedHints, setAllRevealedHints] = useState(new Set());
 
   const chatEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  const getSuspectDialogue = (suspectId) => {
-    if (!caseData) return null;
-    const suspect = caseData.suspects.find(s => s.id === suspectId);
-    return suspect ? suspect.dialogue : null;
-  };
+  const getSuspect = (suspectId) => caseData?.suspects.find(s => s.id === suspectId) || null;
+  const getSuspectDialogue = (suspectId) => getSuspect(suspectId)?.dialogue || null;
 
   const getInitialNode = (suspectId) => {
     const dialogue = getSuspectDialogue(suspectId);
@@ -106,6 +67,15 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
           [suspectId]: [...(prev[suspectId] || []), { type: 'npc', text: node.text }]
         }));
         setCurrentNodeIdBySuspect(prev => ({ ...prev, [suspectId]: node.id }));
+        // NEW: سجل العقدة كـ "تمت زيارتها" لفتح أسئلة شجرة الحوار
+        setVisitedNodesBySuspect(prev => ({
+          ...prev,
+          [suspectId]: [...new Set([...(prev[suspectId] || []), node.id])]
+        }));
+        // NEW: لو العقدة فيها hintReveals (تلميح لمكان مخفي) سجله عالمياً
+        if (node.hintReveals) {
+          setAllRevealedHints(prev => new Set([...prev, ...node.hintReveals]));
+        }
       }
       setIsTyping(false);
     }, 1500);
@@ -114,31 +84,23 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const resetLocalState = () => {
     setCaseData(null); setState(null); setInventory([]); setSearchedLocations([]);
     setPoints(100); setInvestigationCost(10); setSelectedSuspect(null);
-    setMessagesBySuspect({}); setCurrentNodeIdBySuspect({}); setNotifications([]);
-    setAccusationPhase(false); setVote({ suspect: '', weapon: '', motive: '' });
+    setMessagesBySuspect({}); setCurrentNodeIdBySuspect({}); setVisitedNodesBySuspect({});
+    setNotifications([]); setAccusationPhase(false); setVote({ suspect: '', weapon: '', motive: '' });
     setSolution(null); setInvestigationOpen(false); setIsTyping(false);
     setSearchModalOpen(false); setSearching(false); setSuspectsModalOpen(false);
-    setInvestigatingSuspect(null); setHasVoted(false);
+    setInvestigatingSuspect(null); setHasVoted(false); setAllRevealedHints(new Set());
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
   };
 
   useEffect(() => {
-    socket.on('mafiosa_new_game_starting', () => {
-      resetLocalState();
-      setShowNewGameOverlay(true);
-    });
-    socket.on('mafiosa_case_data', (data) => {
-      setShowNewGameOverlay(false);
-      setCaseData(data);
-    });
+    socket.on('mafiosa_new_game_starting', () => { resetLocalState(); setShowNewGameOverlay(true); });
+    socket.on('mafiosa_case_data', (data) => { setShowNewGameOverlay(false); setCaseData(data); });
     socket.on('mafiosa_state', (data) => {
       setState(data);
       if (data) {
         setInventory(data.inventory || []);
         setSearchedLocations(data.searchedLocations || []);
-        if (data.playerPoints && data.playerPoints[playerId] !== undefined) {
-          setPoints(data.playerPoints[playerId]);
-        }
+        if (data.playerPoints && data.playerPoints[playerId] !== undefined) setPoints(data.playerPoints[playerId]);
       }
     });
     socket.on('mafiosa_inventory_update', ({ inventory }) => setInventory(inventory));
@@ -149,8 +111,7 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     });
     socket.on('mafiosa_solution', (data) => {
       setSolution(data);
-      if (data.finalPoints && data.finalPoints[playerId] !== undefined)
-        setPoints(data.finalPoints[playerId]);
+      if (data.finalPoints && data.finalPoints[playerId] !== undefined) setPoints(data.finalPoints[playerId]);
     });
     socket.on('mafiosa_error', ({ message }) => {
       const id = Date.now() + Math.random();
@@ -159,11 +120,15 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     socket.on('mafiosa_investigation_started', ({ suspectId, points, cost }) => {
       setPoints(points); setInvestigationCost(cost); setInvestigatingSuspect(null);
     });
+    // NEW: السيرفر بيرد بنقاط AP الجديدة بعد خصم تكلفة سؤال محوري
+    socket.on('mafiosa_ap_update', ({ ap }) => {
+      setState(prev => prev ? { ...prev, ap } : prev);
+    });
     if (roomCode) socket.emit('mafiosa_start', { roomCode });
     return () => {
-      ['mafiosa_new_game_starting','mafiosa_case_data','mafiosa_state',
-       'mafiosa_inventory_update','mafiosa_notification','mafiosa_solution',
-       'mafiosa_error','mafiosa_investigation_started'].forEach(e => socket.off(e));
+      ['mafiosa_new_game_starting','mafiosa_case_data','mafiosa_state','mafiosa_inventory_update',
+       'mafiosa_notification','mafiosa_solution','mafiosa_error','mafiosa_investigation_started',
+       'mafiosa_ap_update'].forEach(e => socket.off(e));
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [socket, roomCode, playerId]);
@@ -184,6 +149,8 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
       if (startNode) {
         setMessagesBySuspect(prev => ({ ...prev, [suspectId]: [{ type: 'npc', text: startNode.text }] }));
         setCurrentNodeIdBySuspect(prev => ({ ...prev, [suspectId]: startNode.id }));
+        setVisitedNodesBySuspect(prev => ({ ...prev, [suspectId]: [startNode.id] }));
+        if (startNode.hintReveals) setAllRevealedHints(prev => new Set([...prev, ...startNode.hintReveals]));
       }
     }
     setInvestigationOpen(true);
@@ -195,6 +162,13 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     setIsTyping(false);
   };
 
+  // NEW: التحقق هل سؤال معين متاح بناءً على شجرة الحوار (prereqNode)
+  const isOptionUnlockedByTree = (option, suspectId) => {
+    if (!option.prereqNode) return true; // مفيش شرط = متاح من البداية
+    const visited = visitedNodesBySuspect[suspectId] || [];
+    return visited.includes(option.prereqNode);
+  };
+
   const handleChooseOption = (suspectId, option) => {
     if (isTyping) return;
     const currentDialogue = getSuspectDialogue(suspectId);
@@ -202,21 +176,43 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
     const currentNodeId = currentNodeIdBySuspect[suspectId];
     const currentNode = currentDialogue.find(d => d.id === currentNodeId);
     if (!currentNode) return;
-    setMessagesBySuspect(prev => ({
-      ...prev,
-      [suspectId]: [...(prev[suspectId] || []), { type: 'player', text: option.text }]
-    }));
+
+    // تحقق من توفر الدليل المطلوب
     if (option.requiredEvidence && !inventory.includes(option.requiredEvidence)) {
       const id = Date.now() + Math.random();
       setNotifications(prev => [...prev, { message: 'ليس لديك الدليل المطلوب!', type: 'error', id }]);
       return;
     }
+
+    // NEW: تحقق من توفر AP الكافية لو السؤال له تكلفة
+    if (option.apCost && option.apCost > 0) {
+      if (!state || state.ap < option.apCost) {
+        const id = Date.now() + Math.random();
+        setNotifications(prev => [...prev, { message: `لا تملك طاقة كافية لهذا السؤال! (يتطلب ${option.apCost} AP)`, type: 'error', id }]);
+        return;
+      }
+    }
+
+    setMessagesBySuspect(prev => ({
+      ...prev,
+      [suspectId]: [...(prev[suspectId] || []), { type: 'player', text: option.text }]
+    }));
+
     const nextNode = currentDialogue.find(d => d.id === option.nextNodeId);
     if (nextNode) {
+      // NEW: خصم AP لو السؤال محوري — يُرسل للسيرفر
+      if (option.apCost && option.apCost > 0) {
+        socket.emit('mafiosa_spend_ap', { roomCode, amount: option.apCost });
+      }
       if (nextNode.unlockedBy) socket.emit('mafiosa_confront', { roomCode, evidenceId: nextNode.unlockedBy });
       if (nextNode.reward) {
         const rewardId = nextNode.reward.split(' ').join('_').toLowerCase();
         if (!inventory.includes(rewardId)) socket.emit('mafiosa_add_evidence', { roomCode, evidenceId: rewardId });
+      }
+      // NEW: لو العقدة الجديدة بتكشف دافع (motiveReveal) سجله محلياً كدليل اختياري للاتهام
+      if (nextNode.motiveReveal) {
+        const motiveId = `motive_${suspectId}_${nextNode.id}`;
+        if (!inventory.includes(motiveId)) socket.emit('mafiosa_add_evidence', { roomCode, evidenceId: motiveId });
       }
       showNpcResponse(suspectId, nextNode);
     } else {
@@ -239,12 +235,12 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   };
 
   const handleVoteSubmit = () => {
-    if (!vote.suspect.trim() || !vote.weapon.trim() || !vote.motive.trim()) return;
+    if (!vote.suspect || !vote.weapon || !vote.motive) return;
     socket.emit('mafiosa_submit_vote', { roomCode, playerId, vote });
     setHasVoted(true);
   };
 
-  // ── OVERLAY ────────────────────────────────────────────────────────────────
+  // ── OVERLAY ──────────────────────────────────────────────────────────────
   if (showNewGameOverlay) {
     return (
       <div style={{ position:'fixed',inset:0,zIndex:9999,background:'rgba(0,0,0,0.93)',display:'flex',alignItems:'center',justifyContent:'center' }}>
@@ -270,27 +266,59 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
   const currentMessages = selectedSuspect ? messagesBySuspect[selectedSuspect] || [] : [];
   const currentNodeId = selectedSuspect ? currentNodeIdBySuspect[selectedSuspect] : null;
 
-  // ── ألوان الجو العام ──────────────────────────────────────────────────────
+  // NEW: حساب الأماكن المتاحة للتفتيش — عامة دايماً + مخفية لو تم الكشف عنها بتلميح أو دليل
+  const getVisibleLocations = () => {
+    if (!caseData.locations) return {};
+    const visible = {};
+    Object.entries(caseData.locations).forEach(([key, loc]) => {
+      if (!loc.hidden) {
+        visible[key] = loc; // مكان عام دايماً ظاهر
+        return;
+      }
+      // مكان مخفي: يظهر لو revealedBy fulfilled عبر تلميح حوار أو دليل موجود بالفعل
+      const revealedByHint = loc.revealedBy?.some(hint => allRevealedHints.has(hint));
+      const revealedByEvidence = loc.revealedByEvidence?.some(ev => inventory.includes(ev));
+      if (revealedByHint || revealedByEvidence) visible[key] = loc;
+    });
+    return visible;
+  };
+  const visibleLocations = getVisibleLocations();
+
+  // NEW: بناء قوائم الاتهام الذكية — مبنية فقط على ما يملكه اللاعب فعلياً
+  const getAccusationOptions = () => {
+    // القتلة: كل المشتبهين متاحين دايماً للاختيار (هذا جزء من التحدي، مش مقفول)
+    const suspectOptions = caseData.suspects.map(s => s.name);
+
+    // الأداة: فقط الأدلة المصنّفة كـ "أداة جريمة محتملة" واللي موجودة في الـ inventory
+    const weaponOptions = (caseData.evidence || [])
+      .filter(ev => ev.isWeaponClue && inventory.includes(ev.id))
+      .map(ev => ev.weaponLabel || ev.name);
+
+    // الدافع: فقط الدوافع اللي اتكشفت عبر حوار (motiveReveal) وبقت في الـ inventory كـ motive_*
+    const motiveOptions = [];
+    caseData.suspects.forEach(s => {
+      s.dialogue.forEach(node => {
+        if (node.motiveReveal) {
+          const motiveId = `motive_${s.id}_${node.id}`;
+          if (inventory.includes(motiveId)) motiveOptions.push(node.motiveReveal);
+        }
+      });
+    });
+
+    return { suspectOptions, weaponOptions: [...new Set(weaponOptions)], motiveOptions: [...new Set(motiveOptions)] };
+  };
+  const { suspectOptions, weaponOptions, motiveOptions } = getAccusationOptions();
+
   const C = {
-    bg:        'rgba(10,8,20,0.97)',
-    surface:   'rgba(18,14,35,0.95)',
-    border:    'rgba(99,60,180,0.25)',
-    accent:    '#7c3aed',
-    accentDim: 'rgba(124,58,237,0.15)',
-    gold:      '#f59e0b',
-    goldDim:   'rgba(245,158,11,0.12)',
-    red:       '#ef4444',
-    redDim:    'rgba(239,68,68,0.12)',
-    text:      '#e2d9f3',
-    textMuted: '#7c6fa0',
-    evidence:  '#eab308',
+    bg:'rgba(10,8,20,0.97)', border:'rgba(99,60,180,0.25)',
+    gold:'#f59e0b', goldDim:'rgba(245,158,11,0.12)',
+    text:'#e2d9f3', textMuted:'#7c6fa0',
   };
 
   return (
     <div style={{ background: C.bg, borderRadius: 16, padding: 16, border: `1px solid ${C.border}`, position:'relative', animation:'interrogationPulse 4s ease-in-out infinite' }}>
       <style>{GLOBAL_STYLES}</style>
 
-      {/* Notifications */}
       <AnimatePresence>
         {notifications.map(n => (
           <motion.div key={n.id} initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}}
@@ -305,61 +333,38 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
         ))}
       </AnimatePresence>
 
-      {/* ── شريط النقاط + قضية جديدة ── */}
-      <div style={{
-        background: C.goldDim, borderRadius:12, padding:'10px 14px', marginBottom:14,
-        border:`1px solid rgba(245,158,11,0.2)`, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8,
-      }}>
+      {/* النقاط + قضية جديدة */}
+      <div style={{ background: C.goldDim, borderRadius:12, padding:'10px 14px', marginBottom:14, border:`1px solid rgba(245,158,11,0.2)`, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
         <div>
           <span style={{color:C.gold, fontWeight:700, fontSize:'1rem'}}>⭐ {points} نقطة</span>
           <span style={{color:C.textMuted, fontSize:'0.72rem', marginRight:10}}>تكلفة التحقيق: {investigationCost}</span>
         </div>
         <motion.button whileHover={{scale:1.04}} whileTap={{scale:0.97}} onClick={handleNewGame}
-          style={{
-            background:'linear-gradient(135deg,#1e1b4b,#312e81)', border:'1px solid #4338ca',
-            color:'#a5b4fc', borderRadius:10, padding:'6px 14px', fontWeight:700, fontSize:'0.82rem',
-            cursor:'pointer', display:'flex', alignItems:'center', gap:6,
-          }}>
+          style={{ background:'linear-gradient(135deg,#1e1b4b,#312e81)', border:'1px solid #4338ca', color:'#a5b4fc', borderRadius:10, padding:'6px 14px', fontWeight:700, fontSize:'0.82rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
           <FaRedo style={{fontSize:'0.75rem'}}/> قضية جديدة
         </motion.button>
       </div>
 
-      {/* ── العنوان والوصف ── */}
+      {/* العنوان والوصف */}
       {caseData.title && (
-        <div style={{
-          background:'linear-gradient(135deg,rgba(30,15,60,0.9),rgba(15,8,30,0.95))',
-          borderRadius:14, padding:'14px 16px', marginBottom:14,
-          border:`1px solid rgba(124,58,237,0.3)`,
-          animation:'flickerIn 0.6s ease forwards',
-        }}>
+        <div style={{ background:'linear-gradient(135deg,rgba(30,15,60,0.9),rgba(15,8,30,0.95))', borderRadius:14, padding:'14px 16px', marginBottom:14, border:`1px solid rgba(124,58,237,0.3)`, animation:'flickerIn 0.6s ease forwards' }}>
           <h2 style={{color:C.gold, fontWeight:700, fontSize:'1.2rem', margin:'0 0 6px 0', letterSpacing:'0.03em'}}>{caseData.title}</h2>
           <p style={{color:C.textMuted, fontSize:'0.8rem', lineHeight:1.7, margin:0}}>{caseData.description}</p>
         </div>
       )}
 
-      {/* ── التقارير الطبية ── */}
+      {/* التقارير الطبية */}
       {caseData.autopsy && (
         <div style={{marginBottom:14}}>
-          {/* التقرير الأولي المجاني */}
           {!inventory.includes('basic_autopsy') ? (
             <motion.button whileHover={{scale:1.01}} whileTap={{scale:0.98}}
               onClick={() => setInventory(prev => [...prev, 'basic_autopsy'])}
-              style={{
-                width:'100%', padding:'10px 16px', borderRadius:12,
-                border:'1px dashed #10b981', background:'rgba(6,78,59,0.15)',
-                color:'#6ee7b7', fontWeight:700, cursor:'pointer',
-                display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-                animation:'greenPulse 2.5s ease-in-out infinite', fontSize:'0.88rem', marginBottom:10,
-              }}>
+              style={{ width:'100%', padding:'10px 16px', borderRadius:12, border:'1px dashed #10b981', background:'rgba(6,78,59,0.15)', color:'#6ee7b7', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, animation:'greenPulse 2.5s ease-in-out infinite', fontSize:'0.88rem', marginBottom:10 }}>
               <FaFileMedical /> عرض التقرير الأولي — مجاني
             </motion.button>
           ) : (
             <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:0.45}}
-              style={{
-                borderRadius:12, border:'1px solid rgba(16,185,129,0.3)',
-                background:'linear-gradient(160deg,rgba(6,20,15,0.97),rgba(4,14,10,0.99))',
-                overflow:'hidden', position:'relative', marginBottom:10,
-              }}>
+              style={{ borderRadius:12, border:'1px solid rgba(16,185,129,0.3)', background:'linear-gradient(160deg,rgba(6,20,15,0.97),rgba(4,14,10,0.99))', overflow:'hidden', position:'relative', marginBottom:10 }}>
               <div style={{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden',zIndex:0}}>
                 <div style={{position:'absolute',left:0,right:0,height:'25%',background:'linear-gradient(to bottom,transparent,rgba(16,185,129,0.04),transparent)',animation:'scanline 4s linear infinite'}}/>
               </div>
@@ -375,16 +380,12 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                 {(() => {
                   const basicLines = caseData.autopsy.basicText
                     ? caseData.autopsy.basicText.split('\n').filter(Boolean)
-                    : [
-                        caseData.autopsy.text.match(/وقت الوفاة[^.\n]*/)?.[0]?.trim() || 'وقت الوفاة: غير محدد بدقة',
+                    : [ caseData.autopsy.text.match(/وقت الوفاة[^.\n]*/)?.[0]?.trim() || 'وقت الوفاة: غير محدد بدقة',
                         'سبب الوفاة الظاهري: يتطلب تحليلاً معملياً متقدماً.',
-                        'لا توجد إصابات خارجية واضحة في الفحص الأولي السريع.',
-                      ];
+                        'لا توجد إصابات خارجية واضحة في الفحص الأولي السريع.' ];
                   return basicLines.map((line, i) => (
                     <motion.p key={i} initial={{opacity:0,x:-6}} animate={{opacity:1,x:0}} transition={{delay:0.1+i*0.1,duration:0.3}}
-                      style={{color:i===0?'#6ee7b7':'#9ca3af',fontSize:'0.8rem',lineHeight:1.7,margin:'0 0 3px 0'}}>
-                      {line}
-                    </motion.p>
+                      style={{color:i===0?'#6ee7b7':'#9ca3af',fontSize:'0.8rem',lineHeight:1.7,margin:'0 0 3px 0'}}>{line}</motion.p>
                   ));
                 })()}
               </div>
@@ -395,20 +396,11 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
             </motion.div>
           )}
 
-          {/* التقرير المتقدم */}
           {caseData.autopsy.isKey && (
             !inventory.includes('autopsy_report') ? (
               <motion.button whileHover={{scale:1.01}} whileTap={{scale:0.98}}
                 onClick={handleGetAutopsy} disabled={state.ap < 1}
-                style={{
-                  width:'100%', padding:'10px 16px', borderRadius:12,
-                  border: state.ap<1?'1px solid #374151':'1px dashed #dc2626',
-                  background: state.ap<1?'rgba(31,41,55,0.5)':'rgba(127,29,29,0.2)',
-                  color: state.ap<1?'#6b7280':'#fca5a5', fontWeight:700,
-                  cursor: state.ap<1?'not-allowed':'pointer',
-                  display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-                  animation: state.ap>=1?'redPulse 2s ease-in-out infinite':'none', fontSize:'0.88rem',
-                }}>
+                style={{ width:'100%', padding:'10px 16px', borderRadius:12, border: state.ap<1?'1px solid #374151':'1px dashed #dc2626', background: state.ap<1?'rgba(31,41,55,0.5)':'rgba(127,29,29,0.2)', color: state.ap<1?'#6b7280':'#fca5a5', fontWeight:700, cursor: state.ap<1?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, animation: state.ap>=1?'redPulse 2s ease-in-out infinite':'none', fontSize:'0.88rem' }}>
                 <FaFileMedical/> {state.ap<1?'لا تتوفر طاقة كافية':'طلب تقرير الطب الشرعي المتقدم (−1 AP)'}
               </motion.button>
             ) : (
@@ -426,8 +418,8 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                 </div>
                 <div style={{borderTop:'1px dashed rgba(239,68,68,0.25)',margin:'0 14px',position:'relative',zIndex:1}}/>
                 <div style={{padding:'14px 16px',position:'relative',zIndex:1}}>
-                  <motion.div initial={{scale:2.5,rotate:-20,opacity:0}} animate={{scale:1,rotate:-12,opacity:0.18}}
-                    transition={{delay:0.3,duration:0.6}} style={{position:'absolute',top:12,left:12,border:'3px solid #ef4444',borderRadius:6,padding:'2px 8px',color:'#ef4444',fontWeight:900,fontSize:'1.1rem',letterSpacing:'0.15em',pointerEvents:'none',userSelect:'none'}}>
+                  <motion.div initial={{scale:2.5,rotate:-20,opacity:0}} animate={{scale:1,rotate:-12,opacity:0.18}} transition={{delay:0.3,duration:0.6}}
+                    style={{position:'absolute',top:12,left:12,border:'3px solid #ef4444',borderRadius:6,padding:'2px 8px',color:'#ef4444',fontWeight:900,fontSize:'1.1rem',letterSpacing:'0.15em',pointerEvents:'none',userSelect:'none'}}>
                     مُحرَّر
                   </motion.div>
                   {caseData.autopsy.text.split('\n').filter(Boolean).map((line,i) => (
@@ -447,43 +439,27 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
         </div>
       )}
 
-      {/* ── شريط AP + بحث ── */}
+      {/* شريط AP + بحث */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
         <div style={{display:'flex',gap:14,alignItems:'center'}}>
-          <span style={{color:C.text,fontSize:'0.85rem'}}>
-            ⚡ <span style={{color:'#818cf8',fontWeight:700}}>{state.ap}</span> طاقة
-          </span>
-          <button onClick={() => {}} style={{color:'#a78bfa',background:'none',border:'none',cursor:'pointer',fontSize:'0.82rem'}}>
-            <FaBox style={{display:'inline',marginLeft:4}}/> {inventory.length} دليل
-          </button>
+          <span style={{color:C.text,fontSize:'0.85rem'}}>⚡ <span style={{color:'#818cf8',fontWeight:700}}>{state.ap}</span> طاقة</span>
+          <span style={{color:'#a78bfa',fontSize:'0.82rem'}}><FaBox style={{display:'inline',marginLeft:4}}/> {inventory.length} دليل</span>
         </div>
         <motion.button whileHover={{scale:1.04}} whileTap={{scale:0.97}}
           onClick={() => setSearchModalOpen(true)} disabled={state.ap<1}
-          style={{
-            background: state.ap<1?'rgba(31,41,55,0.5)':'linear-gradient(135deg,rgba(6,78,59,0.7),rgba(5,46,22,0.9))',
-            border:`1px solid ${state.ap<1?'#374151':'#10b981'}`,
-            color: state.ap<1?'#6b7280':'#6ee7b7', borderRadius:10, padding:'7px 14px',
-            fontWeight:700, fontSize:'0.82rem', cursor:state.ap<1?'not-allowed':'pointer',
-            display:'flex', alignItems:'center', gap:6,
-          }}>
+          style={{ background: state.ap<1?'rgba(31,41,55,0.5)':'linear-gradient(135deg,rgba(6,78,59,0.7),rgba(5,46,22,0.9))', border:`1px solid ${state.ap<1?'#374151':'#10b981'}`, color: state.ap<1?'#6b7280':'#6ee7b7', borderRadius:10, padding:'7px 14px', fontWeight:700, fontSize:'0.82rem', cursor:state.ap<1?'not-allowed':'pointer', display:'flex', alignItems:'center', gap:6 }}>
           <FaSearch style={{fontSize:'0.75rem'}}/> فحص المواقع (−1 AP)
         </motion.button>
       </div>
 
-      {/* ── الأزرار الرئيسية ── */}
+      {/* الأزرار الرئيسية */}
       {[
         { label:'عرض المشتبه بهم', icon:'👥', onClick:()=>setSuspectsModalOpen(true), color:'#818cf8', borderColor:'rgba(129,140,248,0.3)', bg:'rgba(49,46,129,0.2)' },
         { label:'غرفة التحقيق', icon:'🔦', onClick:()=>setInvestigationOpen(true), color:'#fbbf24', borderColor:'rgba(251,191,36,0.3)', bg:'rgba(120,53,15,0.2)' },
         { label:'توجيه الاتهام', icon:'⚖️', onClick:handleAccuse, color:'#f87171', borderColor:'rgba(248,113,113,0.35)', bg:'rgba(127,29,29,0.2)' },
       ].map((btn, i) => (
-        <motion.button key={i} whileHover={{scale:1.01}} whileTap={{scale:0.98}}
-          onClick={btn.onClick}
-          style={{
-            width:'100%', padding:'11px 16px', borderRadius:12, marginBottom:10,
-            border:`1px solid ${btn.borderColor}`, background:btn.bg,
-            color:btn.color, fontWeight:700, fontSize:'0.92rem', cursor:'pointer',
-            display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-          }}>
+        <motion.button key={i} whileHover={{scale:1.01}} whileTap={{scale:0.98}} onClick={btn.onClick}
+          style={{ width:'100%', padding:'11px 16px', borderRadius:12, marginBottom:10, border:`1px solid ${btn.borderColor}`, background:btn.bg, color:btn.color, fontWeight:700, fontSize:'0.92rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
           <span>{btn.icon}</span> {btn.label}
         </motion.button>
       ))}
@@ -492,12 +468,7 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
       {solution && (
         <>
           {Array.from({length:30}).map((_,i) => (
-            <div key={i} className="confetti-piece" style={{
-              left:`${Math.random()*100}%`,
-              background:['#f59e0b','#10b981','#3b82f6','#ef4444','#a855f7','#ec4899'][i%6],
-              width:`${6+Math.random()*8}px`, height:`${6+Math.random()*8}px`,
-              animationDuration:`${2+Math.random()*3}s`, animationDelay:`${Math.random()*2}s`,
-            }}/>
+            <div key={i} className="confetti-piece" style={{ left:`${Math.random()*100}%`, background:['#f59e0b','#10b981','#3b82f6','#ef4444','#a855f7','#ec4899'][i%6], width:`${6+Math.random()*8}px`, height:`${6+Math.random()*8}px`, animationDuration:`${2+Math.random()*3}s`, animationDelay:`${Math.random()*2}s` }}/>
           ))}
           <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.4}}
             style={{position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:16,background:'rgba(0,0,0,0.88)',backdropFilter:'blur(4px)'}}>
@@ -506,16 +477,10 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
               style={{background:'#0a0814',borderRadius:24,maxWidth:440,width:'100%',textAlign:'center',overflow:'hidden',border:'2px solid #f59e0b',animation:'pulseGold 2.5s ease-in-out infinite'}}>
               <div style={{background:'linear-gradient(90deg,#92400e,#f59e0b,#92400e)',height:5}}/>
               <div style={{padding:'24px 24px 32px'}}>
-                <motion.div initial={{scale:0,rotate:-30}} animate={{scale:1,rotate:0}}
-                  transition={{type:'spring',stiffness:200,damping:12,delay:0.35}}
-                  style={{fontSize:'3.5rem',lineHeight:1,marginBottom:8}}>🏆</motion.div>
-                <motion.h2 initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} transition={{delay:0.5}}
-                  style={{fontSize:'1.7rem',fontWeight:700,color:'#fbbf24',animation:'badgeGlow 2s ease-in-out infinite',marginBottom:16}}>
-                  تم حل القضية!
-                </motion.h2>
+                <motion.div initial={{scale:0,rotate:-30}} animate={{scale:1,rotate:0}} transition={{type:'spring',stiffness:200,damping:12,delay:0.35}} style={{fontSize:'3.5rem',lineHeight:1,marginBottom:8}}>🏆</motion.div>
+                <motion.h2 initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} transition={{delay:0.5}} style={{fontSize:'1.7rem',fontWeight:700,color:'#fbbf24',animation:'badgeGlow 2s ease-in-out infinite',marginBottom:16}}>تم حل القضية!</motion.h2>
                 {solution.image && (
-                  <motion.img src={solution.image} alt="القاتل"
-                    initial={{scale:0,opacity:0}} animate={{scale:1,opacity:1}} transition={{delay:0.6,type:'spring'}}
+                  <motion.img src={solution.image} alt="القاتل" initial={{scale:0,opacity:0}} animate={{scale:1,opacity:1}} transition={{delay:0.6,type:'spring'}}
                     style={{width:120,height:120,borderRadius:'50%',objectFit:'cover',border:'3px solid #f59e0b',margin:'0 auto 16px',display:'block',boxShadow:'0 0 20px #f59e0b88'}}/>
                 )}
                 {[{label:'🔪 القاتل',value:solution.culprit,color:'#f87171'},{label:'⚔️ الأداة',value:solution.weapon,color:'#fb923c'},{label:'💡 الدافع',value:solution.motive,color:'#facc15'}].map((row,i) => (
@@ -532,13 +497,11 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                   </motion.div>
                 )}
                 {solution.finalPoints && (
-                  <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1.2}}
-                    style={{color:'#fbbf24',fontWeight:700,margin:'8px 0 16px',fontSize:'0.95rem'}}>
+                  <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1.2}} style={{color:'#fbbf24',fontWeight:700,margin:'8px 0 16px',fontSize:'0.95rem'}}>
                     ⭐ نقاطك النهائية: {solution.finalPoints[playerId]||0}
                   </motion.div>
                 )}
-                <motion.button onClick={handleNewGame} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
-                  transition={{delay:1.35}} whileHover={{scale:1.04}} whileTap={{scale:0.97}}
+                <motion.button onClick={handleNewGame} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:1.35}} whileHover={{scale:1.04}} whileTap={{scale:0.97}}
                   style={{width:'100%',padding:12,borderRadius:12,background:'linear-gradient(135deg,#0e7490,#0891b2)',color:'white',fontWeight:700,fontSize:'1rem',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                   <FaRedo/> قضية جديدة
                 </motion.button>
@@ -551,8 +514,7 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
 
       {/* ── Suspects Modal ── */}
       {suspectsModalOpen && (
-        <motion.div initial={{opacity:0}} animate={{opacity:1}}
-          style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50,padding:16}}>
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50,padding:16}}>
           <motion.div initial={{scale:0.9,y:20}} animate={{scale:1,y:0}}
             style={{background:'linear-gradient(160deg,rgba(15,10,35,0.99),rgba(10,6,25,1))',borderRadius:20,padding:24,maxWidth:560,width:'100%',maxHeight:'80vh',border:`1px solid rgba(129,140,248,0.25)`,overflowY:'auto'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
@@ -561,64 +523,40 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {caseData.suspects.map(s => (
-                <motion.div key={s.id} whileHover={{scale:1.01}}
-                  style={{background:'rgba(49,46,129,0.2)',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(129,140,248,0.2)'}}>
+                <motion.div key={s.id} whileHover={{scale:1.01}} style={{background:'rgba(49,46,129,0.2)',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(129,140,248,0.2)'}}>
                   <p style={{color:'#e2e8f0',fontWeight:700,margin:'0 0 4px 0',fontSize:'0.95rem'}}>{s.name}</p>
                   <p style={{color:'#818cf8',fontSize:'0.78rem',margin:'0 0 4px 0'}}>العلاقة: {s.relationship}</p>
                   <p style={{color:'#6b7280',fontSize:'0.75rem',margin:0,fontStyle:'italic'}}>"{s.statement}"</p>
                 </motion.div>
               ))}
             </div>
-            <button onClick={()=>setSuspectsModalOpen(false)}
-              style={{width:'100%',marginTop:16,padding:'10px',borderRadius:12,background:'rgba(49,46,129,0.4)',border:'1px solid rgba(129,140,248,0.3)',color:'#a5b4fc',fontWeight:700,cursor:'pointer'}}>
-              إغلاق
-            </button>
+            <button onClick={()=>setSuspectsModalOpen(false)} style={{width:'100%',marginTop:16,padding:'10px',borderRadius:12,background:'rgba(49,46,129,0.4)',border:'1px solid rgba(129,140,248,0.3)',color:'#a5b4fc',fontWeight:700,cursor:'pointer'}}>إغلاق</button>
           </motion.div>
         </motion.div>
       )}
 
       {/* ── Investigation Modal ── */}
       {investigationOpen && (
-        <motion.div initial={{opacity:0}} animate={{opacity:1}}
-          style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',padding:16,
-                  background:'rgba(0,0,0,0.94)',backdropFilter:'blur(3px)'}}>
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',padding:16,background:'rgba(0,0,0,0.94)',backdropFilter:'blur(3px)'}}>
           <motion.div initial={{scale:0.88,y:30}} animate={{scale:1,y:0}} transition={{type:'spring',stiffness:200,damping:20}}
-            style={{
-              background:'linear-gradient(160deg,rgba(12,8,28,0.99),rgba(8,4,18,1))',
-              borderRadius:20, padding:20, maxWidth:580, width:'100%', maxHeight:'90vh',
-              border:'1px solid rgba(251,191,36,0.2)',
-              display:'flex', flexDirection:'column',
-              boxShadow:'0 0 60px rgba(251,191,36,0.05), inset 0 0 60px rgba(0,0,0,0.5)',
-            }}>
+            style={{ background:'linear-gradient(160deg,rgba(12,8,28,0.99),rgba(8,4,18,1))', borderRadius:20, padding:20, maxWidth:580, width:'100%', maxHeight:'90vh', border:'1px solid rgba(251,191,36,0.2)', display:'flex', flexDirection:'column', boxShadow:'0 0 60px rgba(251,191,36,0.05), inset 0 0 60px rgba(0,0,0,0.5)' }}>
 
-            {/* header */}
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,
-                          borderBottom:'1px solid rgba(251,191,36,0.1)',paddingBottom:12}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,borderBottom:'1px solid rgba(251,191,36,0.1)',paddingBottom:12}}>
               <div style={{display:'flex',alignItems:'center',gap:8}}>
                 <span style={{fontSize:'1.2rem'}}>🔦</span>
                 <h3 style={{color:'#fbbf24',fontWeight:700,fontSize:'1rem',margin:0,letterSpacing:'0.05em'}}>
-                  {selectedSuspect ? `التحقيق مع ${caseData.suspects.find(s=>s.id===selectedSuspect)?.name}` : 'اختر المشتبه به'}
+                  {selectedSuspect ? `التحقيق مع ${getSuspect(selectedSuspect)?.name}` : 'اختر المشتبه به'}
                 </h3>
               </div>
-              <button onClick={closeInvestigation}
-                style={{color:'#6b7280',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,width:30,height:30,cursor:'pointer',fontSize:'1rem',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                ✕
-              </button>
+              <button onClick={closeInvestigation} style={{color:'#6b7280',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,width:30,height:30,cursor:'pointer',fontSize:'1rem',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
             </div>
 
             {!selectedSuspect ? (
-              /* قائمة المشتبهين */
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                 {caseData.suspects.map(s => (
                   <motion.button key={s.id} whileHover={{scale:1.03,borderColor:'rgba(251,191,36,0.5)'}} whileTap={{scale:0.97}}
-                    onClick={() => startInvestigation(s.id)}
-                    disabled={investigatingSuspect !== null}
-                    style={{
-                      background:'linear-gradient(135deg,rgba(30,20,60,0.8),rgba(20,12,40,0.9))',
-                      border:'1px solid rgba(251,191,36,0.2)', borderRadius:14, padding:'14px 12px',
-                      color:'#e2d9f3', fontWeight:700, cursor: investigatingSuspect?'not-allowed':'pointer',
-                      opacity: investigatingSuspect?0.5:1, textAlign:'center',
-                    }}>
+                    onClick={() => startInvestigation(s.id)} disabled={investigatingSuspect !== null}
+                    style={{ background:'linear-gradient(135deg,rgba(30,20,60,0.8),rgba(20,12,40,0.9))', border:'1px solid rgba(251,191,36,0.2)', borderRadius:14, padding:'14px 12px', color:'#e2d9f3', fontWeight:700, cursor: investigatingSuspect?'not-allowed':'pointer', opacity: investigatingSuspect?0.5:1, textAlign:'center' }}>
                     <div style={{fontSize:'1.5rem',marginBottom:4}}>🕵️</div>
                     <div style={{fontSize:'0.85rem',color:'#e2d9f3'}}>{s.name}</div>
                     <div style={{fontSize:'0.7rem',color:'#fbbf24',marginTop:4}}>
@@ -628,62 +566,31 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                 ))}
               </div>
             ) : (
-              /* شاشة الحوار */
               <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
-                {/* زرار رجوع + معلومات */}
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
                   <button onClick={()=>{setSelectedSuspect(null);if(typingTimeoutRef.current)clearTimeout(typingTimeoutRef.current);setIsTyping(false);}}
-                    style={{color:'#fbbf24',background:'none',border:'none',cursor:'pointer',fontSize:'0.8rem',display:'flex',alignItems:'center',gap:4}}>
-                    ← العودة
-                  </button>
-                  <span style={{color:'#6b7280',fontSize:'0.7rem'}}>
-                    {caseData.suspects.find(s=>s.id===selectedSuspect)?.relationship}
-                  </span>
+                    style={{color:'#fbbf24',background:'none',border:'none',cursor:'pointer',fontSize:'0.8rem',display:'flex',alignItems:'center',gap:4}}>← العودة</button>
+                  <span style={{color:'#6b7280',fontSize:'0.7rem'}}>{getSuspect(selectedSuspect)?.relationship}</span>
                 </div>
 
-                {/* منطقة المحادثة */}
-                <div style={{
-                  flex:1, overflowY:'auto', padding:'12px', borderRadius:12, marginBottom:10,
-                  background:'rgba(5,3,15,0.8)',
-                  border:'1px solid rgba(251,191,36,0.08)',
-                  display:'flex', flexDirection:'column', gap:8, maxHeight:320,
-                }}>
+                <div style={{ flex:1, overflowY:'auto', padding:'12px', borderRadius:12, marginBottom:10, background:'rgba(5,3,15,0.8)', border:'1px solid rgba(251,191,36,0.08)', display:'flex', flexDirection:'column', gap:8, maxHeight:320 }}>
                   {currentMessages.map((msg, idx) => (
-                    <motion.div key={idx}
-                      initial={{opacity:0, x:msg.type==='player'?30:-30, y:5}}
-                      animate={{opacity:1, x:0, y:0}}
-                      transition={{duration:0.35, ease:'easeOut'}}
+                    <motion.div key={idx} initial={{opacity:0, x:msg.type==='player'?30:-30, y:5}} animate={{opacity:1, x:0, y:0}} transition={{duration:0.35, ease:'easeOut'}}
                       style={{display:'flex', justifyContent:msg.type==='player'?'flex-end':'flex-start'}}>
                       <div style={{
                         maxWidth:'78%', padding:'9px 13px', borderRadius: msg.type==='player'?'14px 14px 4px 14px':'14px 14px 14px 4px',
-                        background: msg.type==='player'
-                          ? 'linear-gradient(135deg,rgba(109,40,217,0.7),rgba(76,29,149,0.8))'
-                          : 'linear-gradient(135deg,rgba(30,20,50,0.9),rgba(20,14,40,0.95))',
-                        border: msg.type==='player'
-                          ? '1px solid rgba(167,139,250,0.3)'
-                          : '1px solid rgba(251,191,36,0.12)',
-                        color: msg.type==='player'?'#ddd6fe':'#d1c9e8',
-                        fontSize:'0.83rem', lineHeight:1.6,
+                        background: msg.type==='player' ? 'linear-gradient(135deg,rgba(109,40,217,0.7),rgba(76,29,149,0.8))' : 'linear-gradient(135deg,rgba(30,20,50,0.9),rgba(20,14,40,0.95))',
+                        border: msg.type==='player' ? '1px solid rgba(167,139,250,0.3)' : '1px solid rgba(251,191,36,0.12)',
+                        color: msg.type==='player'?'#ddd6fe':'#d1c9e8', fontSize:'0.83rem', lineHeight:1.6,
                         boxShadow: msg.type==='player'?'0 2px 12px rgba(109,40,217,0.2)':'0 2px 8px rgba(0,0,0,0.3)',
-                      }}>
-                        {msg.text}
-                      </div>
+                      }}>{msg.text}</div>
                     </motion.div>
                   ))}
-
-                  {/* typing indicator */}
                   {isTyping && (
                     <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{display:'flex',justifyContent:'flex-start'}}>
-                      <div style={{
-                        padding:'10px 14px', borderRadius:'14px 14px 14px 4px',
-                        background:'linear-gradient(135deg,rgba(30,20,50,0.9),rgba(20,14,40,0.95))',
-                        border:'1px solid rgba(251,191,36,0.12)',
-                        display:'flex', gap:5, alignItems:'center',
-                      }}>
+                      <div style={{ padding:'10px 14px', borderRadius:'14px 14px 14px 4px', background:'linear-gradient(135deg,rgba(30,20,50,0.9),rgba(20,14,40,0.95))', border:'1px solid rgba(251,191,36,0.12)', display:'flex', gap:5, alignItems:'center' }}>
                         {[0,300,600].map(delay => (
-                          <motion.span key={delay}
-                            animate={{y:[-3,0,-3]}} transition={{duration:0.7,repeat:Infinity,delay:delay/1000}}
-                            style={{width:6,height:6,background:'#7c6fa0',borderRadius:'50%',display:'block'}}/>
+                          <motion.span key={delay} animate={{y:[-3,0,-3]}} transition={{duration:0.7,repeat:Infinity,delay:delay/1000}} style={{width:6,height:6,background:'#7c6fa0',borderRadius:'50%',display:'block'}}/>
                         ))}
                       </div>
                     </motion.div>
@@ -691,7 +598,7 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                   <div ref={chatEndRef}/>
                 </div>
 
-                {/* الاختيارات */}
+                {/* الاختيارات — مع شجرة الحوار المشروطة (prereqNode) */}
                 {currentNodeId && !isTyping && (
                   <div style={{display:'flex',flexDirection:'column',gap:6}}>
                     {(() => {
@@ -710,53 +617,45 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                         );
                       }
 
-                      const freeOptions = node.options.filter(o => !o.requiredEvidence);
-                      const unlockedConfronts = node.options.filter(o => o.requiredEvidence && inventory.includes(o.requiredEvidence));
-                      const lockedConfronts = node.options.filter(o => o.requiredEvidence && !inventory.includes(o.requiredEvidence));
+                      // NEW: تطبيق شرط شجرة الحوار prereqNode أولاً
+                      const treeUnlockedOptions = node.options.filter(o => isOptionUnlockedByTree(o, selectedSuspect));
+
+                      const freeOptions = treeUnlockedOptions.filter(o => !o.requiredEvidence);
+                      const unlockedConfronts = treeUnlockedOptions.filter(o => o.requiredEvidence && inventory.includes(o.requiredEvidence));
+                      const lockedConfronts = treeUnlockedOptions.filter(o => o.requiredEvidence && !inventory.includes(o.requiredEvidence));
 
                       return (
                         <>
-                          {/* أسئلة عادية */}
                           {freeOptions.map((opt, idx) => (
-                            <motion.button key={`f-${idx}`}
-                              whileHover={{scale:1.02, borderColor:'rgba(167,139,250,0.5)'}}
-                              whileTap={{scale:0.97}}
+                            <motion.button key={`f-${idx}`} whileHover={{scale:1.02, borderColor:'rgba(167,139,250,0.5)'}} whileTap={{scale:0.97}}
                               onClick={() => handleChooseOption(selectedSuspect, opt)}
-                              style={{
-                                width:'100%', padding:'9px 14px', borderRadius:10, textAlign:'right',
-                                background:'rgba(30,20,55,0.7)', border:'1px solid rgba(99,60,180,0.25)',
-                                color:'#c4b5fd', fontSize:'0.82rem', cursor:'pointer', fontWeight:500,
-                              }}>
-                              {opt.text}
-                            </motion.button>
-                          ))}
-
-                          {/* مواجهات مفتوحة بدليل — بلون مميز */}
-                          {unlockedConfronts.map((opt, idx) => (
-                            <motion.button key={`u-${idx}`}
-                              whileHover={{scale:1.02}}
-                              whileTap={{scale:0.97}}
-                              onClick={() => handleChooseOption(selectedSuspect, opt)}
-                              style={{
-                                width:'100%', padding:'9px 14px', borderRadius:10, textAlign:'right',
-                                background:'linear-gradient(135deg,rgba(120,53,15,0.5),rgba(92,38,8,0.6))',
-                                border:'1px solid rgba(251,191,36,0.4)',
-                                color:'#fde68a', fontSize:'0.82rem', cursor:'pointer', fontWeight:700,
-                                animation:'evidencePing 1.5s ease-in-out 2',
-                                display:'flex', alignItems:'center', gap:8,
-                              }}>
-                              <span style={{fontSize:'0.9rem'}}>⚡</span>
+                              style={{ width:'100%', padding:'9px 14px', borderRadius:10, textAlign:'right', background:'rgba(30,20,55,0.7)', border:'1px solid rgba(99,60,180,0.25)', color:'#c4b5fd', fontSize:'0.82rem', cursor:'pointer', fontWeight:500, display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
                               <span>{opt.text}</span>
+                              {opt.apCost > 0 && (
+                                <span style={{display:'flex',alignItems:'center',gap:3,color:'#fbbf24',fontSize:'0.7rem',fontWeight:700,flexShrink:0}}>
+                                  <FaBolt style={{fontSize:'0.65rem'}}/> {opt.apCost}
+                                </span>
+                              )}
                             </motion.button>
                           ))}
 
-                          {/* مواجهات مقفولة — مخفية تماماً */}
-                          {/* لا نعرض أي حاجة للاختيارات المقفولة */}
+                          {unlockedConfronts.map((opt, idx) => (
+                            <motion.button key={`u-${idx}`} whileHover={{scale:1.02}} whileTap={{scale:0.97}}
+                              onClick={() => handleChooseOption(selectedSuspect, opt)}
+                              style={{ width:'100%', padding:'9px 14px', borderRadius:10, textAlign:'right', background:'linear-gradient(135deg,rgba(120,53,15,0.5),rgba(92,38,8,0.6))', border:'1px solid rgba(251,191,36,0.4)', color:'#fde68a', fontSize:'0.82rem', cursor:'pointer', fontWeight:700, animation:'evidencePing 1.5s ease-in-out 2', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+                              <span style={{display:'flex',alignItems:'center',gap:8}}>
+                                <span style={{fontSize:'0.9rem'}}>⚡</span><span>{opt.text}</span>
+                              </span>
+                              {opt.apCost > 0 && (
+                                <span style={{display:'flex',alignItems:'center',gap:3,color:'#fde68a',fontSize:'0.7rem',flexShrink:0}}>
+                                  <FaBolt style={{fontSize:'0.65rem'}}/> {opt.apCost}
+                                </span>
+                              )}
+                            </motion.button>
+                          ))}
 
                           {freeOptions.length === 0 && unlockedConfronts.length === 0 && lockedConfronts.length > 0 && (
-                            <p style={{color:'#4b4568',fontSize:'0.75rem',textAlign:'center',padding:'6px 0'}}>
-                              ابحث عن أدلة لفتح أسئلة المواجهة
-                            </p>
+                            <p style={{color:'#4b4568',fontSize:'0.75rem',textAlign:'center',padding:'6px 0'}}>ابحث عن أدلة لفتح أسئلة المواجهة</p>
                           )}
                         </>
                       );
@@ -769,23 +668,25 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
         </motion.div>
       )}
 
-      {/* ── Search Modal ── */}
+      {/* ── Search Modal — مع نظام الأماكن المخفية ── */}
       {searchModalOpen && (
-        <motion.div initial={{opacity:0}} animate={{opacity:1}}
-          style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50,padding:16}}>
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50,padding:16}}>
           <motion.div initial={{scale:0.9,y:20}} animate={{scale:1,y:0}}
             style={{background:'linear-gradient(160deg,rgba(5,20,12,0.99),rgba(3,12,8,1))',borderRadius:20,padding:24,maxWidth:420,width:'100%',border:'1px solid rgba(16,185,129,0.25)'}}>
-            <h3 style={{color:'#6ee7b7',fontWeight:700,fontSize:'1rem',textAlign:'center',marginBottom:16}}>🔍 اختر موقع البحث</h3>
+            <h3 style={{color:'#6ee7b7',fontWeight:700,fontSize:'1rem',textAlign:'center',marginBottom:6}}>🔍 اختر موقع البحث</h3>
+            <p style={{color:'#4b5563',fontSize:'0.7rem',textAlign:'center',marginBottom:16}}>تحدث مع المشتبهين لاكتشاف أماكن جديدة</p>
             {searching ? (
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'32px 0'}}>
-                <motion.div animate={{rotate:360}} transition={{duration:2,repeat:Infinity,ease:'linear'}}
-                  style={{fontSize:'2.5rem',color:'#10b981'}}>🔍</motion.div>
+                <motion.div animate={{rotate:360}} transition={{duration:2,repeat:Infinity,ease:'linear'}} style={{fontSize:'2.5rem',color:'#10b981'}}>🔍</motion.div>
                 <p style={{color:'#9ca3af',marginTop:16,fontSize:'0.9rem'}}>جاري فحص الموقع...</p>
               </div>
             ) : (
               <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                {caseData.locations && Object.entries(caseData.locations).map(([key,loc]) => (
-                  <motion.button key={key} whileHover={{scale:1.02}} whileTap={{scale:0.97}}
+                {Object.entries(visibleLocations).map(([key,loc]) => (
+                  <motion.button key={key}
+                    initial={loc.hidden ? {opacity:0} : false}
+                    animate={{opacity:1, animation: loc.hidden ? 'fogReveal 0.6s ease forwards' : 'none'}}
+                    whileHover={{scale:1.02}} whileTap={{scale:0.97}}
                     onClick={() => handleSearch(key)}
                     disabled={searchedLocations.includes(key)}
                     style={{
@@ -794,14 +695,16 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                       color: searchedLocations.includes(key)?'#4b5563':'#6ee7b7',
                       borderRadius:12, padding:'10px 14px', textAlign:'right',
                       cursor: searchedLocations.includes(key)?'not-allowed':'pointer',
-                      fontWeight:600, fontSize:'0.85rem',
-                      display:'flex', alignItems:'center', gap:8,
+                      fontWeight:600, fontSize:'0.85rem', display:'flex', alignItems:'center', gap:8,
                     }}>
                     <FaMapPin style={{opacity: searchedLocations.includes(key)?0.4:1}}/>
                     {loc.name}
                     {searchedLocations.includes(key) && <span style={{marginRight:'auto',fontSize:'0.7rem',opacity:0.6}}>✓ تم الفحص</span>}
                   </motion.button>
                 ))}
+                {Object.keys(visibleLocations).length === 0 && (
+                  <p style={{color:'#4b5563',fontSize:'0.8rem',textAlign:'center',padding:'12px 0'}}>لا توجد أماكن متاحة بعد</p>
+                )}
                 <button onClick={()=>setSearchModalOpen(false)}
                   style={{marginTop:8,padding:'9px',borderRadius:12,background:'rgba(127,29,29,0.3)',border:'1px solid rgba(239,68,68,0.25)',color:'#fca5a5',fontWeight:700,cursor:'pointer'}}>
                   إلغاء
@@ -812,21 +715,14 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
         </motion.div>
       )}
 
-      {/* ── Accusation Modal ── */}
+      {/* ── Accusation Modal — قوائم اختيار ذكية مبنية على الأدلة ── */}
       {accusationPhase && (
-        <motion.div initial={{opacity:0}} animate={{opacity:1}}
-          style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50,padding:16}}>
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50,padding:16}}>
           <motion.div initial={{scale:0.88,y:30}} animate={{scale:1,y:0}} transition={{type:'spring',stiffness:200,damping:20}}
-            style={{
-              background:'linear-gradient(160deg,rgba(30,10,10,0.99),rgba(20,5,5,1))',
-              borderRadius:20, padding:24, maxWidth:420, width:'100%',
-              border:'2px solid rgba(239,68,68,0.4)',
-              boxShadow:'0 0 40px rgba(239,68,68,0.1)',
-            }}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+            style={{ background:'linear-gradient(160deg,rgba(30,10,10,0.99),rgba(20,5,5,1))', borderRadius:20, padding:24, maxWidth:420, width:'100%', border:'2px solid rgba(239,68,68,0.4)', boxShadow:'0 0 40px rgba(239,68,68,0.1)' }}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
               <h2 style={{color:'#fbbf24',fontWeight:700,fontSize:'1.2rem',margin:0}}>⚖️ توجيه الاتهام</h2>
-              <button onClick={()=>setAccusationPhase(false)}
-                style={{color:'#6b7280',background:'none',border:'none',cursor:'pointer',fontSize:'1.2rem'}}>✕</button>
+              <button onClick={()=>setAccusationPhase(false)} style={{color:'#6b7280',background:'none',border:'none',cursor:'pointer',fontSize:'1.2rem'}}>✕</button>
             </div>
 
             {hasVoted ? (
@@ -836,46 +732,61 @@ const MafiosaGame = ({ socket, roomCode, playerId, isAdmin }) => {
                 <p style={{color:'#9ca3af',margin:0,fontSize:'0.88rem'}}>في انتظار باقي المحققين...</p>
               </div>
             ) : (
-              <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                <p style={{color:'#9ca3af',fontSize:'0.8rem',margin:'0 0 4px 0',textAlign:'center'}}>
-                  اكتب إجاباتك بناءً على ما جمعته من أدلة
+              <div style={{display:'flex',flexDirection:'column',gap:14}}>
+                <p style={{color:'#9ca3af',fontSize:'0.78rem',margin:0,textAlign:'center'}}>
+                  لا تظهر الخيارات إلا بعد اكتشافها أثناء التحقيق
                 </p>
 
-                {[
-                  { label:'🔪 من هو القاتل؟', key:'suspect', placeholder:'اكتب اسم المشتبه به...', color:'#f87171' },
-                  { label:'⚔️ ما هي أداة الجريمة؟', key:'weapon', placeholder:'اكتب أداة الجريمة...', color:'#fb923c' },
-                  { label:'💡 ما هو الدافع؟', key:'motive', placeholder:'اكتب الدافع وراء الجريمة...', color:'#fbbf24' },
-                ].map(field => (
-                  <div key={field.key}>
-                    <label style={{color:field.color,fontSize:'0.78rem',fontWeight:700,display:'block',marginBottom:5}}>
-                      {field.label}
-                    </label>
-                    <input
-                      type="text"
-                      value={vote[field.key]}
-                      onChange={e => setVote({...vote,[field.key]:e.target.value})}
-                      placeholder={field.placeholder}
-                      style={{
-                        width:'100%', boxSizing:'border-box',
-                        padding:'9px 13px', borderRadius:10, fontSize:'0.85rem',
-                        background:'rgba(20,10,10,0.8)',
-                        border:`1px solid ${vote[field.key]?'rgba(239,68,68,0.4)':'rgba(75,50,50,0.5)'}`,
-                        color:'#e2d9f3', outline:'none',
-                      }}
-                    />
-                  </div>
-                ))}
+                {/* القاتل */}
+                <div>
+                  <label style={{color:'#f87171',fontSize:'0.78rem',fontWeight:700,display:'block',marginBottom:5}}>🔪 من هو القاتل؟</label>
+                  <select value={vote.suspect} onChange={e=>setVote({...vote,suspect:e.target.value})}
+                    style={{ width:'100%', boxSizing:'border-box', padding:'9px 13px', borderRadius:10, fontSize:'0.85rem', background:'rgba(20,10,10,0.8)', border:`1px solid ${vote.suspect?'rgba(239,68,68,0.4)':'rgba(75,50,50,0.5)'}`, color:'#e2d9f3', outline:'none' }}>
+                    <option value="">اختر المشتبه به...</option>
+                    {suspectOptions.map(name => <option key={name} value={name}>{name}</option>)}
+                  </select>
+                </div>
 
-                <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}}
-                  onClick={handleVoteSubmit}
-                  disabled={!vote.suspect.trim()||!vote.weapon.trim()||!vote.motive.trim()}
+                {/* الأداة */}
+                <div>
+                  <label style={{color:'#fb923c',fontSize:'0.78rem',fontWeight:700,display:'block',marginBottom:5}}>⚔️ ما هي أداة الجريمة؟</label>
+                  {weaponOptions.length > 0 ? (
+                    <select value={vote.weapon} onChange={e=>setVote({...vote,weapon:e.target.value})}
+                      style={{ width:'100%', boxSizing:'border-box', padding:'9px 13px', borderRadius:10, fontSize:'0.85rem', background:'rgba(20,10,10,0.8)', border:`1px solid ${vote.weapon?'rgba(239,68,68,0.4)':'rgba(75,50,50,0.5)'}`, color:'#e2d9f3', outline:'none' }}>
+                      <option value="">اختر الأداة...</option>
+                      {weaponOptions.map(w => <option key={w} value={w}>{w}</option>)}
+                    </select>
+                  ) : (
+                    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 13px', borderRadius:10, background:'rgba(31,41,55,0.4)', border:'1px solid #374151', color:'#6b7280', fontSize:'0.78rem' }}>
+                      <FaLock style={{fontSize:'0.7rem'}}/> لم تكتشف أي دليل على أداة الجريمة بعد
+                    </div>
+                  )}
+                </div>
+
+                {/* الدافع */}
+                <div>
+                  <label style={{color:'#fbbf24',fontSize:'0.78rem',fontWeight:700,display:'block',marginBottom:5}}>💡 ما هو الدافع؟</label>
+                  {motiveOptions.length > 0 ? (
+                    <select value={vote.motive} onChange={e=>setVote({...vote,motive:e.target.value})}
+                      style={{ width:'100%', boxSizing:'border-box', padding:'9px 13px', borderRadius:10, fontSize:'0.85rem', background:'rgba(20,10,10,0.8)', border:`1px solid ${vote.motive?'rgba(239,68,68,0.4)':'rgba(75,50,50,0.5)'}`, color:'#e2d9f3', outline:'none' }}>
+                      <option value="">اختر الدافع...</option>
+                      {motiveOptions.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  ) : (
+                    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 13px', borderRadius:10, background:'rgba(31,41,55,0.4)', border:'1px solid #374151', color:'#6b7280', fontSize:'0.78rem' }}>
+                      <FaLock style={{fontSize:'0.7rem'}}/> لم تكشف أي دافع بعد — أكمل حوارات المواجهة
+                    </div>
+                  )}
+                </div>
+
+                <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}} onClick={handleVoteSubmit}
+                  disabled={!vote.suspect||!vote.weapon||!vote.motive}
                   style={{
                     marginTop:4, padding:'11px', borderRadius:12, fontWeight:700, fontSize:'0.95rem',
-                    background: (!vote.suspect.trim()||!vote.weapon.trim()||!vote.motive.trim())
-                      ?'rgba(75,50,50,0.4)':'linear-gradient(135deg,rgba(185,28,28,0.8),rgba(153,27,27,0.9))',
+                    background: (!vote.suspect||!vote.weapon||!vote.motive) ? 'rgba(75,50,50,0.4)' : 'linear-gradient(135deg,rgba(185,28,28,0.8),rgba(153,27,27,0.9))',
                     border:'1px solid rgba(239,68,68,0.4)',
-                    color: (!vote.suspect.trim()||!vote.weapon.trim()||!vote.motive.trim())?'#6b7280':'#fca5a5',
-                    cursor: (!vote.suspect.trim()||!vote.weapon.trim()||!vote.motive.trim())?'not-allowed':'pointer',
+                    color: (!vote.suspect||!vote.weapon||!vote.motive)?'#6b7280':'#fca5a5',
+                    cursor: (!vote.suspect||!vote.weapon||!vote.motive)?'not-allowed':'pointer',
                   }}>
                   تأكيد الاتهام
                 </motion.button>

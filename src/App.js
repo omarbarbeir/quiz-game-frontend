@@ -3,10 +3,39 @@ import io from 'socket.io-client';
 import AdminPanel from './components/AdminPanel';
 import PlayerScreen from './components/PlayerScreen';
 import RoomJoin from './components/RoomJoin';
-import Whiteboard from './components/Whiteboard';
+// import Whiteboard from './components/Whiteboard';
 import categories from './data/categories';
 import questions from './data/questions';
+import DigitalDetectiveGame from './components/DigitalDetectiveGame';
+import MovieTacToe from './components/MovieTacToe';
+import HorrorGame from './components/HorrorGame';
+import CivilRegistryGame from './components/CivilRegistryGame';
 import './index.css';
+import UrbexApp from './components/UrbexApp'
+import CourtGame from './components/CourtGame';
+import BankElHazGame from './components/BankElHazGame';
+import TrapOpponent from './components/TrapOpponent';
+import GuessOpponent from './components/GuessOpponent';
+import HeadsUp from './components/HeadsUp';
+import MovieQuiz from './components/MovieQuiz';
+import Investigation from './components/Investigation';
+import Codenames from './components/Codenames';
+import Taboo from './components/Taboo';
+import Basra from './components/Basra';
+import Bank from './components/Bank';
+import Shayeb from './components/Shayeb';
+import Crazy8 from './components/Crazy8';
+import Solitaire from './components/Solitaire';
+import Spider from './components/Spider';
+import MemoryGrid from './components/MemoryGrid';
+import Chess from './components/Chess';
+import Backgammon from './components/Backgammon';
+import SnakesLadders from './components/SnakesLadders';
+// import EscapeRoomApp from './components/EscapeRoom/EscapeRoomApp';
+import SwordRound from './components/SwordRound';
+import BracketRound from './components/BracketRound';
+import MainMenu from './components/EscapeRoom/MainMenu';
+import StoryGame from './components/EscapeRoom/StoryGame';
 
 const SOCKET_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3001' 
@@ -41,6 +70,9 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [cardGameState, setCardGameState] = useState(null);
+  const [currentGame, setCurrentGame] = useState(null);
+  const [kotshinaMode, setKotshinaMode] = useState('basra');   // ✅ طور كوتشينة الحالي
+  const [selectedStoryId, setSelectedStoryId] = useState(null);
 
   // Session & unload effects...
   useEffect(() => {
@@ -78,9 +110,8 @@ function App() {
 
 
   useEffect(() => {
-    // استقبال قائمة اللاعبين المحدثة بالنقاط الجديدة من السيرفر
     socket.on('update_players', (updatedPlayers) => {
-      setPlayers(updatedPlayers); // هنا setPlayers هتعمل بدون مشاكل
+      setPlayers(updatedPlayers);
     });
 
     return () => {
@@ -94,15 +125,22 @@ function App() {
     socket.on('disconnect', () => console.log('Disconnected'));
     socket.on('connect_error', (error) => console.error('Connection error:', error));
 
-    const handleRoomCreated = (code) => {
+    const handleRoomCreated = ({ roomCode: code, adminPlayer }) => {
       setRoomCode(code);
+      setPlayerId(adminPlayer.id);      // ✅ playerId حقيقي
+      setPlayerName(adminPlayer.name);  // ✅ الاسم اللي دخّله
       setIsAdmin(true);
       setGameStatus('lobby');
       setShowJoinScreen(false);
-      setPlayers([{ id: `admin_${Date.now()}`, name: "Quiz Master", score: 0, isAdmin: true }]);
+      setPlayers([adminPlayer]);        // ✅ السيرفر بعت adminPlayer
     };
     
-    const handlePlayerJoined = (newPlayer) => setPlayers(prev => [...prev, newPlayer]);
+    const handlePlayerJoined = (newPlayer) => {
+      setPlayers(prev => {
+        if (prev.some(p => p.id === newPlayer.id)) return prev;
+        return [...prev, newPlayer];
+      });
+    };
     
     const handlePlayerLeft = (leftPlayerId) => {
       setPlayers(prev => prev.filter(p => p.id !== leftPlayerId));
@@ -122,10 +160,9 @@ function App() {
       setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
     };
 
-    // 🔥 1. دالة معالجة سكور الجاسوس (جديد)
     const handleSpyVotingResults = (data) => {
       if (data && data.players) {
-        setPlayers(data.players); // تحديث وحفظ النقاط لكل اللاعيبة
+        setPlayers(data.players);
       }
     };
     
@@ -135,6 +172,12 @@ function App() {
     };
     
     const handleQuestionChanged = (question) => {
+       console.log('🎵 وصل:', {
+        category: question?.category,
+        hasAudio: !!question?.audio,
+        hasAudio2: !!question?.audio2,
+        id: question?.id,
+      });
       setCurrentQuestion(question);
       setActivePlayer(null);
       setBuzzerLocked(false);
@@ -144,8 +187,9 @@ function App() {
     const handleGameEnded = () => setGameStatus('ended');
     
     const handleRoomClosed = () => {
-      alert('The room has been closed by the admin.');
+      alert('المسؤول أغلق الغرفة. يلا نرجع للصفحة الرئيسية!');
       resetGame();
+      setShowJoinScreen(true);
     };
     
     const handlePlayerDisconnected = (data) => {
@@ -170,14 +214,48 @@ function App() {
       }
     };
 
-    
+    const handleStartDigitalDetective = () => {
+      setCurrentGame('digital_detective');
+      setCurrentQuestion({ 
+        id: 'digital_detective', 
+        category: 'digital_detective', 
+        text: 'المحقق الرقمي', 
+        answer: '' 
+      });
+      setGameStatus('playing');
+    };
+
+    // ✅ تبديل طور كوتشينة (بصرة ↔ بنك)
+    const handleKotshinaModeChanged = ({ mode }) => {
+      setKotshinaMode(mode);
+    };
+    socket.on('kotshina_mode_changed', handleKotshinaModeChanged);
+
+    const handleGameLaunched = ({ gameId }) => {
+      // ✅ غرفة الهروب → نفتح بوابة القصص، مش القصة نفسها
+      if (gameId === 'escape_room') {
+        setCurrentGame('escape_room_hub');
+        return;
+      }
+      setCurrentGame(gameId);
+      setGameStatus('playing');
+    };
+    const handleGameClosed = () => {
+      setCurrentGame(null);
+      setSelectedCategory(null);
+      setSelectedSubcategory(null);
+      setCurrentQuestion(null);
+      setCardGameState(null);
+      setGameStatus('playing');
+      setActivePlayer(null);
+      setBuzzerLocked(false);
+    };
 
     socket.on('room_created', handleRoomCreated);
     socket.on('player_joined', handlePlayerJoined);
     socket.on('player_left', handlePlayerLeft);
     socket.on('player_buzzed', handlePlayerBuzzed);
     socket.on('update_score', handleUpdateScore);
-    // 🔥 2. تشغيل الاستماع لحدث الجاسوس (جديد)
     socket.on('spy_voting_results', handleSpyVotingResults);
     socket.on('reset_buzzer', handleResetBuzzer);
     socket.on('question_changed', handleQuestionChanged);
@@ -186,6 +264,9 @@ function App() {
     socket.on('player_disconnected', handlePlayerDisconnected);
     socket.on('player_photo_question', handlePlayerPhotoQuestion);
     socket.on('card_game_state_update', handleCardGameStateUpdate);
+    socket.on('start_digital_detective', handleStartDigitalDetective);
+    socket.on('game_launched', handleGameLaunched);
+    socket.on('game_closed', handleGameClosed);
 
     return () => {
       socket.off('connect'); socket.off('disconnect'); socket.off('connect_error');
@@ -194,7 +275,6 @@ function App() {
       socket.off('player_left', handlePlayerLeft);
       socket.off('player_buzzed', handlePlayerBuzzed);
       socket.off('update_score', handleUpdateScore);
-      // 🔥 3. تنظيف الحدث عند الخروج (جديد)
       socket.off('spy_voting_results', handleSpyVotingResults);
       socket.off('reset_buzzer', handleResetBuzzer);
       socket.off('question_changed', handleQuestionChanged);
@@ -203,10 +283,16 @@ function App() {
       socket.off('player_disconnected', handlePlayerDisconnected);
       socket.off('player_photo_question', handlePlayerPhotoQuestion);
       socket.off('card_game_state_update', handleCardGameStateUpdate);
+      socket.off('start_digital_detective', handleStartDigitalDetective);
+      socket.off('game_launched', handleGameLaunched);
+      socket.off('game_closed', handleGameClosed);
+      socket.off('kotshina_mode_changed', handleKotshinaModeChanged);   // ✅ التنظيف في مكانه الصح
     };
   }, [activePlayer, roomCode, playerId]);
 
-  const createRoom = () => socket.emit('create_room');
+  const createRoom = (adminName) => {
+    socket.emit('create_room', { playerName: adminName });
+  };
 
   const joinRoom = (code, name) => {
     if (code && name) {
@@ -246,7 +332,6 @@ function App() {
     setBuzzerLocked(false);
   };
 
-  // Shuffle helper
   const shuffleArray = (arr) => {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -256,7 +341,6 @@ function App() {
     return a;
   };
 
-  // ===== WHOAMI ROUND (unique photos) =====
   const startWhoamiRound = (subcategoryId) => {
     const photoQuestions = questions['random-photos']?.[subcategoryId];
     if (!photoQuestions || photoQuestions.length === 0) return;
@@ -277,10 +361,8 @@ function App() {
       }
     }));
 
-    // Send the whole assignments array to the server
     socket.emit('whoami_start', { roomCode, assignments });
 
-    // Admin summary
     setCurrentQuestion({
       id: 'whoami',
       category: 'whoami',
@@ -294,7 +376,6 @@ function App() {
     setCardGameState(null);
   };
 
-  // ===== SPY ROUND (admin sees only word) =====
   const startSpyRound = () => {
     const words = questions.spyWords;
     if (!words || words.length === 0) return;
@@ -319,7 +400,6 @@ function App() {
 
     socket.emit('spy_start', { roomCode, assignments });
 
-    // Admin sees word only
     setCurrentQuestion({
       id: 'spy',
       category: 'spy',
@@ -333,31 +413,22 @@ function App() {
     setCardGameState(null);
   };
 
+
+
+
   const playRandomQuestion = () => {
     if (!selectedCategory) return;
     const mainCat = categories.find(c => c.id === selectedCategory);
     if (!mainCat) return;
 
-    if (selectedCategory === 'flags') {
-      const flagQuestions = questions.flags;
-      if (!flagQuestions?.length) return;
-      const randomQ = flagQuestions[Math.floor(Math.random() * flagQuestions.length)];
-      playQuestion({ ...randomQ, category: 'flags' });
-      return;
-    }
-
-    if (selectedCategory === 'spy') {
-      startSpyRound();
-      return;
-    }
+    if (selectedCategory === 'spy') { startSpyRound(); return; }
 
     if (selectedCategory === 'whoami') {
-      if (!selectedSubcategory) return;
-      startWhoamiRound(selectedSubcategory);
+      socket.emit('whoami_reset', { roomCode });
+      playQuestion({ id: 'whoami', category: 'whoami', text: 'أنا مين', answer: '' });
       return;
     }
 
-    // ---------- GRID GAME ----------
     if (selectedCategory === 'grid-game') {
       socket.emit('grid_game_init', { roomCode });
       playQuestion({ id: 'grid-game', category: 'grid-game', text: 'الجدول', answer: '' });
@@ -365,25 +436,133 @@ function App() {
     }
 
     if (selectedCategory === 'tic-tac-toe') {
-      // Tic Tac Toe is started from AdminPanel, not here. Just set a placeholder question.
       playQuestion({ id: 'tic-tac-toe', category: 'tic-tac-toe', text: 'Tic Tac Toe', answer: '' });
       return;
     }
 
     if (selectedCategory === 'bingo') {
-      socket.emit('bingo_init', { roomCode, playerId: '' });   // admin init
+      socket.emit('bingo_init', { roomCode, playerId: '' });
       playQuestion({ id: 'bingo', category: 'bingo', text: 'بينجو', answer: '' });
       return;
     }
 
     if (selectedCategory === 'battleship') {
-      socket.emit('battleship_init', { roomCode, playerId: '' }); // admin init
+      socket.emit('battleship_init', { roomCode, playerId: '' });
       playQuestion({ id: 'battleship', category: 'battleship', text: 'حرب السفن', answer: '' });
       return;
     }
 
+    if (selectedCategory === 'digital_detective') {
+      setCurrentGame('digital_detective');
+      socket.emit('start_digital_detective', { roomCode });
+      playQuestion({ id: 'digital_detective', category: 'digital_detective', text: 'المحقق الرقمي', answer: '' });
+      return;
+    }
+
+    if (selectedCategory === 'movie_tac_toe') { socket.emit('launch_game', { roomCode, gameId: 'movie_tac_toe' }); return; }
+    if (selectedCategory === 'horror_game') { socket.emit('launch_game', { roomCode, gameId: 'horror_game' }); return; }
+    if (selectedCategory === 'civil_registry') { socket.emit('launch_game', { roomCode, gameId: 'civil_registry' }); return; }
+    if (selectedCategory === 'urbex_game') { socket.emit('launch_game', { roomCode, gameId: 'urbex_game' }); return; }
+    if (selectedCategory === 'court_game') { socket.emit('launch_game', { roomCode, gameId: 'court_game' }); return; }
+    if (selectedCategory === 'bank_el_haz') { socket.emit('launch_game', { roomCode, gameId: 'bank_el_haz' }); return; }
+    if (selectedCategory === 'trap_opponent') { socket.emit('launch_game', { roomCode, gameId: 'trap_opponent' }); return; }
+    if (selectedCategory === 'guess_opponent') { socket.emit('launch_game', { roomCode, gameId: 'guess_opponent' }); return; }
+    if (selectedCategory === 'heads_up') { socket.emit('launch_game', { roomCode, gameId: 'heads_up' }); return; }
+    if (selectedCategory === 'movie_quiz') { socket.emit('launch_game', { roomCode, gameId: 'movie_quiz' }); return; }
+    if (selectedCategory === 'investigation') { socket.emit('launch_game', { roomCode, gameId: 'investigation' }); return; }
+    if (selectedCategory === 'codenames') { socket.emit('launch_game', { roomCode, gameId: 'codenames' }); return; }
+    if (selectedCategory === 'taboo') { socket.emit('launch_game', { roomCode, gameId: 'taboo' }); return; }
+
+    // ✅ بصرة وبنك الاتنين بيفتحوا kotshina، بس بـ mode مختلف
+    if (selectedCategory === 'basra') {
+      setKotshinaMode('basra');
+      socket.emit('launch_game', { roomCode, gameId: 'kotshina' });
+      return;
+    }
+
+    if (selectedCategory === 'memory') {
+      socket.emit('launch_game', { roomCode, gameId: 'memory' });
+      return;
+    }
+
+    if (selectedCategory === 'chess') {
+      socket.emit('launch_game', { roomCode, gameId: 'chess' });
+      return;
+    }
+
+    if (selectedCategory === 'backgammon') {
+      socket.emit('launch_game', { roomCode, gameId: 'backgammon' });
+      return;
+    }
+
+    if (selectedCategory === 'snakes') {
+      socket.emit('launch_game', { roomCode, gameId: 'snakes' });
+      return;
+    }
+
+    // if (selectedCategory === 'escape_room') {
+    //   socket.emit('launch_game', { roomCode, gameId: 'escape_room' });
+    //   return;
+    // }
+
+    if (selectedCategory === 'escape_room') {
+      setCurrentGame('escape_room_hub');
+      return;
+    }
+
+    if (selectedCategory === 'music' || selectedSubcategory === 'music') {
+      socket.emit('music_start', { roomCode });
+      return;
+    }
+
+    if (selectedCategory === 'reverse' || selectedSubcategory === 'reverse') {
+      socket.emit('reverse_start', { roomCode });
+      return;
+    }
+
+    if (selectedCategory === 'who-said' || selectedSubcategory === 'who-said') {
+      socket.emit('who_said_start', { roomCode });
+      return;
+    }
+
+    if (selectedCategory === 'put-word-in-song' || selectedSubcategory === 'put-word-in-song') {
+      socket.emit('put_word_start', { roomCode });
+      return;
+    }
+
+    if (selectedCategory === 'song-for' || selectedSubcategory === 'song-for') {
+      socket.emit('song_for_start', { roomCode });
+      return;
+    }
+
+    if (selectedCategory === 'cinema' && (selectedSubcategory === 'before-2000' || selectedSubcategory === 'after-2000')) {
+      const sub = selectedSubcategory === 'before-2000' ? 'history' : 'cinema';
+      socket.emit('cinema_start', { roomCode, subcategory: sub });
+      return;
+    }
+
+    if (selectedCategory === 'flags') {
+      socket.emit('flags_start', { roomCode });
+      return;
+    }
+
+    if (selectedCategory === 'autobis') {
+      playQuestion({ id: 'autobis', category: 'autobis', text: 'أتوبيس كومبليت', answer: '' });
+      return;
+    }
+
+    if (selectedCategory === 'sword-of-knowledge') { 
+      socket.emit('launch_game', { roomCode, gameId: 'sword_of_knowledge' }); 
+      return; 
+    }
+
+    if (selectedCategory === 'hangman') {
+      socket.emit('launch_game', { roomCode, gameId: 'hangman' });
+      return;
+    }
+
     if (selectedCategory === 'round16') {
-      playQuestion({ id: 'round16', category: 'round16', text: 'دور الـ١٦', answer: '' });
+      socket.emit('launch_game', { roomCode, gameId: 'round16' });
       return;
     }
 
@@ -398,11 +577,7 @@ function App() {
     }
     if (!selectedSubcategory) return;
 
-    let questionKey;
-    if (selectedCategory === 'cinema') questionKey = selectedSubcategory;
-    else if (selectedCategory === 'casino') questionKey = selectedSubcategory;
-    else questionKey = selectedSubcategory;
-
+    let questionKey = selectedSubcategory;
     const questionList = questions[questionKey];
     if (!questionList?.length) return;
     playQuestion(questionList[Math.floor(Math.random() * questionList.length)]);
@@ -426,6 +601,8 @@ function App() {
     setPlayers([]); setActivePlayer(null); setCurrentQuestion(null);
     setGameStatus('lobby'); setBuzzerLocked(false); setShowJoinScreen(true);
     setSelectedCategory(null); setSelectedSubcategory(null); setCardGameState(null);
+    setCurrentGame(null);
+    setKotshinaMode('basra');   // ✅ إعادة تعيين طور كوتشينة
     sessionStorage.removeItem('quizGameState');
   };
 
@@ -436,6 +613,21 @@ function App() {
 
   const handleSubcategorySelect = (subcategoryId) => setSelectedSubcategory(subcategoryId);
 
+  
+  // ✅ دالة موحدة لإغلاق أي لعبة — بتصفّر كل حاجة فورًا
+  const closeGame = () => {
+    socket.emit('close_game', { roomCode });
+    setCurrentGame(null);
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
+    setCurrentQuestion(null);
+    setCardGameState(null);
+    setGameStatus('playing');
+    setActivePlayer(null);
+    setBuzzerLocked(false);
+  };
+  
+  
   const exitCardGame = () => {
     setCardGameState(null);
     setCurrentQuestion(null);
@@ -443,36 +635,297 @@ function App() {
   };
 
   return (
-    
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-indigo-950 to-purple-950 text-white p-4">
+      <div className="min-h-screen text-white overflow-x-hidden" style={{ background: 'radial-gradient(ellipse at 50% 0%, #1a1410 0%, #0a0a0a 70%)' }}>
       {showJoinScreen ? (
         <RoomJoin onCreateRoom={createRoom} onJoinRoom={joinRoom} />
+
+      ) : currentGame === 'horror_game' ? (
+        <HorrorGame
+          socket={socket} roomCode={roomCode} players={players}
+          currentPlayer={players.find(p => isAdmin ? p.isAdmin : p.id === playerId)}
+          isAdmin={isAdmin}
+          onExit={() => socket.emit('close_game', { roomCode })}
+        />
+
+      ) : currentGame === 'movie_tac_toe' ? (
+        <MovieTacToe
+          socket={socket} roomCode={roomCode} players={players}
+          currentPlayer={players.find((p) => (isAdmin ? p.isAdmin : p.id === playerId))}
+          isAdmin={isAdmin}
+          onExit={() => {
+            socket.emit('close_game', { roomCode });
+            setCurrentGame(null);
+            setSelectedCategory(null);       // ✅
+            setSelectedSubcategory(null);    // ✅
+          }}
+        />
+
+      ) : currentGame === 'civil_registry' ? (
+        <CivilRegistryGame
+          serverUrl={SOCKET_URL}
+          onExit={closeGame}
+        />
+
+      ) : currentGame === 'urbex_game' ? (
+        <UrbexApp onExit={closeGame} />
+
+      ) : currentGame === 'court_game' ? (
+        <CourtGame
+          socket={socket} roomCode={roomCode}
+          playerId={playerId} playerName={playerName}
+          onExit={closeGame}
+        />
+
+      ) : currentGame === 'bank_el_haz' ? (
+        <BankElHazGame
+          socket={socket}
+          roomCode={roomCode}
+          playerId={playerId}
+          playerName={playerName}
+          isAdmin={isAdmin}
+          players={players}
+          onExit={() => {
+            socket.emit('close_game', { roomCode });
+            setCurrentGame(null);
+            setSelectedCategory(null);      // ✅ مهم
+            setSelectedSubcategory(null);   // ✅ مهم
+          }}
+        />
+
+      ) : currentGame === 'trap_opponent' ? (
+        <TrapOpponent
+          socket={socket} roomCode={roomCode}
+          playerId={playerId} playerName={playerName}
+          isAdmin={isAdmin} players={players}
+         onExit={closeGame}
+        />
+
+      ) : currentGame === 'guess_opponent' ? (
+        <GuessOpponent
+          socket={socket} roomCode={roomCode}
+          playerId={playerId} playerName={playerName}
+          isAdmin={isAdmin} players={players}
+          onExit={closeGame}
+        />
+
+      ) : currentGame === 'heads_up' ? (
+        <HeadsUp
+          socket={socket} roomCode={roomCode}
+          playerId={playerId} playerName={playerName}
+          isAdmin={isAdmin} players={players}
+          onExit={closeGame}
+        />
+
+      ) : currentGame === 'movie_quiz' ? (
+        <MovieQuiz
+          socket={socket} roomCode={roomCode}
+          playerId={playerId} playerName={playerName}
+          isAdmin={isAdmin} players={players}
+          onExit={closeGame}
+        />
+
+      ) : currentGame === 'investigation' ? (
+        <Investigation
+          socket={socket} roomCode={roomCode} playerId={playerId}
+          playerName={playerName} isAdmin={isAdmin} players={players}
+          onExit={closeGame}
+        />
+
+      ) : currentGame === 'codenames' ? (
+        <Codenames
+          socket={socket} roomCode={roomCode}
+          playerId={playerId} playerName={playerName}
+          isAdmin={isAdmin} players={players}
+          onExit={closeGame}
+        />
+
+        ) : currentGame === 'memory' ? (
+        <MemoryGrid
+          socket={socket}
+          roomCode={roomCode}
+          playerId={playerId}
+          playerName={playerName}
+          isAdmin={isAdmin}
+          players={players}
+          onExit={closeGame}
+        />
+
+      ) : currentGame === 'taboo' ? (
+        <Taboo
+          socket={socket} roomCode={roomCode}
+          playerId={playerId} playerName={playerName}
+          isAdmin={isAdmin} players={players}
+          onExit={closeGame}
+        />
+
+        ) : currentGame === 'chess' ? (
+          <Chess
+            socket={socket}
+            roomCode={roomCode}
+            playerId={playerId}
+            playerName={playerName}
+            isAdmin={isAdmin}
+            players={players}
+            onExit={closeGame}
+          />
+
+          ) : currentGame === 'backgammon' ? (
+            <Backgammon
+              socket={socket}
+              roomCode={roomCode}
+              playerId={playerId}
+              playerName={playerName}
+              isAdmin={isAdmin}
+              players={players}
+              onExit={closeGame}
+            />
+
+            ) : currentGame === 'snakes' ? (
+              <SnakesLadders
+                socket={socket}
+                roomCode={roomCode}
+                playerId={playerId}
+                playerName={playerName}
+                isAdmin={isAdmin}
+                players={players}
+                onExit={closeGame}
+              />
+
+              ) : currentGame === 'escape_room_hub' ? (
+                <MainMenu
+                  onExit={(action, storyId) => {
+                    if (action === 'start' && storyId) {
+                      setSelectedStoryId(storyId);
+                      setCurrentGame('escape_room_game');
+                    } else {
+                      // خروج كامل
+                      setCurrentGame(null);
+                      setSelectedCategory(null);
+                      setSelectedSubcategory(null);
+                    }
+                  }}
+                />
+
+              ) : currentGame === 'escape_room_game' && selectedStoryId ? (
+                <StoryGame
+                  storyId={selectedStoryId}
+                  socket={socket}
+                  roomCode={roomCode}
+                  playerId={playerId}
+                  playerName={playerName}
+                  isAdmin={isAdmin}
+                  onExit={() => {
+                    // رجوع لبوابة القصص
+                    setSelectedStoryId(null);
+                    setCurrentGame('escape_room_hub');
+                  }}
+                />
+
+                ) : currentGame === 'sword_of_knowledge' ? (
+                <SwordRound
+                  socket={socket} roomCode={roomCode}
+                  playerId={playerId} playerName={playerName}
+                  isAdmin={isAdmin} players={players}
+                  onExit={closeGame}
+                />
+
+                ) : currentGame === 'round16' ? (
+                <BracketRound
+                  socket={socket} roomCode={roomCode}
+                  playerId={playerId} playerName={playerName}
+                  isAdmin={isAdmin} players={players}
+                  onExit={() => {
+                    socket.emit('close_game', { roomCode });
+                    setCurrentGame(null);
+                    setSelectedCategory(null);      // ✅ مهم جدًا
+                    setSelectedSubcategory(null);   // ✅ مهم جدًا
+                  }}
+                />
+
+      ) : currentGame === 'kotshina' ? (
+        kotshinaMode === 'bank' ? (
+          <Bank
+            socket={socket} roomCode={roomCode}
+            playerId={playerId} playerName={playerName}
+            isAdmin={isAdmin}
+            players={players}
+            onExit={closeGame}
+          />
+        ) : kotshinaMode === 'shayeb' ? (
+          <Shayeb
+            socket={socket} roomCode={roomCode}
+            playerId={playerId} playerName={playerName}
+            isAdmin={isAdmin}
+            players={players}
+            onExit={closeGame}
+          />
+        ) : kotshinaMode === 'crazy8' ? (
+          <Crazy8
+            socket={socket} roomCode={roomCode}
+            playerId={playerId} playerName={playerName}
+            isAdmin={isAdmin}
+            players={players}
+            onExit={closeGame}
+          />
+          ) : kotshinaMode === 'solitaire' ? (
+            <Solitaire
+              socket={socket} roomCode={roomCode}
+              playerId={playerId} playerName={playerName}
+              isAdmin={isAdmin}
+              onExit={closeGame}
+            />
+              ) : kotshinaMode === 'spider' ? (
+              <Spider
+                socket={socket} roomCode={roomCode}
+                playerId={playerId} playerName={playerName}
+                isAdmin={isAdmin}
+                onExit={closeGame}
+              />
+        ) : (
+          <Basra
+            socket={socket} roomCode={roomCode}
+            playerId={playerId} playerName={playerName}
+            isAdmin={isAdmin} players={players}
+            onExit={closeGame}
+          />
+        )
+
       ) : isAdmin ? (
         <div className="max-w-6xl mx-auto">
-          <AdminPanel 
-            roomCode={roomCode} players={players} activePlayer={activePlayer}
-            currentQuestion={currentQuestion} onScoreChange={handleScoreChange}
-            onPlayQuestion={playQuestion} onPlayRandomQuestion={playRandomQuestion}
-            onResetBuzzer={resetBuzzer} onEndGame={endGame} onLeaveRoom={leaveRoom}
-            onAdminBuzzer={handleAdminBuzzer} gameStatus={gameStatus}
-            categories={categories} selectedCategory={selectedCategory}
-            selectedSubcategory={selectedSubcategory} onCategorySelect={handleCategorySelect}
-            onSubcategorySelect={handleSubcategorySelect} socket={socket}
-            questions={questions} buzzerLocked={buzzerLocked} isAdmin={true}
-            cardGameState={cardGameState} onExitCardGame={exitCardGame}
-          />
+          {currentGame === 'digital_detective' ? (
+            <DigitalDetectiveGame socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={isAdmin} />
+          ) : (
+            <AdminPanel
+              roomCode={roomCode} players={players} playerId={playerId} playerName={playerName}  activePlayer={activePlayer}
+              currentQuestion={currentQuestion} onScoreChange={handleScoreChange}
+              onPlayQuestion={playQuestion} onPlayRandomQuestion={playRandomQuestion}
+              onResetBuzzer={resetBuzzer} onEndGame={endGame} onLeaveRoom={leaveRoom}
+              onAdminBuzzer={handleAdminBuzzer} gameStatus={gameStatus}
+              categories={categories} selectedCategory={selectedCategory}
+              selectedSubcategory={selectedSubcategory} onCategorySelect={handleCategorySelect}
+              onSubcategorySelect={handleSubcategorySelect} socket={socket}
+              questions={questions} buzzerLocked={buzzerLocked} isAdmin={true}
+              cardGameState={cardGameState} onExit={closeGame}
+              setCurrentGame={setCurrentGame}
+            />
+          )}
         </div>
+
       ) : (
         <div className="max-w-6xl mx-auto">
-          <PlayerScreen 
-            playerId={playerId} playerName={playerName} roomCode={roomCode}
-            players={players} activePlayer={activePlayer} currentQuestion={currentQuestion}
-            onBuzzerPress={handleBuzzer} buzzerLocked={buzzerLocked} onLeaveRoom={leaveRoom}
-            gameStatus={gameStatus} socket={socket} isAdmin={false}
-            setCurrentQuestion={setCurrentQuestion} setActivePlayer={setActivePlayer}
-            setBuzzerLocked={setBuzzerLocked} setGameStatus={setGameStatus}
-            cardGameState={cardGameState} onExitCardGame={exitCardGame}
-          />
+          {currentGame === 'digital_detective' ? (
+            <DigitalDetectiveGame socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={isAdmin} />
+          ) : (
+            <PlayerScreen
+              playerId={playerId} playerName={playerName} roomCode={roomCode}
+              players={players} activePlayer={activePlayer} currentQuestion={currentQuestion}
+              onBuzzerPress={handleBuzzer} buzzerLocked={buzzerLocked} onLeaveRoom={leaveRoom}
+              gameStatus={gameStatus} socket={socket} isAdmin={false}
+              setCurrentQuestion={setCurrentQuestion} setActivePlayer={setActivePlayer}
+              setBuzzerLocked={setBuzzerLocked} setGameStatus={setGameStatus}
+              cardGameState={cardGameState} onExit={closeGame}
+            />
+          )}
         </div>
       )}
     </div>

@@ -1,26 +1,45 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { FaLock, FaSignOutAlt, FaTrophy, FaVolumeUp, FaRedo, FaTimes, FaCrown } from 'react-icons/fa';
-import Whiteboard from './Whiteboard';
+import React, { useState, useEffect } from 'react';
+import { FaLock, FaSignOutAlt, FaTrophy, FaTimes, FaCrown } from 'react-icons/fa';
 import CardGame from './CardGame';
-import TicTacToe from './TicTacToe';
 import Timer from './Timer';
 import GridGame from './GridGame';
-import BingoGame from './BingoGame';
-import BattleshipGame from './BattleshipGame';
-import SwordOfKnowledge from './SwordOfKnowledge';
 import BracketGame from './BracketGame';
-import HangmanGame from './HangmanGame';
 import MafiosaGame from './MafiosoGame';
+import DigitalDetectiveGame from './DigitalDetectiveGame';
+import SpyRound from './SpyRound';
+import MusicRound from './MusicRound';
+import ReverseRound from './ReverseRound';
+import WhoamiRound from './WhoamiRound';
+import WhoSaidRound from './WhoSaidRound';
+import PutWordRound from './PutWordRound';
+import SongForRound from './SongForRound';
+import CinemaRound from './CinemaRound';
+import FlagsRound from './FlagsRound';
+import WhiteboardRound from './WhiteboardRound';
+import TicTacToeRound from './TicTacToeRound';
+import BingoRound from './BingoRound';
+import BattleshipRound from './BattleshipRound';
+import SwordRound from './SwordRound';
+import HangmanRound from './HangmanRound';
+import { GOLD, BG_GRADIENT, GLASS, BTN_PRIMARY, BTN_OUTLINE } from '../theme/goldenNoir';
 
-const PlayerScreen = ({ 
+const labelStyle = {
+  fontSize: 10,
+  fontWeight: 900,
+  letterSpacing: '0.3em',
+  textTransform: 'uppercase',
+  color: GOLD.textMuted,
+};
+
+const PlayerScreen = ({
   playerId,
-  playerName, 
-  roomCode, 
-  players, 
-  activePlayer, 
-  currentQuestion, 
-  onBuzzerPress, 
-  buzzerLocked, 
+  playerName,
+  roomCode,
+  players,
+  activePlayer,
+  currentQuestion,
+  onBuzzerPress,
+  buzzerLocked,
   onLeaveRoom,
   gameStatus,
   socket,
@@ -30,19 +49,17 @@ const PlayerScreen = ({
   setBuzzerLocked,
   setGameStatus,
   cardGameState,
-  onExitCardGame
+  onExitCardGame,
 }) => {
-  const [audioPlaying, setAudioPlaying] = useState(false);
+  console.log('🎬 PlayerScreen render | category:', currentQuestion?.category, '| full:', currentQuestion);
+
   const [showReloadWarning, setShowReloadWarning] = useState(false);
-  const audioRef = useRef(null);
   const isActivePlayer = activePlayer === playerId;
-  const [pausedTime, setPausedTime] = useState(0);
 
   const [showSpyVoteModal, setShowSpyVoteModal] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [votedFor, setVotedFor] = useState(null);
   const [spyResult, setSpyResult] = useState(null);
-
 
   const [crimeHorror, setCrimeHorror] = useState(false);
   const [crimeHeadline, setCrimeHeadline] = useState(null);
@@ -54,39 +71,12 @@ const PlayerScreen = ({
   const [crimeSolution, setCrimeSolution] = useState(null);
 
   const publicUrl = process.env.PUBLIC_URL || '';
-
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-  
   const isReverseQuestion = currentQuestion?.category === 'reverse';
-  
-  // ----- Socket listeners -----
+
   useEffect(() => {
-    const handlePlayAudio = () => {
-      if (audioRef.current && !activePlayer && !currentQuestion?.image) {
-        audioRef.current.play()
-          .then(() => setAudioPlaying(true))
-          .catch(error => console.error("Audio play failed:", error));
-      }
-    };
-    
-    const handlePauseAudio = () => {
-      if (audioRef.current) {
-        setPausedTime(audioRef.current.currentTime);
-        audioRef.current.pause();
-        setAudioPlaying(false);
-      }
-    };
-    
-    const handleContinueAudio = (time) => {
-      if (audioRef.current) {
-        audioRef.current.currentTime = time;
-        audioRef.current.play()
-          .then(() => setAudioPlaying(true))
-          .catch(error => console.error("Audio continue failed:", error));
-      }
-    };
-    
-    // Handles both Whoami and Spy personalised data
+    if (!socket) return;
+
     const handlePlayerPhotoQuestion = (photoData) => {
       if (photoData.playerId === playerId) {
         if (onExitCardGame) onExitCardGame();
@@ -104,30 +94,25 @@ const PlayerScreen = ({
           id: 'card-game',
           category: 'card-game',
           text: 'لعبة البطاقات',
-          answer: ''
+          answer: '',
         });
         setGameStatus('playing');
       }
     };
 
-    // ⭐ NEW: enter TicTacToe mode when server sends game state
     const handleTicTacToeState = (state) => {
       setCurrentQuestion({
         id: 'tic-tac-toe',
         category: 'tic-tac-toe',
         text: 'Tic Tac Toe',
-        answer: ''
+        answer: '',
       });
       setGameStatus('playing');
     };
-    
-    socket.on('play_audio', handlePlayAudio);
-    socket.on('pause_audio', handlePauseAudio);
-    socket.on('continue_audio', handleContinueAudio);
+
     socket.on('player_photo_question', handlePlayerPhotoQuestion);
     socket.on('card_game_state_update', handleCardGameStateUpdate);
     socket.on('tic_tac_toe_state', handleTicTacToeState);
-
 
     const handleOpenSpyVoting = () => {
       setShowSpyVoteModal(true);
@@ -138,62 +123,67 @@ const PlayerScreen = ({
     const handleSpyVotingResults = (result) => {
       setShowSpyVoteModal(false);
       setSpyResult(result);
-      // لو السيرفر بيبعت قائمة اللاعبين بالنقاط الجديدة ممكن تعملها Set هنا
     };
 
     socket.on('open_spy_voting', handleOpenSpyVoting);
     socket.on('spy_voting_results', handleSpyVotingResults);
 
-    // ولا تنسى تحطهم في الـ return جوا הـ useEffect عشان يتمسحوا مع الـ unmount
-    // socket.off('open_spy_voting', handleOpenSpyVoting);
-    // socket.off('spy_voting_results', handleSpyVotingResults);
-
-
-    socket.on('crime_horror_message', ({ message }) => {
+    const handleCrimeHorror = () => {
       setCrimeHorror(true);
       setTimeout(() => setCrimeHorror(false), 4000);
-    });
-    socket.on('crime_headline', ({ headline, description }) => {
-      setCrimeHeadline({ headline, description });
-    });
-    socket.on('crime_statement', ({ suspect, statement, number, total }) => {
-      setCrimeStatement({ suspect, statement, number, total });
-    });
-    socket.on('crime_voting_open', ({ suspects }) => {
+    };
+    const handleCrimeHeadline = ({ headline, description }) => setCrimeHeadline({ headline, description });
+    const handleCrimeStatement = ({ suspect, statement, number, total }) => setCrimeStatement({ suspect, statement, number, total });
+    const handleCrimeVotingOpen = ({ suspects }) => {
       setCrimeSuspects(suspects);
       setCrimeVotingOpen(true);
       setCrimeVote(null);
       setCrimeVotingComplete(false);
-    });
-    socket.on('crime_voting_complete', ({ votes }) => {
+    };
+    const handleCrimeVotingComplete = () => {
       setCrimeVotingOpen(false);
       setCrimeVotingComplete(true);
-    });
-    socket.on('crime_solution', ({ solution, votes }) => {
+    };
+    const handleCrimeSolution = ({ solution }) => {
       setCrimeSolution(solution);
       setCrimeVotingComplete(false);
-    });
-    
+    };
+
+    socket.on('crime_horror_message', handleCrimeHorror);
+    socket.on('crime_headline', handleCrimeHeadline);
+    socket.on('crime_statement', handleCrimeStatement);
+    socket.on('crime_voting_open', handleCrimeVotingOpen);
+    socket.on('crime_voting_complete', handleCrimeVotingComplete);
+    socket.on('crime_solution', handleCrimeSolution);
+
+    const forceSwitch = (data) => {
+      console.log('🚨 لقطت إشارة بدء المحقق الرقمي، هجبر الشاشة تقلب!');
+      if (typeof setCurrentQuestion === 'function') {
+        setCurrentQuestion({ category: 'digital_detective' });
+      }
+    };
+
+    socket.on('room_update', forceSwitch);
+    socket.on('room_data', forceSwitch);
+    socket.on('detective_started', forceSwitch);
+
     return () => {
-      socket.off('play_audio', handlePlayAudio);
-      socket.off('pause_audio', handlePauseAudio);
-      socket.off('continue_audio', handleContinueAudio);
       socket.off('player_photo_question', handlePlayerPhotoQuestion);
       socket.off('card_game_state_update', handleCardGameStateUpdate);
       socket.off('tic_tac_toe_state', handleTicTacToeState);
+      socket.off('open_spy_voting', handleOpenSpyVoting);
+      socket.off('spy_voting_results', handleSpyVotingResults);
+      socket.off('crime_horror_message', handleCrimeHorror);
+      socket.off('crime_headline', handleCrimeHeadline);
+      socket.off('crime_statement', handleCrimeStatement);
+      socket.off('crime_voting_open', handleCrimeVotingOpen);
+      socket.off('crime_voting_complete', handleCrimeVotingComplete);
+      socket.off('crime_solution', handleCrimeSolution);
+      socket.off('room_update', forceSwitch);
+      socket.off('room_data', forceSwitch);
+      socket.off('detective_started', forceSwitch);
     };
-  }, [socket, activePlayer, currentQuestion, playerId, setCurrentQuestion, setActivePlayer, setBuzzerLocked, setGameStatus, onExitCardGame]);
-  
-  // Load audio for audio questions
-  useEffect(() => {
-    if (currentQuestion && audioRef.current && !currentQuestion.image && currentQuestion.category !== 'spy') {
-      const audioUrl = `${publicUrl}${currentQuestion.audio}`;
-      audioRef.current.src = audioUrl;
-      audioRef.current.load();
-      setAudioPlaying(false);
-      setPausedTime(0);
-    }
-  }, [currentQuestion, publicUrl]);
+  }, [socket, setCurrentQuestion, playerId]);
 
   useEffect(() => {
     setSpyResult(null);
@@ -201,171 +191,35 @@ const PlayerScreen = ({
     setVotedFor(null);
   }, [currentQuestion]);
 
-  // useEffect(() => {
-  //   // استقبال قائمة اللاعبين المحدثة بالنقاط الجديدة من السيرفر
-  //   socket.on('update_players', (updatedPlayers) => {
-  //     setPlayers(updatedPlayers); // هنا setPlayers هتعمل بدون مشاكل
-  //   });
-
-  //   return () => {
-  //     socket.off('update_players');
-  //   };
-  // }, [socket]);;
-
-  // Render TicTacToe when in tic-tac-toe mode
+  // ============================================================
+  // Game-specific fullscreen returns (unchanged)
+  // ============================================================
   if (currentQuestion?.category === 'tic-tac-toe') {
-    const currentPlayer = players.find(p => p.id === playerId);
-    return (
-      <div className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-right">Tic Tac Toe</h1>
-            <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
-          </div>
-          <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
-            <span className="font-medium">رمز الغرفة:</span>
-            <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
-          </div>
-        </div>
-
-        <TicTacToe
-          socket={socket}
-          roomCode={roomCode}
-          players={players}
-          currentPlayer={currentPlayer}
-          isAdmin={false}
-        />
-
-        <button onClick={onLeaveRoom} className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2">
-          <FaSignOutAlt /> مغادرة الغرفة
-        </button>
-      </div>
-    );
+    return <TicTacToeRound socket={socket} roomCode={roomCode} players={players} playerId={playerId} isAdmin={false} onLeaveRoom={onLeaveRoom} />;
   }
 
-  // Render GridGame when in grid-game mode
-  if (currentQuestion?.category === 'grid-game') {
-    return (
-      <div className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-right">الجدول التعاوني</h1>
-            <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
-          </div>
-          <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
-            <span className="font-medium">رمز الغرفة:</span>
-            <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
-          </div>
-        </div>
-        <GridGame socket={socket} roomCode={roomCode} playerId={playerId} />
-        <button onClick={onLeaveRoom} className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2">
-          <FaSignOutAlt /> مغادرة الغرفة
-        </button>
-      </div>
-    );
-  }
-
-  // Render BingoGame when in bingo mode
   if (currentQuestion?.category === 'bingo') {
-    return (
-      <div className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-right">بينجو</h1>
-            <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
-          </div>
-          <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
-            <span className="font-medium">رمز الغرفة:</span>
-            <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
-          </div>
-        </div>
-        <BingoGame socket={socket} roomCode={roomCode} playerId={playerId} />
-        <button onClick={onLeaveRoom} className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2">
-          <FaSignOutAlt /> مغادرة الغرفة
-        </button>
-      </div>
-    );
+    return <BingoRound socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={false} onLeaveRoom={onLeaveRoom} />;
   }
 
-  // Render Battleship when in battleship mode
+  if (currentQuestion?.category === 'grid-game') {
+    return <GridGame socket={socket} roomCode={roomCode} playerId={playerId} onLeaveRoom={onLeaveRoom} />;
+  }
+
   if (currentQuestion?.category === 'battleship') {
-    return (
-      <div className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-right">حرب السفن</h1>
-            <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
-          </div>
-          <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
-            <span className="font-medium">رمز الغرفة:</span>
-            <span className="font-mono text-xl">{roomCode}</span>
-          </div>
-        </div>
-        <BattleshipGame socket={socket} roomCode={roomCode} playerId={playerId} />
-        <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
-          <FaSignOutAlt /> مغادرة الغرفة
-        </button>
-      </div>
-    );
-  }
-
-
-  if (currentQuestion?.category === 'mafiosa') {
-  return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-right">🕵️ مافوزا</h1>
-          <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
-        </div>
-        <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
-          <span className="font-medium">رمز الغرفة:</span>
-          <span className="font-mono text-xl">{roomCode}</span>
-        </div>
-      </div>
-      <MafiosaGame socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={false} />
-      <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
-        <FaSignOutAlt /> مغادرة الغرفة
-      </button>
-    </div>
-  );
-}
-
-  // Render Sword of Knowledge when in sword-of-knowledge mode
-  if (currentQuestion?.category === 'sword-of-knowledge') {
-    const currentPlayer = players.find(p => p.id === playerId);
-    return (
-      <div className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-right">سيف المعرفة</h1>
-            <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
-          </div>
-          <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
-            <span className="font-medium">رمز الغرفة:</span>
-            <span className="font-mono text-xl">{roomCode}</span>
-          </div>
-        </div>
-        <SwordOfKnowledge
-          socket={socket}
-          roomCode={roomCode}
-          players={players}
-          currentPlayer={currentPlayer}
-          isAdmin={false}
-        />
-        <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
-          <FaSignOutAlt /> مغادرة الغرفة
-        </button>
-      </div>
-    );
+    return <BattleshipRound socket={socket} roomCode={roomCode} players={players} playerId={playerId} isAdmin={false} onLeaveRoom={onLeaveRoom} />;
   }
 
   if (currentQuestion?.category === 'hangman') {
+    return <HangmanRound socket={socket} roomCode={roomCode} playerId={playerId} playerName={playerName} isAdmin={false} players={players} onExit={onLeaveRoom} />;
+  }
+
+  if (currentQuestion?.category === 'mafiosa') {
     return (
-      <div className="w-full">
+      <div className="w-full px-4 py-4">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-right">🔠 الرجل المشنوق</h1>
+            <h1 className="text-2xl font-bold text-right">🕵️ مافوزا</h1>
             <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
           </div>
           <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
@@ -373,7 +227,7 @@ const PlayerScreen = ({
             <span className="font-mono text-xl">{roomCode}</span>
           </div>
         </div>
-        <HangmanGame socket={socket} roomCode={roomCode} isAdmin={false} />
+        <MafiosaGame socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={false} />
         <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
           <FaSignOutAlt /> مغادرة الغرفة
         </button>
@@ -381,16 +235,12 @@ const PlayerScreen = ({
     );
   }
 
-
-  
-
-  if (currentQuestion?.category === 'round16') {
-    const currentPlayer = players.find(p => p.id === playerId);
+  if (currentQuestion?.category === 'digital_detective') {
     return (
-      <div className="w-full">
+      <div className="w-full px-4 py-4">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-right">دور الـ١٦</h1>
+            <h1 className="text-2xl font-bold text-right">🖥️ المحقق الرقمي</h1>
             <p className="text-gray-300 text-right">مرحبًا، {playerName}</p>
           </div>
           <div className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-3">
@@ -398,13 +248,7 @@ const PlayerScreen = ({
             <span className="font-mono text-xl">{roomCode}</span>
           </div>
         </div>
-        <BracketGame
-          socket={socket}
-          roomCode={roomCode}
-          players={players}
-          currentPlayer={currentPlayer}
-          isAdmin={false}
-        />
+        <DigitalDetectiveGame socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={false} />
         <button onClick={onLeaveRoom} className="w-full mt-6 bg-red-600 hover:bg-red-500 py-3 rounded-lg flex items-center justify-center gap-2">
           <FaSignOutAlt /> مغادرة الغرفة
         </button>
@@ -412,13 +256,50 @@ const PlayerScreen = ({
     );
   }
 
-  
+  if (currentQuestion?.category === 'music') {
+    return <MusicRound currentQuestion={currentQuestion} players={players} playerId={playerId} isAdmin={false} socket={socket} roomCode={roomCode} onLeaveRoom={onLeaveRoom} activePlayer={activePlayer} buzzerLocked={buzzerLocked} onBuzzerPress={onBuzzerPress} />;
+  }
 
-  // Render CardGame when in card game mode
+  if (currentQuestion?.category === 'reverse-word') {
+    return <ReverseRound currentQuestion={currentQuestion} players={players} playerId={playerId} isAdmin={false} socket={socket} roomCode={roomCode} onLeaveRoom={onLeaveRoom} activePlayer={activePlayer} buzzerLocked={buzzerLocked} onBuzzerPress={onBuzzerPress} onResetBuzzer={() => {}} onScoreChange={null} />;
+  }
+
+  if (currentQuestion?.category === 'whoami') {
+    return <WhoamiRound currentQuestion={currentQuestion} players={players} playerId={playerId} isAdmin={false} socket={socket} roomCode={roomCode} onLeaveRoom={onLeaveRoom} onScoreChange={null} />;
+  }
+
+  if (currentQuestion?.category === 'who-said-game') {
+    return <WhoSaidRound currentQuestion={currentQuestion} players={players} playerId={playerId} isAdmin={false} socket={socket} roomCode={roomCode} onLeaveRoom={onLeaveRoom} activePlayer={activePlayer} buzzerLocked={buzzerLocked} onBuzzerPress={onBuzzerPress} onResetBuzzer={() => {}} onScoreChange={null} />;
+  }
+
+  if (currentQuestion?.category === 'put-word-game') {
+    return <PutWordRound currentQuestion={currentQuestion} players={players} playerId={playerId} isAdmin={false} socket={socket} roomCode={roomCode} onLeaveRoom={onLeaveRoom} activePlayer={activePlayer} buzzerLocked={buzzerLocked} onBuzzerPress={onBuzzerPress} onResetBuzzer={() => {}} onScoreChange={null} />;
+  }
+
+  if (currentQuestion?.category === 'song-for-game') {
+    return <SongForRound currentQuestion={currentQuestion} players={players} playerId={playerId} isAdmin={false} socket={socket} roomCode={roomCode} onLeaveRoom={onLeaveRoom} activePlayer={activePlayer} buzzerLocked={buzzerLocked} onBuzzerPress={onBuzzerPress} onResetBuzzer={() => {}} onScoreChange={null} />;
+  }
+
+  if (currentQuestion?.category === 'cinema-game') {
+    return <CinemaRound currentQuestion={currentQuestion} players={players} playerId={playerId} isAdmin={false} socket={socket} roomCode={roomCode} onLeaveRoom={onLeaveRoom} activePlayer={activePlayer} buzzerLocked={buzzerLocked} onBuzzerPress={onBuzzerPress} onResetBuzzer={() => {}} onScoreChange={null} />;
+  }
+
+  if (currentQuestion?.category === 'flags-game') {
+    return <FlagsRound currentQuestion={currentQuestion} players={players} playerId={playerId} isAdmin={false} socket={socket} roomCode={roomCode} onLeaveRoom={onLeaveRoom} activePlayer={activePlayer} buzzerLocked={buzzerLocked} onBuzzerPress={onBuzzerPress} onResetBuzzer={() => {}} onScoreChange={null} />;
+  }
+
+  if (currentQuestion?.category === 'whiteboard') {
+    return <WhiteboardRound socket={socket} roomCode={roomCode} isAdmin={false} players={players} playerId={playerId} onLeaveRoom={onLeaveRoom} />;
+  }
+
+  if (currentQuestion?.category === 'sword-of-knowledge') {
+    return <SwordRound socket={socket} roomCode={roomCode} playerId={playerId} playerName={playerName} isAdmin={false} players={players} onExit={onLeaveRoom} />;
+  }
+
   if (currentQuestion?.category === 'card-game' || cardGameState?.gameStarted) {
-    const currentPlayer = players.find(p => p.id === playerId);
+    const currentPlayer = players.find((p) => p.id === playerId);
     return (
-      <div className="w-full">
+      <div className="w-full px-4 py-4">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
           <div>
             <h1 className="text-2xl font-bold text-right">لاعب لعبة البطاقات</h1>
@@ -429,499 +310,451 @@ const PlayerScreen = ({
             <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
           </div>
         </div>
-
-        <CardGame 
-          socket={socket}
-          roomCode={roomCode}
-          players={players}
-          currentPlayer={currentPlayer}
-          isAdmin={false}
-          onExit={onExitCardGame}
-        />
-
-        <button
-          onClick={onLeaveRoom}
-          className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2"
-        >
+        <CardGame socket={socket} roomCode={roomCode} players={players} currentPlayer={currentPlayer} isAdmin={false} onExit={onExitCardGame} />
+        <button onClick={onLeaveRoom} className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2">
           <FaSignOutAlt /> مغادرة الغرفة
         </button>
       </div>
     );
   }
 
-
+  // ============================================================
+  // MAIN QUIZ VIEW — Golden Noir
+  // ============================================================
   const handleVoteSubmit = (targetId) => {
     setVotedFor(targetId);
     socket.emit('submit_spy_vote', { roomCode, voterId: playerId, votedForId: targetId });
   };
 
-  // ========== MAIN QUIZ VIEW ==========
   return (
-    <div className="w-full">
-      {showReloadWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-indigo-800 rounded-xl p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4 text-center">تحذير!</h2>
-            <p className="text-lg mb-6 text-center">
-              إذا قمت بإعادة تحميل الصفحة، ستخرج وستفقد نقاطك
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => {
-                  setShowReloadWarning(false);
-                  window.location.reload();
-                }}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold"
-              >
-                خروج على أي حال
-              </button>
-              <button
-                onClick={() => setShowReloadWarning(false)}
-                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-bold"
-              >
-                البقاء في اللعبة
-              </button>
+    <div className="relative w-full py-4" style={{ background: BG_GRADIENT, minHeight: '100vh' }}>
+      {/* هالة ذهبية علوية */}
+      <div
+        className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2"
+        style={{
+          width: '60vw', height: '30vh',
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.12) 0%, transparent 60%)',
+          filter: 'blur(50px)',
+          zIndex: 0,
+        }}
+      />
+
+      <div className="relative z-10 w-full px-4">
+
+        {/* Warning Modal */}
+        {showReloadWarning && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div
+              className="rounded-3xl p-6 max-w-md w-full relative overflow-hidden"
+              style={{ ...GLASS, boxShadow: '0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)' }}
+            >
+              <span className="pointer-events-none absolute inset-x-8 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}80, transparent)` }} />
+              <h2 className="text-2xl font-black mb-4 text-center" style={{ color: GOLD.light }}>تحذير!</h2>
+              <p className="text-base mb-6 text-center" style={{ color: GOLD.text }}>
+                إذا قمت بإعادة تحميل الصفحة، ستخرج وستفقد نقاطك
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowReloadWarning(false); window.location.reload(); }}
+                  className="flex-1 py-3 rounded-xl font-black text-sm"
+                  style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.5)', color: '#fca5a5' }}
+                >
+                  خروج على أي حال
+                </button>
+                <button
+                  onClick={() => setShowReloadWarning(false)}
+                  className="flex-1 py-3 rounded-xl font-black text-sm"
+                  style={BTN_PRIMARY}
+                >
+                  البقاء في اللعبة
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* HUD */}
+        <div
+          className="rounded-2xl px-4 py-3 mb-5 flex items-center justify-between gap-4 flex-wrap relative overflow-hidden"
+          style={{ ...GLASS, boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)' }}
+        >
+          <span className="pointer-events-none absolute inset-x-6 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}60, transparent)` }} />
+
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="text-2xl" style={{ filter: 'drop-shadow(0 0 10px rgba(212,175,55,0.6))' }}>👤</div>
+            <div className="min-w-0">
+              <p style={labelStyle}>لاعب</p>
+              <p className="text-sm font-black truncate" style={{ color: GOLD.light }}>{playerName}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="text-center">
+              <p style={labelStyle}>رمز الغرفة</p>
+              <p className="text-lg font-mono font-black tracking-[0.3em]" style={{ color: GOLD.light, textShadow: '0 0 12px rgba(212,175,55,0.5)' }}>
+                {roomCode}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="text-center">
+              <p style={labelStyle}>نقاطك</p>
+              <p className="text-xl font-black tabular-nums" style={{ color: GOLD.light }}>
+                {players.find((p) => p.id === playerId)?.score || 0}
+              </p>
             </div>
           </div>
         </div>
-      )}
 
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-right">لاعب المسابقة</h1>
-          <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
-        </div>
-        
-        <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
-          <span className="font-medium">رمز الغرفة:</span>
-          <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
-        </div>
-      </div>
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {gameStatus === 'ended' ? (
-            <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl p-6 shadow-lg text-center">
-              <div className="flex justify-center mb-4">
-                <FaTrophy className="text-5xl text-amber-300" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2">انتهت اللعبة!</h2>
-              <p className="mb-6">أنهى المسؤول المسابقة.</p>
-              
-              {sortedPlayers.length > 0 && (
-                <div className="bg-amber-800 bg-opacity-50 rounded-lg p-4 mb-6">
-                  <h3 className="font-bold text-lg mb-3">النتائج النهائية</h3>
-                  <div className="flex justify-center">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex flex-col items-center justify-center mb-4">
-                      <span className="text-3xl font-bold text-amber-900">1</span>
-                      <span className="text-xs font-bold text-amber-900">المركز</span>
-                    </div>
-                  </div>
-                  <p className="text-xl font-bold">
-                    {sortedPlayers[0].isAdmin ? "المسؤول" : "اللاعب الأول"} ({sortedPlayers[0].score} نقاط)
-                  </p>
-                </div>
-              )}
+          <div className="lg:col-span-2 space-y-5">
 
-              <button
-                onClick={onLeaveRoom}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 px-6 py-3 rounded-lg font-bold"
+            {gameStatus === 'ended' ? (
+              <div
+                className="rounded-3xl p-8 text-center relative overflow-hidden"
+                style={{ ...GLASS, boxShadow: '0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)' }}
               >
-                مغادرة اللعبة
-              </button>
-            </div>
-            ) : currentQuestion?.category === 'whiteboard' ? (
-              <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
-                <Timer socket={socket} roomCode={roomCode} isAdmin={false} />
-                <h2 className="text-xl font-semibold mb-4 text-center">السبورة التعاونية</h2>
-                <Whiteboard socket={socket} roomCode={roomCode} isAdmin={false} />
+                <span className="pointer-events-none absolute inset-x-8 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}80, transparent)` }} />
+
+                <div className="flex justify-center mb-4">
+                  <FaTrophy className="text-6xl" style={{ color: GOLD.primary, filter: 'drop-shadow(0 0 24px rgba(212,175,55,0.7))' }} />
+                </div>
+                <h2 className="text-3xl font-black mb-2" style={{ color: GOLD.light }}>انتهت اللعبة!</h2>
+                <p className="mb-6" style={{ color: GOLD.textDim }}>أنهى المسؤول المسابقة.</p>
+
+                {sortedPlayers.length > 0 && (
+                  <div
+                    className="rounded-2xl p-5 mb-6 relative overflow-hidden"
+                    style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${GOLD.border}` }}
+                  >
+                    <p style={labelStyle} className="mb-3">الفائز</p>
+                    <div className="flex justify-center mb-3">
+                      <div
+                        className="w-24 h-24 rounded-full flex flex-col items-center justify-center"
+                        style={{
+                          background: `linear-gradient(135deg, ${GOLD.primary}, ${GOLD.deep})`,
+                          boxShadow: '0 0 40px rgba(212,175,55,0.6), inset 0 1px 0 rgba(255,255,255,0.2)',
+                        }}
+                      >
+                        <FaCrown className="text-2xl mb-1" style={{ color: '#1a0f05' }} />
+                        <span className="text-xs font-black" style={{ color: '#1a0f05' }}>{sortedPlayers[0].score}</span>
+                      </div>
+                    </div>
+                    <p className="text-xl font-black" style={{ color: GOLD.light }}>
+                      {sortedPlayers[0].name}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={onLeaveRoom}
+                  className="px-8 py-3 rounded-xl font-black text-sm"
+                  style={BTN_PRIMARY}
+                >
+                  مغادرة اللعبة
+                </button>
               </div>
             ) : (
-            <>
-              {/* ===== SPY ROUND DISPLAY ===== */}
-              {currentQuestion?.category === 'spy' ? (
-                <div className="relative p-[2px] rounded-xl overflow-hidden">
-                  {/* Shimmer border */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-cyan-400 animate-shimmer rounded-xl" />
-                  <div className="relative bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 rounded-xl p-6 shadow-lg text-center">
+              <>
+                {currentQuestion?.category === 'spy' ? (
+                  <SpyRound
+                    currentQuestion={currentQuestion}
+                    players={players}
+                    playerId={playerId}
+                    isAdmin={false}
+                    socket={socket}
+                    roomCode={roomCode}
+                    showSpyVoteModal={showSpyVoteModal}
+                    votedFor={votedFor}
+                    spyResult={spyResult}
+                    onVote={handleVoteSubmit}
+                    onCloseResult={() => setSpyResult(null)}
+                    onNewRound={() => socket.emit('spy_start', { roomCode })}
+                    onLeaveRoom={onLeaveRoom}
+                  />
+                ) : currentQuestion?.image ? (
+                  <div
+                    className="rounded-3xl p-6 text-center relative overflow-hidden"
+                    style={{ ...GLASS, boxShadow: '0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)' }}
+                  >
+                    <span className="pointer-events-none absolute inset-x-8 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}60, transparent)` }} />
+
                     <div className="mb-4">
-                      <h2 className="text-xl font-semibold text-cyan-300">جولة الجاسوس</h2>
-                      <p className="text-gray-400 mt-2">انظر إلى كلمتك:</p>
-                    </div>
-                    <div className="bg-gray-800/70 p-6 rounded-lg border border-purple-500/20">
-                      <p className="text-3xl font-bold text-yellow-300">
-                        {currentQuestion.text}
+                      <h2 className="text-lg font-black mb-1" style={{ color: GOLD.light }}>
+                        {currentQuestion.category === 'random-photos' ? `أنا مين: ${currentQuestion.subcategory || ''}` :
+                         currentQuestion.category === 'flags' ? 'أعلام الدول' :
+                         'سؤال بالصورة'}
+                      </h2>
+                      <p className="text-xs" style={{ color: GOLD.textMuted }}>
+                        {currentQuestion.category === 'random-photos' ? 'صورتك الفريدة لتتعرف عليها' : ''}
                       </p>
-                      {currentQuestion.text?.includes('Spy') && (
-                        <p className="text-red-600 font-bold mt-4 text-3xl">أنت الجاسوس! حاول التخفي!</p>
+                    </div>
+
+                    <div className="mt-4">
+                      <img
+                        src={`${publicUrl}${currentQuestion.image}`}
+                        alt="Question"
+                        className="object-contain rounded-xl max-h-[60vh] mx-auto"
+                        style={{ border: `2px solid ${GOLD.border}`, boxShadow: '0 10px 40px rgba(0,0,0,0.6)' }}
+                      />
+                      {currentQuestion.category !== 'flags' && (
+                        <div
+                          className="mt-4 p-4 rounded-xl"
+                          style={{ background: 'rgba(212,175,55,0.10)', border: `1px solid ${GOLD.border}` }}
+                        >
+                          <p style={labelStyle} className="mb-2">الإجابة</p>
+                          <p className="text-3xl font-black" style={{ color: GOLD.light }}>{currentQuestion.answer}</p>
+                        </div>
+                      )}
+                      {currentQuestion.bounc && (
+                        <div className="mt-4 p-4 rounded-xl" style={{ background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.4)' }}>
+                          <p style={labelStyle} className="mb-2">تلميح</p>
+                          <p className="text-lg font-black" style={{ color: '#fca5a5' }}>{currentQuestion.bounc}</p>
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
-              ) : currentQuestion?.image ? (
-                /* ===== ANY IMAGE QUESTION (flags, whoami, etc.) ===== */
-                <div className="bg-indigo-800 rounded-xl p-6 shadow-lg text-center">
-                  <div className="mb-4">
-                    <h2 className="text-xl font-semibold">
-                      {currentQuestion.category === 'random-photos' ? `أنا مين: ${currentQuestion.subcategory || ''}` :
-                       currentQuestion.category === 'flags' ? 'أعلام الدول' :
-                       'سؤال بالصورة'}
-                    </h2>
-                    <p className="text-indigo-300 mt-2">
-                      {currentQuestion.category === 'random-photos' ? 'صورتك الفريدة لتتعرف عليها' : ''}
-                    </p>
-                  </div>
-                  <div className="mt-4">
-                    <img 
-                      src={`${publicUrl}${currentQuestion.image}`} 
-                      alt="Question" 
-                      className="object-contain rounded-lg max-h-[60vh] mx-auto"
-                    />
-                    {/* Answer box – hidden for flags */}
-                    {currentQuestion.category !== 'flags' && (
-                      <div className="mt-4 bg-green-600 p-4 rounded-lg">
-                        <h3 className="font-semibold mb-2">الإجابة:</h3>
-                        <p className="text-3xl font-bold">{currentQuestion.answer}</p>
+                ) : isReverseQuestion ? (
+                  <div
+                    className="rounded-3xl p-6 relative overflow-hidden"
+                    style={{ ...GLASS, boxShadow: '0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)' }}
+                  >
+                    <span className="pointer-events-none absolute inset-x-8 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}60, transparent)` }} />
+                    <div className="mb-4 text-center">
+                      <h2 className="text-lg font-black" style={{ color: GOLD.light }}>الكلمات المعكوسة</h2>
+                      <p className="text-xs mt-1" style={{ color: GOLD.textMuted }}>تحدي الكلمات المعكوسة</p>
+                    </div>
+                    <div className="p-6 rounded-xl" style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${GOLD.border}` }}>
+                      <p style={labelStyle} className="mb-2 text-center">السؤال</p>
+                      <p className="text-2xl font-black text-center mb-6" style={{ color: GOLD.light }}>{currentQuestion.text}</p>
+                      <div className="p-4 rounded-lg" style={{ background: 'rgba(0,0,0,0.35)' }}>
+                        <p style={labelStyle} className="mb-2 text-center">تلميح</p>
+                        <p className="text-base text-center" style={{ color: GOLD.text }}>{currentQuestion.bounc}</p>
                       </div>
-                    )}
-                    {currentQuestion.bounc && (
-                      <div className="mt-4 bg-red-700 p-4 rounded-lg">
-                        <h3 className="font-semibold mb-2">تلميح:</h3>
-                        <p className="text-lg font-bold">{currentQuestion.bounc}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : isReverseQuestion ? (
-                <div className="bg-indigo-800 rounded-xl p-6 shadow-lg">
-                  <div className="mb-4 text-center">
-                    <h2 className="text-xl font-semibold">الكلمات المعكوسة</h2>
-                    <p className="text-indigo-300 mt-2">تحدي الكلمات المعكوسة</p>
-                  </div>
-                  
-                  <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-6 rounded-lg">
-                    <h3 className="font-semibold mb-2 text-center">السؤال:</h3>
-                    <p className="text-2xl font-bold text-center mb-6">{currentQuestion.text}</p>
-                    
-                    <div className="bg-indigo-900 p-4 rounded-lg">
-                      <h3 className="font-semibold mb-2 text-center">تلميح:</h3>
-                      <p className="text-lg text-center">{currentQuestion.bounc}</p>
                     </div>
-                  </div>
-                </div>
-              ) : currentQuestion?.audio ? (
-                <div className="bg-indigo-800 rounded-xl p-6 shadow-lg text-center">
-                  <div className="mb-4">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
-                      audioPlaying 
-                        ? 'bg-green-500 animate-pulse' 
-                        : 'bg-indigo-600'
-                    }`}>
-                      <FaVolumeUp className="text-2xl" />
-                    </div>
-                    <h2 className="text-xl font-semibold">السؤال الحالي</h2>
-                    <p className="mt-2 text-indigo-300">
-                      {audioPlaying ? "الصوت قيد التشغيل..." : "في انتظار الصوت..."}
-                    </p>
-                  </div>
-                  
-                  <div className="mt-4">
-                    {activePlayer && (
-                      <button
-                        onClick={() => {
-                          if (audioRef.current) {
-                            audioRef.current.play()
-                              .then(() => setAudioPlaying(true))
-                              .catch(error => console.error("Audio play failed:", error));
-                          }
-                        }}
-                        className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg flex items-center justify-center gap-2 mx-auto"
-                      >
-                        <FaVolumeUp /> تشغيل السؤال مرة أخرى
-                      </button>
-                    )}
-                    
-                    <audio 
-                      ref={audioRef}
-                      className="w-full mt-4"
-                      onPlay={() => setAudioPlaying(true)}
-                      onPause={() => setAudioPlaying(false)}
-                      onEnded={() => setAudioPlaying(false)}
-                      onError={(e) => console.error("Audio error:", e)}
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* ===== TEXT QUESTION DISPLAY ===== */
-                currentQuestion && (currentQuestion.category === 'who-said' || currentQuestion.category === 'song-for' || currentQuestion.category === 'put-word-in-song') ? (
-                  <div className="bg-indigo-800 rounded-xl p-6 shadow-lg text-center">
-                    <div className="mb-4">
-                      <h2 className="text-xl font-semibold">
-                        {currentQuestion.category === 'who-said' ? 'مين قال الجملة دي' :
-                         currentQuestion.category === 'song-for' ? 'أغنية لـ' :
-                         'حط كلمة في أغنية'}
-                      </h2>
-                      <p className="text-indigo-300 mt-2">استمع للسؤال من المسؤول واضغط للجواب</p>
-                    </div>
-                    {/* No answer shown to players */}
                   </div>
                 ) : (
-                  <div className="bg-indigo-800 rounded-xl p-8 shadow-lg text-center">
-                    <h2 className="text-xl font-semibold">في انتظار السؤال</h2>
-                    <p className="text-indigo-300">سيبدأ المسؤول اللعبة قريبًا...</p>
-                  </div>
-                )
-              )}
-
-              {/* ----- BUZZER (show for all except spy) ----- */}
-              {/* ----- BUZZER with animated border ----- */}
-              {currentQuestion?.category !== 'spy' && (
-                <div className="relative p-[2px] rounded-xl overflow-hidden">
-                  {/* shimmer border only when buzzer is active (ready to press) */}
-                  {(!buzzerLocked && !activePlayer && gameStatus === 'playing' && currentQuestion) && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-cyan-400 animate-shimmer-fast rounded-xl" />
-                  )}
-                  <div className="relative bg-gradient-to-br from-cyan-900/90 to-purple-900/90 rounded-xl p-6 shadow-lg">
-                    <button
-                      onClick={() => {
-                        if (!buzzerLocked && currentQuestion && gameStatus === 'playing' && !activePlayer) {
-                          const audio = new Audio('/audio/bell.mp3');
-                          audio.play().catch(err => console.error('Buzzer play error:', err));
-                        }
-                        onBuzzerPress();
-                      }}
-                      disabled={buzzerLocked || !currentQuestion || gameStatus !== 'playing' || activePlayer}
-                      className={`w-full py-12 rounded-xl text-4xl font-bold flex flex-col items-center justify-center transform transition-all ${
-                        isActivePlayer
-                          ? 'bg-gradient-to-r from-cyan-400 to-purple-400 cursor-not-allowed shadow-lg shadow-cyan-500/20'
-                          : activePlayer
-                            ? 'bg-gray-700 cursor-not-allowed'
-                            : buzzerLocked || !currentQuestion || gameStatus !== 'playing'
-                              ? 'bg-gray-700 cursor-not-allowed'
-                              : 'bg-gradient-to-br from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 active:scale-95 shadow-lg shadow-cyan-500/20'
-                      }`}
+                  currentQuestion && (currentQuestion.category === 'who-said' || currentQuestion.category === 'song-for' || currentQuestion.category === 'put-word-in-song') ? (
+                    <div
+                      className="rounded-3xl p-6 text-center relative overflow-hidden"
+                      style={{ ...GLASS, boxShadow: '0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)' }}
                     >
-                      {isActivePlayer ? (
-                        <>
-                          <FaLock className="text-3xl mb-2" />
-                          <span>لقد ضغطت!</span>
-                        </>
-                      ) : activePlayer ? (
-                        <>
-                          <FaLock className="text-3xl mb-2" />
-                          <span>تم قفل الزر</span>
-                        </>
-                      ) : buzzerLocked || !currentQuestion || gameStatus !== 'playing' ? (
-                        <>
-                          <FaLock className="text-3xl mb-2" />
-                          <span>تم قفل الزر</span>
-                        </>
-                      ) : (
-                        <span>اضغط للجواب!</span>
-                      )}
-                    </button>
-
-                    {activePlayer && (
-                      <div className="mt-4 text-center">
-                        <p className="text-lg">
-                          <span className="font-bold">
-                            {players.find(p => p.id === activePlayer)?.isAdmin
-                              ? "المسؤول"
-                              : "لاعب"}
-                            ضغط على الزر!
-                          </span>
-                        </p>
+                      <span className="pointer-events-none absolute inset-x-8 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}60, transparent)` }} />
+                      <div className="mb-4">
+                        <h2 className="text-lg font-black mb-1" style={{ color: GOLD.light }}>
+                          {currentQuestion.category === 'who-said' ? 'مين قال الجملة دي' :
+                           currentQuestion.category === 'song-for' ? 'أغنية لـ' :
+                           'حط كلمة في أغنية'}
+                        </h2>
+                        <p className="text-xs" style={{ color: GOLD.textMuted }}>استمع للسؤال من المسؤول واضغط للجواب</p>
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-          
-          <button
-            onClick={onLeaveRoom}
-            className="w-full bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2"
-          >
-            <FaSignOutAlt /> مغادرة الغرفة
-          </button>
-        </div>
-
-        {/* Player list */}
-        {/* <div className="bg-indigo-800 rounded-xl p-4 shadow-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">اللاعبون</h2>
-            <span className="bg-indigo-700 px-3 py-1 rounded-full">
-              {players.length} {players.length === 1 ? 'لاعب' : 'لاعبين'}
-            </span>
-          </div>
-          
-          <div className="space-y-3">
-            {sortedPlayers.map((player, index) => (
-              <div 
-                key={player.id} 
-                className={`flex items-center justify-between p-3 rounded-lg ${
-                  activePlayer === player.id 
-                    ? 'bg-gradient-to-r from-amber-700 to-amber-600' 
-                    : 'bg-indigo-700'
-                } ${player.isAdmin ? 'border-2 border-yellow-400' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    player.isAdmin ? 'bg-yellow-500' : 'bg-indigo-600'
-                  }`}>
-                    {player.isAdmin ? '👑' : <span className="font-bold">{player.name.charAt(0)}</span>}
-                  </div>
-                  <span className="font-medium">
-                    {player.name} 
-                    {player.isAdmin && ' (مسؤول)'}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-lg">
-                    {player.score}
-                  </span>
-                  {index === 0 && players.length > 1 && (
-                    <span className="text-yellow-400">👑</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div> */}
-
-        {/* زرار لوحة السكور (عائم عشان ماياخدش مساحة) */}
-      <button 
-        onClick={() => setShowScoreModal(true)}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-transform z-40"
-      >
-        <FaTrophy size={24} />
-      </button>
-
-      {/* نافذة التصويت المنبثقة */}
-      {/* نافذة التصويت المنبثقة */}
-      {showSpyVoteModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 p-6 rounded-xl border border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.5)] w-full max-w-md text-center">
-            <h2 className="text-2xl font-bold text-cyan-300 mb-6">صوّت: مين الجاسوس؟ 🕵️</h2>
-            
-            {/* --- بداية الكود المطلوب --- */}
-            <div className="grid grid-cols-2 gap-3">
-              {players && players.length > 0 ? (
-                players
-                  .filter(p => p.id !== playerId) // بيشيل اسمك أنت من القائمة عشان ما تصوتش لنفسك
-                  .map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => handleVoteSubmit(p.id)}
-                      disabled={votedFor !== null}
-                      className={`p-3 rounded-lg font-semibold transition-all shadow-md ${
-                        votedFor === p.id 
-                          ? 'bg-green-500 text-white scale-95' 
-                          : votedFor 
-                            ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' 
-                            : 'bg-gray-700 hover:bg-cyan-600 text-white active:scale-95'
-                      }`}
+                    </div>
+                  ) : (
+                    <div
+                      className="rounded-3xl p-10 text-center relative overflow-hidden"
+                      style={{ ...GLASS, boxShadow: '0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)' }}
                     >
-                      {p.name}
-                    </button>
-                  ))
-              ) : (
-                <p className="col-span-2 text-gray-400 italic">لا يوجد لاعبين متاحين للتصويت حالياً</p>
-              )}
-            </div>
-            {/* --- نهاية الكود المطلوب --- */}
+                      <span className="pointer-events-none absolute inset-x-8 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}60, transparent)` }} />
+                      <div className="text-5xl mb-4" style={{ filter: 'drop-shadow(0 0 20px rgba(212,175,55,0.5))' }}>⏳</div>
+                      <h2 className="text-xl font-black mb-2" style={{ color: GOLD.light }}>في انتظار السؤال</h2>
+                      <p className="text-sm" style={{ color: GOLD.textDim }}>سيبدأ المسؤول اللعبة قريبًا...</p>
+                    </div>
+                  )
+                )}
 
-            {votedFor && (
-              <div className="mt-4 animate-pulse">
-                <p className="text-green-400 font-medium">تم تسجيل تصويتك بنجاح!</p>
-                <p className="text-gray-400 text-sm">في انتظار إنهاء الآدمن للتصويت...</p>
-              </div>
+                {currentQuestion?.category !== 'spy' && (
+                  <div className="relative p-[2px] rounded-2xl overflow-hidden">
+                    {(!buzzerLocked && !activePlayer && gameStatus === 'playing' && currentQuestion) && (
+                      <div
+                        className="absolute inset-0 rounded-2xl"
+                        style={{
+                          background: `linear-gradient(90deg, transparent 0%, ${GOLD.light}80 50%, transparent 100%)`,
+                          backgroundSize: '200% 100%',
+                          animation: 'goldenShimmer 2s linear infinite',
+                        }}
+                      />
+                    )}
+                    <div className="relative rounded-2xl p-[1px]" style={{ background: `linear-gradient(180deg, rgba(212,175,55,0.25), rgba(0,0,0,0.4))` }}>
+                      <button
+                        onClick={() => {
+                          if (!buzzerLocked && currentQuestion && gameStatus === 'playing' && !activePlayer) {
+                            const audio = new Audio('/audio/bell.mp3');
+                            audio.play().catch((err) => console.error('Buzzer play error:', err));
+                          }
+                          onBuzzerPress();
+                        }}
+                        disabled={buzzerLocked || !currentQuestion || gameStatus !== 'playing' || activePlayer}
+                        className="w-full py-12 rounded-2xl text-4xl font-black flex flex-col items-center justify-center transition-all"
+                        style={
+                          isActivePlayer
+                            ? {
+                                background: `linear-gradient(135deg, ${GOLD.primary}, ${GOLD.deep})`,
+                                color: '#1a0f05',
+                                cursor: 'not-allowed',
+                                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)',
+                              }
+                            : activePlayer
+                              ? { background: 'rgba(40,40,40,0.6)', color: GOLD.textMuted, cursor: 'not-allowed', border: `1px solid ${GOLD.borderFaint}` }
+                              : buzzerLocked || !currentQuestion || gameStatus !== 'playing'
+                                ? { background: 'rgba(40,40,40,0.6)', color: GOLD.textMuted, cursor: 'not-allowed', border: `1px solid ${GOLD.borderFaint}` }
+                                : {
+                                    background: `linear-gradient(135deg, ${GOLD.primary}, ${GOLD.deep})`,
+                                    color: '#1a0f05',
+                                    boxShadow: `0 0 40px rgba(212,175,55,0.5), inset 0 1px 0 rgba(255,255,255,0.3)`,
+                                  }
+                        }
+                      >
+                        {isActivePlayer ? (
+                          <>
+                            <FaLock className="text-3xl mb-2" />
+                            <span>لقد ضغطت!</span>
+                          </>
+                        ) : activePlayer ? (
+                          <>
+                            <FaLock className="text-3xl mb-2" />
+                            <span>تم قفل الزر</span>
+                          </>
+                        ) : buzzerLocked || !currentQuestion || gameStatus !== 'playing' ? (
+                          <>
+                            <FaLock className="text-3xl mb-2" />
+                            <span>تم قفل الزر</span>
+                          </>
+                        ) : (
+                          <span>اضغط للجواب!</span>
+                        )}
+                      </button>
+
+                      {activePlayer && (
+                        <div className="mt-4 text-center">
+                          <p className="text-sm" style={{ color: GOLD.text }}>
+                            <span className="font-black" style={{ color: GOLD.light }}>
+                              {players.find((p) => p.id === activePlayer)?.name || 'لاعب'}
+                            </span>{' '}
+                            ضغط على الزر!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
+
+            <button
+              onClick={onLeaveRoom}
+              className="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2"
+              style={BTN_OUTLINE}
+            >
+              <FaSignOutAlt /> مغادرة الغرفة
+            </button>
+          </div>
+
+          {/* Sidebar: Score */}
+          <div className="hidden lg:block">
+            <div
+              className="rounded-2xl p-4 relative overflow-hidden sticky top-4"
+              style={{ ...GLASS, boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)' }}
+            >
+              <span className="pointer-events-none absolute inset-x-6 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}60, transparent)` }} />
+
+              <div className="flex items-center gap-2 mb-4">
+                <FaTrophy style={{ color: GOLD.primary }} />
+                <h2 className="text-base font-black" style={{ color: GOLD.light }}>الترتيب</h2>
+              </div>
+
+              <div className="space-y-2">
+                {sortedPlayers.map((p, index) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between p-2 rounded-lg"
+                    style={{
+                      background: index === 0 ? 'rgba(212,175,55,0.10)' : 'rgba(0,0,0,0.25)',
+                      border: `1px solid ${index === 0 ? GOLD.border : GOLD.borderFaint}`,
+                    }}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs w-4 font-mono" style={{ color: GOLD.textMuted }}>{index + 1}</span>
+                      {index === 0 && <FaCrown className="text-xs" style={{ color: GOLD.primary }} />}
+                      <span className="text-sm font-bold truncate" style={{ color: GOLD.text }}>{p.name}</span>
+                    </div>
+                    <span className="text-sm font-black tabular-nums" style={{ color: GOLD.light }}>{p.score}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* نافذة نتيجة الجاسوس */}
-      {/* نافذة نتيجة الجاسوس المحدثة */}
-      {spyResult && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className={`bg-gray-900 p-6 rounded-xl border-2 shadow-2xl w-full max-w-md text-center relative max-h-[90vh] overflow-y-auto
-            ${spyResult.spyCaught ? 'border-green-500 shadow-green-500/50' : 'border-red-500 shadow-red-500/50'}`}>
-            
-            {/* زرار القفل اليدوي (لو حابب يقفلها قبل الأدمن) */}
-            <button onClick={() => setSpyResult(null)} className="absolute top-3 right-3 text-gray-400 hover:text-white">
-              <FaTimes size={20} />
-            </button>
+        {/* Floating score button (mobile) */}
+        <button
+          onClick={() => setShowScoreModal(true)}
+          className="fixed bottom-6 right-6 p-4 rounded-full shadow-2xl transition-transform hover:scale-110 z-40 lg:hidden"
+          style={{
+            background: `linear-gradient(135deg, ${GOLD.primary}, ${GOLD.deep})`,
+            color: '#1a0f05',
+            boxShadow: `0 0 40px rgba(212,175,55,0.6)`,
+          }}
+        >
+          <FaTrophy size={24} />
+        </button>
 
-            {/* عرض صورة المكسب أو الخسارة */}
-            <div className="flex justify-center mb-4">
-              <img 
-                src={spyResult.spyCaught 
-                  ? `${process.env.PUBLIC_URL}/SPYIMAGES/spy-caught.png` 
-                  : `${process.env.PUBLIC_URL}/SPYIMAGES/spy-escaped.png`} 
-                alt={spyResult.spyCaught ? 'Caught' : 'Escaped'} 
-                className="w-[500px] h-[200px] object-contain drop-shadow-lg"
-                // لو الصور مش موجودة لسه في مجلد public هيتم إخفاء الخطأ برمجياً
-                onError={(e) => e.target.style.display = 'none'} 
-              />
-            </div>
+        {showScoreModal && (
+          <div
+            className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4"
+            onClick={() => setShowScoreModal(false)}
+          >
+            <div
+              className="rounded-3xl p-6 max-w-sm w-full relative overflow-hidden"
+              style={{ ...GLASS, boxShadow: '0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="pointer-events-none absolute inset-x-8 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD.light}80, transparent)` }} />
 
-            {spyResult.spyCaught ? (
-              <h2 className="text-3xl font-bold text-green-400 mb-2">الجاسوس اتكشف! 🎉</h2>
-            ) : (
-              <h2 className="text-3xl font-bold text-red-500 mb-2">الجاسوس هرب! 😈</h2>
-            )}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black flex items-center gap-2" style={{ color: GOLD.light }}>
+                  <FaTrophy style={{ color: GOLD.primary }} /> الترتيب
+                </h2>
+                <button onClick={() => setShowScoreModal(false)} className="transition-colors" style={{ color: GOLD.textMuted }}>
+                  <FaTimes size={20} />
+                </button>
+              </div>
 
-            <p className="text-yellow-300 mt-2 mb-4 text-xl">الجاسوس كان: <span className="font-bold">{players.find(p => p.id === spyResult.spyId)?.name}</span></p>
-
-            {/* مربع ملخص نقاط الجولة */}
-            <div className="bg-gray-800 p-4 rounded-xl mt-4 border border-gray-600 text-right">
-              <h3 className="text-cyan-300 font-bold mb-3 border-b border-gray-600 pb-2 text-center text-lg">📊 نقاط هذه الجولة</h3>
-              <div className="space-y-2">
-                {spyResult.roundScores.map((score, index) => (
-                  <div key={index} className="flex justify-between items-center bg-gray-700/60 p-3 rounded-lg">
-                    <span className="text-white font-semibold flex items-center gap-2">
-                      {score.isSpy ? '🕵️' : '👨‍💼'} {score.name}
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {sortedPlayers.map((p, index) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between p-3 rounded-xl"
+                    style={{
+                      background: index === 0 ? 'rgba(212,175,55,0.10)' : 'rgba(0,0,0,0.25)',
+                      border: `1px solid ${index === 0 ? GOLD.border : GOLD.borderFaint}`,
+                    }}
+                  >
+                    <span className="flex items-center gap-2 font-bold text-sm" style={{ color: GOLD.text }}>
+                      {index === 0 && <FaCrown style={{ color: GOLD.primary }} />} {p.name}
                     </span>
-                    <span className={`font-bold px-3 py-1 rounded-md shadow-sm ${
-                      score.pointsEarned > 0 ? 'bg-green-500 text-white' : 'bg-gray-600 text-gray-300'
-                    }`}>
-                      {score.pointsEarned > 0 ? '+1 نقطة' : '0 نقطة'}
+                    <span
+                      className="px-3 py-1 rounded-md text-sm font-black tabular-nums"
+                      style={{ background: 'rgba(212,175,55,0.18)', color: GOLD.light }}
+                    >
+                      {p.score}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
-        </div>
-      )}
-
-      {/* نافذة السكور المنبثقة */}
-      {showScoreModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowScoreModal(false)}>
-          <div className="bg-gradient-to-b from-gray-800 to-gray-900 p-6 rounded-2xl border border-purple-500 shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-yellow-400 flex items-center gap-2"><FaTrophy /> الترتيب</h2>
-              <button onClick={() => setShowScoreModal(false)} className="text-gray-400 hover:text-white"><FaTimes size={24}/></button>
-            </div>
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-              {sortedPlayers.map((p, index) => (
-                <div key={p.id} className="flex justify-between bg-gray-800/80 p-3 rounded-lg border border-gray-700">
-                  <span className="font-bold text-white flex items-center gap-2">
-                    {index === 0 && <FaCrown className="text-yellow-400" />} {p.name}
-                  </span>
-                  <span className="bg-purple-600 text-white px-3 py-1 rounded-md font-bold">{p.score}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+        )}
       </div>
+
+      <style>{`
+        @keyframes goldenShimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+      `}</style>
     </div>
   );
 };
