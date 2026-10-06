@@ -1,5 +1,4 @@
 // components/SwordRound.jsx
-// ⚔️ Sword of Knowledge – الواجهة الكاملة (ديناميكية + إمبراطوريات + حرمان)
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   FaCrown, FaBook, FaExpand, FaCompress, FaVolumeUp, FaVolumeMute,
@@ -12,53 +11,22 @@ import {
 
 /* ==================== Animations ==================== */
 const AnimCSS = `
-@keyframes sokBattleRing {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-@keyframes sokFlagWave {
-  0%, 100% { transform: skewX(0deg); }
-  50%      { transform: skewX(-10deg); }
-}
+@keyframes sokBattleRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes sokFlagWave { 0%, 100% { transform: skewX(0deg); } 50% { transform: skewX(-10deg); } }
 @keyframes sokCrownDrop {
   0%   { transform: translateY(-24px) scale(0.4); opacity: 0; }
   60%  { transform: translateY(3px) scale(1.15); opacity: 1; }
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 @keyframes sokFadeIn  { from { opacity: 0; } to { opacity: 1; } }
-@keyframes sokScaleIn {
-  0%   { transform: scale(0.82); opacity: 0; }
-  100% { transform: scale(1);    opacity: 1; }
-}
-@keyframes sokLinePulse {
-  0%, 100% { stroke-opacity: 0.5; }
-  50%      { stroke-opacity: 0.85; }
-}
+@keyframes sokScaleIn { 0% { transform: scale(0.82); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes sokLinePulse { 0%, 100% { stroke-opacity: 0.5; } 50% { stroke-opacity: 0.85; } }
 
-/* ==================== أنيميشن مرحلة السيطرة ==================== */
 @keyframes sokClaimReveal {
-  0% {
-    opacity: 0;
-    transform: translateY(-80px) scale(0.4) rotate(-8deg);
-    letter-spacing: 0.8em;
-    filter: blur(15px);
-  }
-  55% {
-    opacity: 1;
-    transform: translateY(6px) scale(1.08) rotate(2deg);
-    letter-spacing: 0.2em;
-    filter: blur(0);
-  }
-  75% {
-    transform: translateY(-2px) scale(0.98) rotate(-1deg);
-    letter-spacing: 0.08em;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(0deg);
-    letter-spacing: 0.02em;
-    filter: blur(0);
-  }
+  0% { opacity: 0; transform: translateY(-80px) scale(0.4) rotate(-8deg); letter-spacing: 0.8em; filter: blur(15px); }
+  55% { opacity: 1; transform: translateY(6px) scale(1.08) rotate(2deg); letter-spacing: 0.2em; filter: blur(0); }
+  75% { transform: translateY(-2px) scale(0.98) rotate(-1deg); letter-spacing: 0.08em; }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); letter-spacing: 0.02em; filter: blur(0); }
 }
 @keyframes sokClaimGlow {
   0%   { filter: drop-shadow(0 0 0 rgba(16,185,129,0)); }
@@ -74,31 +42,11 @@ const AnimCSS = `
   0%   { transform: scale(0.2); opacity: 1; stroke-width: 8; }
   100% { transform: scale(2.6); opacity: 0; stroke-width: 0.5; }
 }
-
-/* ==================== أنيميشن مرحلة الهجوم ==================== */
 @keyframes sokAttackReveal {
-  0% {
-    opacity: 0;
-    transform: translateY(80px) scale(1.5) rotate(8deg);
-    letter-spacing: 0.8em;
-    filter: blur(15px);
-  }
-  55% {
-    opacity: 1;
-    transform: translateY(-6px) scale(0.95) rotate(-2deg);
-    letter-spacing: 0.2em;
-    filter: blur(0);
-  }
-  75% {
-    transform: translateY(3px) scale(1.03) rotate(1deg);
-    letter-spacing: 0.08em;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(0deg);
-    letter-spacing: 0.02em;
-    filter: blur(0);
-  }
+  0% { opacity: 0; transform: translateY(80px) scale(1.5) rotate(8deg); letter-spacing: 0.8em; filter: blur(15px); }
+  55% { opacity: 1; transform: translateY(-6px) scale(0.95) rotate(-2deg); letter-spacing: 0.2em; filter: blur(0); }
+  75% { transform: translateY(3px) scale(1.03) rotate(1deg); letter-spacing: 0.08em; }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); letter-spacing: 0.02em; filter: blur(0); }
 }
 @keyframes sokAttackGlow {
   0%   { filter: drop-shadow(0 0 0 rgba(239,68,68,0)); }
@@ -227,7 +175,6 @@ class SoundEngine {
           this._t({ f:110, d:0.3, t:'sawtooth', g:0.07 });
           break;
         case 'deny':
-          // صوت "تحطيم" – حرمان
           this._t({ f:200, d:0.15, t:'sawtooth', g:0.12 });
           this._t({ f:150, d:0.25, t:'square', g:0.08, s:0.06 });
           break;
@@ -368,7 +315,6 @@ const RealmGroup = ({
 
   const hubs = realm.regions.slice(1, 7);
 
-  // إحصاء الأقاليم لكل لاعب
   const ownershipCount = useMemo(() => {
     const counts = {};
     realm.regions.forEach(r => {
@@ -385,8 +331,7 @@ const RealmGroup = ({
   }, [ownershipCount]);
 
   const dominantCount = dominantOwner ? ownershipCount[dominantOwner] : 0;
-  const totalRegions = realm.regions.length; // 7 (قلعة + 6)
-  // شفافية اللون من 0.0 → 0.55
+  const totalRegions = realm.regions.length;
   const intensity = Math.min(0.55, dominantCount / totalRegions);
 
   const allOwnedByBase = baseOwner
@@ -396,22 +341,18 @@ const RealmGroup = ({
 
   return (
     <g transform={`translate(${layout.x}, ${layout.y})`}>
-      {/* ظل */}
       <path d={blobPath} fill="rgba(0,0,0,0.55)" transform="translate(5,7)" pointerEvents="none" />
 
-      {/* اليابسة */}
       <path d={blobPath}
         fill="url(#sokParchment)"
         stroke={allOwnedByBase ? '#ffd700' : 'rgba(212,175,55,0.55)'}
         strokeWidth={allOwnedByBase ? 3.5 : 1.5} />
 
-      {/* فلتر اللون (تصاعد حسب السيطرة) */}
       {dominantOwner && (
         <path d={blobPath} fill={getColor(dominantOwner)}
           opacity={intensity} pointerEvents="none" />
       )}
 
-      {/* خطوط القاعدة ↔ الأقاليم (داخلية) */}
       {hubs.map((r, i) => {
         const owner = ownership[realm.id]?.[r.id];
         const col = (owner && baseOwner && owner === baseOwner)
@@ -426,7 +367,6 @@ const RealmGroup = ({
         );
       })}
 
-      {/* الأقاليم */}
       {hubs.map((r, i) => {
         const owner = ownership[realm.id]?.[r.id];
         const claimable = (phase === 'claiming' || phase === 'attacking') && myTurn && !owner;
@@ -448,7 +388,6 @@ const RealmGroup = ({
         );
       })}
 
-      {/* القلعة */}
       <g style={{ cursor: canAttackBase ? 'pointer' : 'default' }}
         onClick={() => { if (canAttackBase) onAttackBase(realm.id); }}>
         {canAttackBase && (
@@ -460,7 +399,6 @@ const RealmGroup = ({
           size={1.1} />
       </g>
 
-      {/* لافتة الاسم */}
       <g transform={`translate(0, ${layout.r + 20})`} pointerEvents="none">
         <rect x="-58" y="-10" width="116" height="20" rx="5"
           fill="rgba(10,25,41,0.9)" stroke="#d4af37" strokeWidth="0.9" />
@@ -472,7 +410,6 @@ const RealmGroup = ({
         </text>
       </g>
 
-      {/* تاج */}
       {allOwnedByBase && (
         <g transform={`translate(0, ${-layout.r - 10})`}
           style={{ animation: 'sokCrownDrop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}>
@@ -512,12 +449,10 @@ const MapCanvas = ({
     return { x: r() * MAP_W, y: r() * MAP_H, s: 0.4 + r() * 1.1 };
   }), []);
 
-  // ✅ خطوط الإمبراطوريات
   const imperialLines = useMemo(() => {
     const layoutMap = {};
     layout.forEach(l => { layoutMap[l.id] = l; });
 
-    // map: pid -> homeRealmId
     const homeRealmOf = {};
     Object.entries(gameState.ownership).forEach(([realmId, regions]) => {
       const baseId = SOK_REALMS.find(r => r.id === realmId)?.regions[0].id;
@@ -525,7 +460,6 @@ const MapCanvas = ({
       if (owner) homeRealmOf[owner] = realmId;
     });
 
-    // map: (pid, realmId) -> count of owned regions (excluding home realm)
     const externalCount = {};
     Object.entries(gameState.ownership).forEach(([realmId, regions]) => {
       Object.entries(regions).forEach(([regionId, owner]) => {
@@ -582,7 +516,6 @@ const MapCanvas = ({
 
       <rect width={MAP_W} height={MAP_H} fill="url(#sokSeaGrad)" />
 
-      {/* موجات */}
       <g opacity="0.13" pointerEvents="none">
         {Array.from({ length: 14 }).map((_, i) => (
           <path key={i}
@@ -591,17 +524,14 @@ const MapCanvas = ({
         ))}
       </g>
 
-      {/* نجوم */}
       <g pointerEvents="none">
         {stars.map((s, i) => (
           <circle key={i} cx={s.x} cy={s.y} r={s.s} fill="#f4e5a1" opacity="0.4" />
         ))}
       </g>
 
-      {/* ✅ خطوط الإمبراطوريات */}
       {imperialLines.map(line => (
         <g key={line.id} pointerEvents="none">
-          {/* هالة ناعمة */}
           <line
             x1={line.from.x} y1={line.from.y}
             x2={line.to.x} y2={line.to.y}
@@ -609,7 +539,6 @@ const MapCanvas = ({
             strokeWidth={2 + line.strength * 6}
             opacity={0.12}
             strokeLinecap="round" />
-          {/* الخط الأساسي */}
           <line
             x1={line.from.x} y1={line.from.y}
             x2={line.to.x} y2={line.to.y}
@@ -619,7 +548,6 @@ const MapCanvas = ({
             strokeDasharray={line.count >= 6 ? '0' : '10 6'}
             strokeLinecap="round"
             style={{ animation: 'sokLinePulse 3s ease-in-out infinite' }} />
-          {/* نقطة صغيرة في المنتصف */}
           <circle
             cx={(line.from.x + line.to.x) / 2}
             cy={(line.from.y + line.to.y) / 2}
@@ -629,7 +557,6 @@ const MapCanvas = ({
         </g>
       ))}
 
-      {/* الممالك */}
       {realms.map((realm, i) => {
         const l = layout.find(x => x.id === realm.id) || layout[i];
         if (!l) return null;
@@ -651,7 +578,6 @@ const MapCanvas = ({
         );
       })}
 
-      {/* البوصلة */}
       <g transform={`translate(${MAP_W - 90}, ${MAP_H - 90})`} opacity="0.6" pointerEvents="none">
         <circle r="36" fill="none" stroke="#d4af37" strokeWidth="1" />
         <circle r="27" fill="none" stroke="#d4af37" strokeWidth="0.5" strokeDasharray="2 2" />
@@ -660,7 +586,6 @@ const MapCanvas = ({
         <text y="-44" textAnchor="middle" fontSize="13" fill="#d4af37" fontWeight="800">N</text>
       </g>
 
-      {/* زوايا */}
       {[[30,30,1,1],[MAP_W-30,30,-1,1],[30,MAP_H-30,1,-1],[MAP_W-30,MAP_H-30,-1,-1]].map(([x,y,sx,sy], i) => (
         <g key={i} transform={`translate(${x}, ${y}) scale(${sx}, ${sy})`} opacity="0.55" pointerEvents="none">
           <path d="M 0 0 L 40 0 M 0 0 L 0 40 M 0 0 L 20 20" stroke="#d4af37" strokeWidth="1.5" fill="none" />
@@ -702,7 +627,6 @@ const TimerBar = ({ timer, max }) => {
 const ResultsPanel = ({ results }) => {
   const isMcq = results?.questionType === 'mcq';
   const options = results?.questionOptions;
-  const correctIndex = results?.correctIndex;
 
   return (
     <div className="p-4 rounded-2xl bg-black/40 border border-amber-500/30">
@@ -767,101 +691,21 @@ const RulesModal = ({ onClose }) => (
       </div>
 
       <div className="space-y-6 text-amber-100/90 text-[13px] sm:text-sm leading-[1.9] text-right">
-
         <section className="bg-black/30 rounded-xl p-4 border border-amber-500/20">
           <h3 className="text-lg font-bold text-amber-300 mb-2">🎯 فكرة اللعبة</h3>
           <p>كل لاعب يحكم مملكة واحدة في البداية، وهدفه توسيع إمبراطوريته بالسيطرة على أراضي الخصوم. اللعبة على مرحلتين: <b className="text-amber-200">السيطرة</b> ثم <b className="text-red-300">الهجوم</b>. آخر لاعب يصمد على الخريطة يتوَّج <b className="text-amber-300">ملكاً للمعرفة</b> 👑</p>
         </section>
-
-        <section>
-          <h3 className="text-lg font-bold text-cyan-300 mb-2">🗺️ الخريطة والممالك</h3>
-          <ul className="list-disc list-inside space-y-1.5 mr-3">
-            <li>عدد الممالك <b className="text-amber-200">يساوي عدد اللاعبين</b> — 3 لاعبين = 3 ممالك، 12 = 12 مملكة.</li>
-            <li>كل مملكة فيها <b className="text-amber-200">قلعة (🏰)</b> في المنتصف و<b className="text-amber-200">6 أقاليم</b> حولها.</li>
-            <li>كل لاعب يبدأ بقلعة في مملكة عشوائية، وله لون فريد ثابت.</li>
-            <li>شكل الخريطة وترتيب الممالك يتغيّر تلقائياً حسب عدد اللاعبين.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h3 className="text-lg font-bold text-purple-300 mb-2">🎨 الألوان وخطوط الإمبراطورية</h3>
-          <ul className="list-disc list-inside space-y-1.5 mr-3">
-            <li>عند احتلال إقليم، يتلوَّن بلونك ويظهر خط من قلعتك إليه.</li>
-            <li>قوة اللون تزيد حسب عدد الأقاليم في نفس المملكة — 1 = خفيف، 6 = كامل.</li>
-            <li>لما تحتل إقليماً في مملكة <b>ليست مملكتك</b>، يظهر <b className="text-amber-300">خط إمبراطوري</b> من قلعتك الأصلية لقلعة المملكة دي. الخط مرئي للجميع.</li>
-            <li>كل ما زادت أقاليمك، زاد سمك الخط وقوته.</li>
-            <li>لو خسرت قلعتك، خطوطك تتحوَّل للون اللاعب الجديد — إمبراطوريتك تندمج معه.</li>
-            <li>لما تسيطر على كل أقاليم مملكة، تتحوَّل المملكة كاملة للونك مع تاج ذهبي.</li>
-          </ul>
-        </section>
-
         <section className="bg-emerald-950/30 rounded-xl p-4 border border-emerald-500/25">
           <h3 className="text-lg font-bold text-emerald-300 mb-2">⚔️ المرحلة الأولى — السيطرة</h3>
-          <p className="mb-2">في دورك، اضغط على أي <b className="text-amber-200">إقليم فارغ</b> (في مملكتك أو مملكة خصم). يظهر سؤال للجميع.</p>
-          <p className="font-bold text-emerald-200 mt-3 mb-1">نتيجة السؤال:</p>
-          <ul className="list-disc list-inside space-y-1.5 mr-3">
-            <li><b className="text-emerald-300">أجبت صح</b> → تاخد الإقليم فوراً.</li>
-            <li><b className="text-red-300">أجبت غلط</b> → <u>لا تأخذ الإقليم</u>، ومهما جاوب التانيين صح، الإقليم يفضل <b className="text-red-300">فارغاً ولا يذهب لأي أحد</b>. أنت حرّمت الخصوم من التوسع.</li>
-            <li><b className="text-cyan-300">التانيين جاوبوا صح</b> → مفيش فايدة — الإقليم يفضل فاضي ومتاح لأي حد في أي دور.</li>
-          </ul>
-          <p className="mt-3 text-amber-200/90 text-xs sm:text-sm italic">💡 أحياناً الأهم مش إنك تكسب، لكن إنك تمنع خصمك. فكّر قبل ما تختار.</p>
+          <p className="mb-2">في دورك، اضغط على أي <b className="text-amber-200">إقليم فارغ</b>. يظهر سؤال للجميع. لو جاوبت صح → تاخد الإقليم. لو غلط → الإقليم يفضل فاضي.</p>
         </section>
-
-        <section>
-          <h3 className="text-lg font-bold text-yellow-300 mb-2">🔄 نظام الأدوار</h3>
-          <ul className="list-disc list-inside space-y-1.5 mr-3">
-            <li>اللعبة بالترتيب: كل لاعب فرصة في الجولة، والدور ينتقل للتالي.</li>
-            <li>عدد الجولات ديناميكي حسب عدد اللاعبين.</li>
-            <li>لما الأقاليم تتحول أو الجولات تخلص، اللعبة تنتقل لـ <b className="text-red-300">مرحلة الهجوم</b>.</li>
-          </ul>
-        </section>
-
         <section className="bg-red-950/30 rounded-xl p-4 border border-red-500/25">
           <h3 className="text-lg font-bold text-red-300 mb-2">⚔️ المرحلة الثانية — الهجوم</h3>
-          <p className="mb-2">في دورك، ممكن تختار:</p>
-          <ul className="list-disc list-inside space-y-1.5 mr-3">
-            <li><b className="text-emerald-300">إقليم فارغ</b> (لو موجود) — تحتله بالسؤال.</li>
-            <li><b className="text-red-300">إقليم خصم</b> — تبدأ <b>مبارزة Best of 3</b>:
-              <ul className="list-disc list-inside mr-6 mt-1 space-y-0.5">
-                <li>أنت والمدافع تجاوبان على نفس السؤال في كل جولة.</li>
-                <li>اللي جاوب صح = يكسب الجولة.</li>
-                <li>أول واحد يوصل 2 جولات = يفوز بالمبارزة.</li>
-              </ul>
-            </li>
-          </ul>
+          <p>تختار إقليم خصم → مبارزة Best of 3. أول واحد يوصل 2 جولات = يفوز بالمبارزة.</p>
         </section>
-
-        <section className="bg-yellow-950/30 rounded-xl p-4 border border-yellow-500/25">
-          <h3 className="text-lg font-bold text-yellow-300 mb-2">🏰 مهاجمة القلعة</h3>
-          <p className="mb-2">مهاجمة القلعة تُقصي الخصم نهائياً. شروطها:</p>
-          <ul className="list-disc list-inside space-y-1.5 mr-3">
-            <li>لازم تملك <b className="text-amber-200">4 من 6 أقاليم</b> حول القلعة.</li>
-            <li>لازم الخصم <b className="text-amber-200">ما يكونش عنده أي إقليم خارج مملكته</b>.</li>
-          </ul>
-          <p className="font-bold text-red-300 mt-3 mb-1">لو كسبت:</p>
-          <ul className="list-disc list-inside space-y-1 mr-3">
-            <li>كل ممالكه تنتقل إليك.</li>
-            <li><b className="text-amber-200">خطوطه الإمبراطورية تتحوَّل للونك</b>.</li>
-            <li>يُقصى من اللعبة (💀) ويبقى مشاهداً.</li>
-          </ul>
-        </section>
-
         <section className="bg-purple-950/30 rounded-xl p-4 border border-purple-500/25">
           <h3 className="text-lg font-bold text-purple-300 mb-2">👑 شروط الفوز</h3>
-          <ul className="list-disc list-inside space-y-1.5 mr-3">
-            <li>آخر لاعب صامد = يفوز ويتوَّج <b className="text-amber-300">ملكاً للمعرفة</b>.</li>
-            <li>لو اللعبة اتقفلت، الفائز هو الأكثر أقاليم + نقاط.</li>
-          </ul>
-        </section>
-
-        <section className="bg-black/40 rounded-xl p-4 border border-amber-500/20">
-          <h3 className="text-lg font-bold text-amber-300 mb-2">💡 نصائح استراتيجية</h3>
-          <ul className="list-disc list-inside space-y-1.5 mr-3 text-amber-100/80">
-            <li>التوسع في مملكة واحدة = خط أقوى ونفوذ أعمق.</li>
-            <li>في السيطرة، حرمان خصم قوي أهم من محاولة الكسب.</li>
-            <li>راقب خطوط الخصوم — خطوط سميكة = إمبراطورية قوية = أولوية في الهجوم.</li>
-            <li>قبل مهاجمة قلعة، تأكد إن الخصم مالوش أراضٍ بره.</li>
-          </ul>
+          <p>آخر لاعب صامد = يفوز ويتوَّج <b className="text-amber-300">ملكاً للمعرفة</b>.</p>
         </section>
       </div>
 
@@ -907,6 +751,9 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
   const prevPhaseRef = useRef(null);
   const lastTickRef = useRef(null);
 
+  // ✅ مرجع يتتبع إننا لعبنا بالفعل في هذه الجلسة
+  const hasPlayedRef = useRef(false);
+
   useEffect(() => { soundRef.current = new SoundEngine(SOK_SOUND_PATHS); }, []);
   const unlockSound = useCallback(async () => {
     if (!soundRef.current || soundReady) return;
@@ -916,26 +763,52 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
   useEffect(() => { if (soundRef.current) soundRef.current.setEnabled(!soundMuted); }, [soundMuted]);
   const playSound = useCallback((n) => { soundRef.current?.play(n); }, []);
 
-  /* Socket listeners */
+  // ✅ إعادة تعيين كل المراجع عند تغيير الغرفة
+  useEffect(() => {
+    setGameOver(null);
+    setCurrentQuestion(null);
+    setDuelQuestion(null);
+    setResults(null);
+    setDuelRoundResult(null);
+    setPhaseMsg(null);
+    setClaimMsg(null);
+    setDuelMsg(null);
+    setPlayerLeftMsg(null);
+    hasPlayedRef.current = false;
+    claimingShownRef.current = false;
+    attackModalShownRef.current = false;
+    prevPhaseRef.current = null;
+  }, [roomCode]);
+
   useEffect(() => {
     if (!socket) return;
     socket.emit('sok_init', { roomCode });
 
     const onState = (state) => {
+      // ✅ إذا كانت اللعبة في مرحلة غير منتهية → الجلسة حقيقية
+      if (state.phase !== 'ended') {
+        hasPlayedRef.current = true;
+        setGameOver(null);
+      }
+
+      // إشعار بداية مرحلة السيطرة
       if (state.phase === 'claiming' && !claimingShownRef.current) {
         claimingShownRef.current = true;
         setPhaseMsg('claiming');
         playSound('phaseChange');
         setTimeout(() => setPhaseMsg(null), SOK_CONFIG.msgDisplayMs);
       }
+      // إشعار بداية مرحلة الهجوم
       if (prevPhaseRef.current !== 'attacking' && state.phase === 'attacking') {
         setPhaseMsg('attacking');
         playSound('phaseChange');
         setTimeout(() => setPhaseMsg(null), SOK_CONFIG.msgDisplayMs);
       }
+
       prevPhaseRef.current = state.phase;
       setGameState(state);
     };
+
     const onQuestion = (q) => {
       setCurrentQuestion(q);
       setTimer(SOK_CONFIG.questionTimer);
@@ -960,11 +833,17 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
       playSound(data.winner ? 'correct' : 'wrong');
       setTimeout(() => setDuelRoundResult(null), 4000);
     };
-    const onGameOver = (d) => { setGameOver(d); playSound('victory'); };
+
+    // ✅ لا تعرض شاشة الفوز إلا لو لعبنا فعلًا
+    const onGameOver = (d) => {
+      if (!hasPlayedRef.current) return;
+      setGameOver(d);
+      playSound('victory');
+    };
+
     const onRequestDuelQuestion = () => socket.emit('sok_provide_duel_question', { roomCode });
     const onResults = (res) => {
       setResults(res);
-      // صوت مناسب
       if (res.claimed) playSound('correct');
       else if (res.initiatorCorrect === false && res.denyGained?.includes(playerId)) playSound('deny');
       else playSound('wrong');
@@ -975,7 +854,6 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
     const onStageChanged = ({ stage }) => {
       if (stage === 'attacking' && !attackModalShownRef.current) {
         attackModalShownRef.current = true;
-        // ✅ نسجلها pending لحد ما الـ popup تقفل
         setPendingStageMsg('attacking');
       }
     };
@@ -1021,7 +899,6 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
     // eslint-disable-next-line
   }, [socket, roomCode]);
 
-  /* Timer */
   useEffect(() => {
     if (!currentQuestion && !duelQuestion) return;
     if (hasAnswered) return;
@@ -1035,7 +912,6 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
     return () => clearInterval(id);
   }, [currentQuestion, duelQuestion, hasAnswered, playSound]);
 
-  // ✅ لما الـ results popup تقفل و في pending stage message → اعرضها
   useEffect(() => {
     if (results || !pendingStageMsg) return;
     const t = setTimeout(() => {
@@ -1043,11 +919,10 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
       playSound('phaseChange');
       setPendingStageMsg(null);
       setTimeout(() => setPhaseMsg(null), 4500);
-    }, 350); // تأخير صغير عشان الـ popup تكون اختفت بصريًا
+    }, 350);
     return () => clearTimeout(t);
   }, [results, pendingStageMsg, playSound]);
 
-  /* Helpers */
   const realPlayers = gameState?.players || [];
   const me = realPlayers.find(p => p.id === playerId);
   const amIEliminated = !!me?.eliminated;
@@ -1142,93 +1017,124 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
         style={{ background: 'radial-gradient(circle at 30% 20%, #2a1050 0%, #10061e 55%, #04010a 100%)' }}
         onClick={unlockSound}>
 
-        {/* Header */}
-        <header className="relative z-10 flex items-center justify-between px-3 py-1.5 border-b border-amber-500/30"
-          style={{ background: 'linear-gradient(90deg, rgba(20,8,36,0.95), rgba(60,24,90,0.8), rgba(20,8,36,0.95))' }}>
-          <div className="flex items-center gap-2">
-            <FaCrown className="text-amber-300 text-lg" />
-            <h1 className="font-extrabold text-sm sm:text-base bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent">
+        {/* الشريط العلوي الموحّد */}
+        <header
+          className="relative z-30 flex items-center gap-2 px-2 py-1 border-b border-amber-500/30 flex-shrink-0"
+          style={{
+            background:
+              'linear-gradient(90deg, rgba(20,8,36,0.98), rgba(60,24,90,0.9), rgba(20,8,36,0.98))',
+          }}
+        >
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <FaCrown className="text-amber-300 text-sm" />
+            <h1 className="font-extrabold text-xs sm:text-sm bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent whitespace-nowrap">
               سيف المعرفة
             </h1>
-            <span className="hidden sm:inline text-xs text-amber-200/70">
-              {phase === 'claiming' ? 'مرحلة السيطرة' : phase === 'attacking' ? 'مرحلة الهجوم' : phase === 'duel' ? 'مبارزة' : ''}
-            </span>
           </div>
-          <div className="flex items-center gap-1.5">
+
+          <span className="hidden sm:inline text-amber-500/30">|</span>
+
+          <div className="text-[10px] sm:text-xs text-amber-100 whitespace-nowrap flex-shrink-0">
+            {phase === 'claiming' && (
+              <span>
+                🗺️ <b className="text-white">{turnPlayer?.name || '—'}</b>
+                <span className="hidden sm:inline"> • جولة <b className="text-amber-300">{(gameState.roundCount || 0) + 1}</b> / {gameState.maxClaimRounds || 8}</span>
+              </span>
+            )}
+            {phase === 'attacking' && (
+              <span>⚔️ <b className="text-white">{turnPlayer?.name || '—'}</b></span>
+            )}
+            {phase === 'duel' && <span className="text-red-300 font-bold">⚡ مبارزة</span>}
+            {phase === 'ended' && <span className="text-amber-300 font-bold">🏆 انتهت</span>}
+          </div>
+
+          <span className="hidden sm:inline text-amber-500/30">|</span>
+
+          <div className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto">
+            {realPlayers.map(p => {
+              const isTurn = gameState.turn === p.id && !p.eliminated;
+              return (
+                <div
+                  key={p.id}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full whitespace-nowrap text-[10px] sm:text-xs border flex-shrink-0 transition-all ${
+                    p.eliminated ? 'opacity-40 border-gray-600'
+                    : isTurn ? 'border-amber-400 shadow-[0_0_12px_rgba(212,175,55,0.55)]'
+                    : 'border-gray-600'
+                  }`}
+                  style={{
+                    background: isTurn ? 'rgba(212,175,55,0.15)' : 'rgba(31,41,55,0.7)',
+                  }}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+                  <span
+                    className="font-bold"
+                    style={{ color: p.id === playerId ? '#f4e5a1' : '#e5e7eb' }}
+                  >
+                    {p.name}{p.id === playerId ? ' (أنت)' : ''}
+                  </span>
+                  <span className="text-amber-300">({scores?.[p.id] || 0})</span>
+                  {gameState?.skippedPlayers?.[p.id] && <span className="text-red-400">⏭</span>}
+                  {p.eliminated && <FaSkull className="text-red-500" size={9} />}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-1 flex-shrink-0">
             {(currentQuestion || duelQuestion) && !hasAnswered && (
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/40 border border-amber-500/30">
-                <FaClock className={timer <= 5 ? 'text-red-400' : 'text-amber-300'} />
-                <span className={`font-mono font-bold text-sm ${timer <= 5 ? 'text-red-400' : 'text-amber-100'}`}>{timer}</span>
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-black/40 border border-amber-500/30">
+                <FaClock className={timer <= 5 ? 'text-red-400' : 'text-amber-300'} size={11} />
+                <span className={`font-mono font-bold text-xs ${timer <= 5 ? 'text-red-400' : 'text-amber-100'}`}>
+                  {timer}
+                </span>
               </div>
             )}
-            <button onClick={() => setSoundMuted(m => !m)} title="الصوت"
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-black/30 border border-amber-500/30 hover:bg-black/50">
-              {soundMuted ? <FaVolumeMute className="text-red-400" /> : <FaVolumeUp className="text-amber-200" />}
+
+            <button
+              onClick={() => setSoundMuted(m => !m)}
+              title="الصوت"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/30 border border-amber-500/30 hover:bg-black/50"
+            >
+              {soundMuted ? <FaVolumeMute className="text-red-400 text-xs" /> : <FaVolumeUp className="text-amber-200 text-xs" />}
             </button>
-            <button onClick={() => setShowRules(true)} title="القواعد"
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-black/30 border border-amber-500/30 hover:bg-black/50">
-              <FaBook className="text-amber-200" />
+
+            <button
+              onClick={() => setShowRules(true)}
+              title="القواعد"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/30 border border-amber-500/30 hover:bg-black/50"
+            >
+              <FaBook className="text-amber-200 text-xs" />
             </button>
-            <button onClick={toggleFs} title="ملء الشاشة"
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-black/30 border border-amber-500/30 hover:bg-black/50">
-              {isFs ? <FaCompress className="text-amber-200" /> : <FaExpand className="text-amber-200" />}
+
+            <button
+              onClick={toggleFs}
+              title="ملء الشاشة"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/30 border border-amber-500/30 hover:bg-black/50"
+            >
+              {isFs ? <FaCompress className="text-amber-200 text-xs" /> : <FaExpand className="text-amber-200 text-xs" />}
             </button>
+
             {isAdmin && (
-              <button onClick={() => socket.emit('sok_reset', { roomCode })} title="إعادة"
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-700/60 border border-amber-400/50 hover:bg-amber-700">
-                <FaRedo className="text-white" />
+              <button
+                onClick={() => socket.emit('sok_reset', { roomCode })}
+                title="إعادة"
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-amber-700/60 border border-amber-400/50 hover:bg-amber-700"
+              >
+                <FaRedo className="text-white text-xs" />
               </button>
             )}
-            <button onClick={onExit} title="خروج"
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-800/70 border border-red-400/50 hover:bg-red-700">
-              <FaSignOutAlt className="text-white" />
+
+            <button
+              onClick={onExit}
+              title="خروج"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-800/70 border border-red-400/50 hover:bg-red-700"
+            >
+              <FaSignOutAlt className="text-white text-xs" />
             </button>
           </div>
         </header>
 
-        {/* Players bar */}
-        <div className="relative z-10 flex items-center gap-1.5 px-2 py-1.5 overflow-x-auto border-b border-amber-500/20"
-          style={{ background: 'rgba(8,4,20,0.75)' }}>
-          {realPlayers.map(p => {
-            const isTurn = gameState.turn === p.id && !p.eliminated;
-            return (
-              <div key={p.id}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-full whitespace-nowrap text-xs border transition-all ${
-                  p.eliminated ? 'opacity-40 border-gray-600'
-                  : isTurn ? 'border-amber-400 shadow-[0_0_12px_rgba(212,175,55,0.6)]'
-                  : 'border-gray-600'
-                }`}
-                style={{ background: isTurn ? 'rgba(212,175,55,0.15)' : 'rgba(31,41,55,0.7)' }}>
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: p.color }} />
-                <span className="font-bold" style={{ color: p.id === playerId ? '#f4e5a1' : '#e5e7eb' }}>
-                  {p.name}{p.id === playerId ? ' (أنت)' : ''}
-                </span>
-                <span className="text-amber-300">({scores?.[p.id] || 0})</span>
-                {isTurn && <span className="text-amber-400">●</span>}
-                {gameState?.skippedPlayers?.[p.id] && <span className="text-red-400">⏭</span>}
-                {p.eliminated && <FaSkull className="text-red-500" />}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Turn bar */}
-        <div className="relative z-10 text-center py-1 text-xs sm:text-sm"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.08), transparent)' }}>
-          {phase === 'claiming' && (
-            <span className="text-amber-200">
-              🗺️ مرحلة السيطرة — الدور: <b className="text-white">{turnPlayer?.name || '—'}</b>
-              {' • '}الجولة <b className="text-amber-300">{(gameState.roundCount || 0) + 1}</b> / {gameState.maxClaimRounds || 8}
-            </span>
-          )}
-          {phase === 'attacking' && (
-            <span className="text-amber-200">⚔️ مرحلة الهجوم — الدور: <b className="text-white">{turnPlayer?.name || '—'}</b></span>
-          )}
-          {phase === 'duel' && <span className="text-red-300 font-bold">⚡ مبارزة جارية الآن</span>}
-          {phase === 'ended' && <span className="text-amber-300 font-bold">🏆 انتهت المعركة</span>}
-        </div>
-
-        {/* Map */}
+        {/* البورد */}
         <main className="relative z-10 flex-1 overflow-hidden">
           <MapCanvas
             gameState={gameState}
@@ -1241,17 +1147,28 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
             onAttackBase={attackBase}
             canAttackBaseFn={canAttackBaseFn}
           />
+
+          <div
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full text-[11px] sm:text-xs pointer-events-none whitespace-nowrap"
+            style={{
+              background: 'rgba(8,4,20,0.85)',
+              border: '1px solid rgba(212,175,55,0.35)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {myTurn && !amIEliminated && (
+              <span className="text-amber-200 font-bold">دورك الآن — اضغط على أي منطقة</span>
+            )}
+            {!myTurn && !amIEliminated && phase !== 'duel' && phase !== 'ended' && (
+              <span className="text-amber-100/70">في انتظار دورك...</span>
+            )}
+            {amIEliminated && (
+              <span className="text-red-400 font-bold">☠️ أنت مشاهد فقط</span>
+            )}
+          </div>
         </main>
 
-        {/* Footer */}
-        <footer className="relative z-10 px-3 py-1 text-center text-[10px] sm:text-xs text-amber-200/70 border-t border-amber-500/20"
-          style={{ background: 'rgba(8,4,20,0.7)' }}>
-          {myTurn && <span>دورك الآن — اضغط على أي منطقة</span>}
-          {!myTurn && phase !== 'duel' && phase !== 'ended' && <span>في انتظار دورك...</span>}
-          {amIEliminated && <span className="text-red-400">☠️ تم إقصاؤك — أنت مشاهد فقط</span>}
-        </footer>
-
-        {/* Modals */}
+        {/* النوافذ المنبثقة */}
         {phaseMsg && (
           <div className="fixed inset-0 z-[990] bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
             style={{ animation: 'sokFadeIn 0.3s ease-out both' }}>
@@ -1259,21 +1176,16 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
               <div className="text-center relative">
                 {phaseMsg === 'claiming' ? (
                   <>
-                    {/* دايرة متمددة */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="w-40 h-40 rounded-full border-2 border-emerald-400/60"
                         style={{ animation: 'sokCircleExpand 1.8s ease-out 0.2s both' }} />
                       <div className="w-40 h-40 rounded-full border-2 border-teal-400/40 absolute"
                         style={{ animation: 'sokCircleExpand 1.8s ease-out 0.5s both' }} />
                     </div>
-
-                    {/* درع */}
                     <div className="text-7xl mb-3"
                       style={{ animation: 'sokShieldSpin 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}>
                       🛡️
                     </div>
-
-                    {/* العنوان بتدرج */}
                     <h2
                       className="text-4xl sm:text-6xl font-extrabold bg-gradient-to-l from-emerald-300 via-teal-200 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg"
                       style={{
@@ -1281,7 +1193,6 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
                       }}>
                       مرحلة السيطرة
                     </h2>
-
                     <p
                       className="text-emerald-100/85 mt-5 text-base sm:text-lg font-bold tracking-wide"
                       style={{ animation: 'sokFadeIn 0.7s ease-out 1s both' }}>
@@ -1290,15 +1201,11 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
                   </>
                 ) : (
                   <>
-                    {/* السيفين بيتخبطوا */}
                     <div className="relative h-32 sm:h-40 flex items-center justify-center mb-2">
-                      {/* فلاش الاصطدام */}
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="w-32 h-32 rounded-full bg-gradient-to-r from-amber-300 via-yellow-200 to-orange-400 blur-2xl"
                           style={{ animation: 'sokClashFlash 2.2s ease-out 0.5s both' }} />
                       </div>
-
-                      {/* السيف الشمال */}
                       <svg width="140" height="140" viewBox="0 0 100 100"
                         className="absolute"
                         style={{ animation: 'sokSwordLeft 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both' }}>
@@ -1315,8 +1222,6 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
                         <rect x="42" y="82" width="16" height="3" fill="#d4af37" />
                         <circle cx="50" cy="94" r="3" fill="#d4af37" />
                       </svg>
-
-                      {/* السيف اليمين */}
                       <svg width="140" height="140" viewBox="0 0 100 100"
                         className="absolute"
                         style={{ animation: 'sokSwordRight 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both' }}>
@@ -1333,8 +1238,6 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
                         <rect x="42" y="82" width="16" height="3" fill="#d4af37" />
                         <circle cx="50" cy="94" r="3" fill="#d4af37" />
                       </svg>
-
-                      {/* شرر */}
                       {[
                         { dx: '-60px', dy: '-40px', delay: '0.55s' },
                         { dx: '60px',  dy: '-40px', delay: '0.55s' },
@@ -1351,8 +1254,6 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
                           }} />
                       ))}
                     </div>
-
-                    {/* العنوان بتدرج */}
                     <h2
                       className="text-4xl sm:text-6xl font-extrabold bg-gradient-to-l from-red-400 via-orange-300 to-yellow-400 bg-clip-text text-transparent drop-shadow-lg"
                       style={{
@@ -1360,7 +1261,6 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
                       }}>
                       مرحلة الهجوم
                     </h2>
-
                     <p
                       className="text-red-100/85 mt-5 text-base sm:text-lg font-bold tracking-wide"
                       style={{ animation: 'sokFadeIn 0.7s ease-out 1s both' }}>
@@ -1372,6 +1272,7 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
             </div>
           </div>
         )}
+
         {claimMsg && (
           <Modal>
             <div className="text-center max-w-md">
@@ -1382,6 +1283,7 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
             </div>
           </Modal>
         )}
+
         {duelMsg && (
           <Modal>
             <div className="text-center max-w-md">
@@ -1537,11 +1439,33 @@ const SwordRound = ({ socket, roomCode, playerId, playerName, isAdmin, players, 
                 {gameOver.name} ملك المعرفة!
               </h2>
               <p className="text-amber-100/80 mt-3">أخضع كل الممالك تحت رايته ⚔️</p>
-              <button onClick={onExit}
-                className="mt-6 px-6 py-3 rounded-xl font-bold"
-                style={{ background: 'linear-gradient(90deg,#d4af37,#f4e5a1)', color: '#0a1929' }}>
-                خروج
-              </button>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setGameOver(null);
+                    hasPlayedRef.current = false;
+                    socket.emit('sok_reset', { roomCode });
+                  }}
+                  className="flex-1 px-6 py-3 rounded-xl font-bold"
+                  style={{
+                    background: 'linear-gradient(90deg,#10b981,#059669)',
+                    color: '#ffffff',
+                    boxShadow: '0 8px 24px rgba(16,185,129,0.4)',
+                  }}>
+                  🔄 لعبة جديدة
+                </button>
+                <button
+                  onClick={onExit}
+                  className="flex-1 px-6 py-3 rounded-xl font-bold"
+                  style={{ background: 'linear-gradient(90deg,#d4af37,#f4e5a1)', color: '#0a1929' }}>
+                  🚪 خروج
+                </button>
+              </div>
+
+              <p className="text-amber-100/50 text-[11px] mt-3">
+                "لعبة جديدة" يبدأ من الصفر في نفس الغرفة — "خروج" يخرجك للفئات
+              </p>
             </div>
           </Modal>
         )}

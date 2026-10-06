@@ -171,7 +171,16 @@ const AdminPanel = ({
   }
 
   if (selectedCategory === 'bingo') {
-    return <BingoRound socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={true} onLeaveRoom={handleBackToCategories} />;
+    return (
+      <BingoRound
+        socket={socket}
+        roomCode={roomCode}
+        playerId={playerId}
+        isAdmin={true}
+        onLeaveRoom={handleBackToCategories}
+        onBackToLobby={handleBackToCategories}
+      />
+    );
   }
 
   if (selectedCategory === 'battleship') {
@@ -590,6 +599,7 @@ const AdminPanel = ({
                         onCloseResult={() => setSpyResult(null)}
                         onNewRound={() => socket.emit('spy_start', { roomCode })}
                         onLeaveRoom={handleBackToCategories}
+                        onBackToCategories={handleBackToCategories}
                       />
                     ) : selectedCategory === 'whoami' ? (
                       <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(212,175,55,0.10)', border: `1px solid ${GOLD.border}` }}>

@@ -199,7 +199,21 @@ const PlayerScreen = ({
   }
 
   if (currentQuestion?.category === 'bingo') {
-    return <BingoRound socket={socket} roomCode={roomCode} playerId={playerId} isAdmin={false} onLeaveRoom={onLeaveRoom} />;
+    return (
+      <BingoRound
+        socket={socket}
+        roomCode={roomCode}
+        playerId={playerId}
+        isAdmin={false}
+        onLeaveRoom={onLeaveRoom}
+        onBackToLobby={() => {
+          if (setCurrentQuestion) setCurrentQuestion(null);
+          if (setActivePlayer) setActivePlayer(null);
+          if (setBuzzerLocked) setBuzzerLocked(false);
+          if (setGameStatus) setGameStatus('lobby');
+        }}
+      />
+    );
   }
 
   if (currentQuestion?.category === 'grid-game') {
@@ -298,11 +312,23 @@ const PlayerScreen = ({
 
   if (currentQuestion?.category === 'card-game' || cardGameState?.gameStarted) {
     const currentPlayer = players.find((p) => p.id === playerId);
+
+    // ✅ عند الضغط على "البازر" داخل CardGame → رجوع لشاشة الأزرار بدون مغادرة الغرفة
+    const handleExitCardGame = () => {
+      if (typeof onExitCardGame === 'function') {
+        onExitCardGame();
+      } else {
+        // احتياطي: لو الدالة لم تُمرَّر، صفّر الحالة يدويًا
+        if (typeof setCurrentQuestion === 'function') setCurrentQuestion(null);
+        if (typeof setGameStatus === 'function') setGameStatus('playing');
+      }
+    };
+
     return (
       <div className="w-full px-4 py-4">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-right">لاعب لعبة البطاقات</h1>
+            <h1 className="text-2xl font-bold text-right">🎴 لعبة البطاقات</h1>
             <p className="text-indigo-200 text-right">مرحبًا، {playerName}</p>
           </div>
           <div className="bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-3">
@@ -310,9 +336,22 @@ const PlayerScreen = ({
             <span className="font-mono text-xl bg-indigo-800 px-3 py-1 rounded">{roomCode}</span>
           </div>
         </div>
-        <CardGame socket={socket} roomCode={roomCode} players={players} currentPlayer={currentPlayer} isAdmin={false} onExit={onExitCardGame} />
-        <button onClick={onLeaveRoom} className="w-full mt-6 bg-indigo-700 hover:bg-indigo-900 py-3 rounded-lg flex items-center justify-center gap-2">
-          <FaSignOutAlt /> مغادرة الغرفة
+
+        <CardGame
+          socket={socket}
+          roomCode={roomCode}
+          players={players}
+          currentPlayer={currentPlayer}
+          isAdmin={false}
+          onExit={handleExitCardGame}
+        />
+
+        {/* ✅ زر مغادرة الغرفة الوحيد — في الأسفل */}
+        <button
+          onClick={onLeaveRoom}
+          className="w-full mt-4 bg-indigo-900 hover:bg-indigo-800 py-3 rounded-lg flex items-center justify-center gap-2 text-sm"
+        >
+          <FaSignOutAlt /> مغادرة الغرفة نهائيًا
         </button>
       </div>
     );

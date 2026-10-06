@@ -12,7 +12,6 @@ const LETTERS = ['B', 'I', 'N', 'G', 'O'];
 const emptyGrid = () => Array.from({ length: SIZE }, () => Array(SIZE).fill(''));
 const emptyMarks = () => Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
 
-/* Cross overlay */
 function CrossLine({ delay = 0, color = '#fbbf24', strokeWidth = 6 }) {
   return (
     <svg
@@ -40,17 +39,13 @@ function CrossLine({ delay = 0, color = '#fbbf24', strokeWidth = 6 }) {
   );
 }
 
-/* ═══════════════════════════════════════════
-   MAIN
-═══════════════════════════════════════════ */
-export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeaveRoom }) {
+export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeaveRoom, onBackToLobby }) {
   const [grid, setGrid] = useState(emptyGrid);
   const [marks, setMarks] = useState(emptyMarks);
   const [penActive, setPenActive] = useState(false);
   const [calledNumbers, setCalledNumbers] = useState([]);
   const [showNumbers, setShowNumbers] = useState(false);
 
-  // ─── Socket sync ───
   useEffect(() => {
     if (!socket || !playerId) return;
     socket.emit('bingo_init', { roomCode, playerId });
@@ -60,24 +55,35 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
       if (state.grid) setGrid(state.grid);
       if (state.marks) setMarks(state.marks);
     };
+
     const handleCalled = (numbers) => setCalledNumbers(numbers || []);
 
-    // ✅ عند خروج الأدمن — اخرج من اللعبة وارجع لشاشة الأزرار
-    const handleAdminLeft = () => {
-      if (onLeaveRoom) onLeaveRoom();
+    // ✅ يصفّر اللوحة عند عودة الأدمن — يبدأ الجميع من الأول
+    const handleResetAll = () => {
+      setGrid(emptyGrid());
+      setMarks(emptyMarks());
+      setPenActive(false);
+      setCalledNumbers([]);
+    };
+
+    // ✅ عند خروج الأدمن — يبقى اللاعب في الغرفة، ويعود لشاشة الأزرار
+    const handleBackToLobby = () => {
+      if (onBackToLobby) onBackToLobby();
     };
 
     socket.on('bingo_state', handleBingoState);
     socket.on('bingo_called_numbers', handleCalled);
-    socket.on('bingo_admin_left', handleAdminLeft);
+    socket.on('bingo_reset_all', handleResetAll);
+    socket.on('bingo_back_to_lobby', handleBackToLobby);
+
     return () => {
       socket.off('bingo_state', handleBingoState);
       socket.off('bingo_called_numbers', handleCalled);
-      socket.off('bingo_admin_left', handleAdminLeft);
+      socket.off('bingo_reset_all', handleResetAll);
+      socket.off('bingo_back_to_lobby', handleBackToLobby);
     };
-  }, [socket, roomCode, playerId, onLeaveRoom]);
+  }, [socket, roomCode, playerId, onBackToLobby]);
 
-  // ─── Cell update ───
   const updateCell = useCallback((row, col, value) => {
     setGrid(prev =>
       prev.map((r, ri) =>
@@ -87,7 +93,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
     socket.emit('bingo_cell_update', { roomCode, playerId, row, col, value });
   }, [socket, roomCode, playerId]);
 
-  // ─── Toggle mark ───
   const toggleMark = useCallback((row, col) => {
     const newValue = !marks[row][col];
     setMarks(prev =>
@@ -109,10 +114,10 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
     socket.emit('bingo_call_number', { roomCode });
   };
 
-
+  // ✅ زر الخروج: للأدمن فقط، ويصفّر كل شيء ثم يرجع للفئات
   const handleExit = () => {
     socket.emit('bingo_cleanup', { roomCode, playerId });
-    if (onLeaveRoom) onLeaveRoom();
+    if (onBackToLobby) onBackToLobby();
   };
 
   const handleKeyDown = (e) => {
@@ -127,7 +132,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
     }
   };
 
-  // ─── Completed lines ───
   const completedLines = useMemo(() => {
     const lines = [];
     for (let r = 0; r < SIZE; r++) {
@@ -157,7 +161,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
     return set;
   }, [completedLines]);
 
-  // ✅ الأرقام اللي اللاعب كتبها بنفسه (للمودال الشخصي)
   const myEnteredNumbers = useMemo(() => {
     const set = new Set();
     grid.forEach(row => row.forEach(cell => {
@@ -175,7 +178,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
         fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
       }}
     >
-      {/* Ambient glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 right-0 w-[600px] h-[600px] rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.1), transparent 70%)', filter: 'blur(80px)' }} />
@@ -183,7 +185,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
           style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.1), transparent 70%)', filter: 'blur(80px)' }} />
       </div>
 
-      {/* ═══ Top bar ═══ */}
       <div
         className="relative z-10 flex items-center justify-between px-4 py-3"
         style={{
@@ -229,24 +230,24 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
             <span className="hidden sm:inline">جديد</span>
           </button>
 
-          {onLeaveRoom && (
+          {/* ✅ زر الرجوع للأدمن فقط */}
+          {isAdmin && (
             <button
               onClick={handleExit}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-amber-200/60 hover:text-amber-100 hover:bg-amber-500/10 transition-all"
+              className="px-3 h-8 rounded-lg flex items-center gap-1.5 text-amber-200/70 hover:text-amber-100 hover:bg-amber-500/10 text-xs font-semibold transition-all"
               style={{ border: '1px solid rgba(251,191,36,0.2)' }}
-              title="خروج"
+              title="رجوع للفئات"
             >
               <FaSignOutAlt size={11} />
+              <span className="hidden sm:inline">رجوع للفئات</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* ═══ Main scroll ═══ */}
       <div className="relative z-10 flex-1 overflow-y-auto taboo-scroll px-3 sm:px-4 py-4">
         <div className="mx-auto w-full max-w-3xl flex flex-col gap-4">
 
-          {/* ═══ BINGO Letters Tracker ═══ */}
           <div
             className="rounded-3xl p-4"
             style={{
@@ -303,7 +304,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
             </div>
           </div>
 
-          {/* ═══ Called Number + Call button ═══ */}
           <div className="flex items-center gap-3">
             <div
               className="flex-1 rounded-2xl p-4 flex items-center justify-between"
@@ -354,7 +354,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
             </motion.button>
           </div>
 
-          {/* ✅ شريط الأرقام المستدعاة — كلها ظاهرة */}
           <div
             className="rounded-2xl p-3"
             style={{
@@ -402,7 +401,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
             )}
           </div>
 
-          {/* ═══ Bingo Board ═══ */}
           <div
             className="rounded-3xl p-3 sm:p-4"
             style={{
@@ -413,7 +411,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
               boxShadow: 'inset 0 1px 0 rgba(167,139,250,0.1), 0 20px 50px rgba(0,0,0,0.4)',
             }}
           >
-            {/* Header letters */}
             <div className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-2">
               {LETTERS.map((l, i) => (
                 <div
@@ -431,7 +428,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
               ))}
             </div>
 
-            {/* 5x5 cells */}
             <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
               {Array.from({ length: SIZE }, (_, r) =>
                 Array.from({ length: SIZE }, (_, c) => {
@@ -467,7 +463,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
                         cursor: penActive ? 'pointer' : 'default',
                       }}
                     >
-                      {/* ✅ input بعرض كامل + محاذاة مركزية */}
                       <input
                         type="text"
                         inputMode="numeric"
@@ -486,7 +481,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
                           lineHeight: '1',
                           padding: 0,
                           transition: 'color 0.25s, text-shadow 0.25s',
-                          // ✅ عند تفعيل القلم: لا يستقبل input أي نقرة، فيصل النقر للأب
                           pointerEvents: penActive ? 'none' : 'auto',
                         }}
                       />
@@ -516,7 +510,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
             </div>
           </div>
 
-          {/* Bottom Controls */}
           <div className="flex gap-2">
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -545,7 +538,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
         </div>
       </div>
 
-      {/* ═══ Numbers Modal — مساعد شخصي ═══ */}
       <AnimatePresence>
         {showNumbers && (
           <motion.div
@@ -639,7 +631,6 @@ export default function BingoRound({ socket, roomCode, playerId, isAdmin, onLeav
         )}
       </AnimatePresence>
 
-      {/* ═══ BINGO Win Popup ═══ */}
       <AnimatePresence>
         {hasBingo && (
           <motion.div

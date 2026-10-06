@@ -2,6 +2,25 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import io from 'socket.io-client';
 
+
+function useFullscreen() {
+  const [isFs, setFs] = useState(false);
+  useEffect(() => {
+    const h = () => setFs(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', h);
+    return () => document.removeEventListener('fullscreenchange', h);
+  }, []);
+  const toggle = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+      } else (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    } catch {}
+  }, []);
+  return { isFs, toggle };
+}
+
 // Landscape lock على الموبايل
 const LandscapeLock = () => (
   <div style={{
@@ -653,7 +672,7 @@ const LandCard = ({ tile, onBuild, onAuction }) => {
 
   return (
     <div style={{
-      borderRadius:20, overflow:'hidden', width:210, flexShrink:0,
+      borderRadius:20, overflow:'hidden', width:'min(210px, 72vw)', flexShrink:0,
       background:'linear-gradient(160deg, #fbf3dd 0%, #f0e2b8 100%)',
       boxShadow:`0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px ${color}40`,
       border:`3px solid ${color}`,
@@ -835,12 +854,14 @@ const PropsPanel = ({ open, onClose, myPlayer, gameState, onBuild, onAuction }) 
                 <div style={{fontSize:13}}>ما عندكش بلاد لسه</div>
               </div>
             ) : (
-              <div style={{
-                display:'flex',gap:12,overflowX:'auto',
-                padding:'0 16px 28px',
-                scrollSnapType:'x mandatory',
-                WebkitOverflowScrolling:'touch',
-              }}>
+                <div style={{
+                  display:'flex',gap:12,overflowX:'auto',
+                  padding:'0 16px 28px',
+                  scrollSnapType:'x mandatory',
+                  WebkitOverflowScrolling:'touch',
+                  direction: 'rtl',
+                  scrollPaddingInlineStart: 16,
+                }}>
                 {myPlayer.properties.map((tid, idx) => {
                   const tile = gameState?.board?.find(t=>t.id===tid);
                   if (!tile) return null;
@@ -848,7 +869,7 @@ const PropsPanel = ({ open, onClose, myPlayer, gameState, onBuild, onAuction }) 
                     <motion.div key={tid}
                       initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
                       transition={{delay:idx*0.06}}
-                      style={{scrollSnapAlign:'start',flexShrink:0,cursor:'pointer'}}
+                      style={{scrollSnapAlign:'start',flexShrink:0,cursor:'pointer', maxWidth: '72vw'}}
                       onClick={() => setSelectedTile(tile)}
                     >
                       <LandCard tile={tile} onBuild={onBuild} onAuction={onAuction}/>
@@ -1018,6 +1039,8 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
   const [showTurnOrder,   setShowTurnOrder]   = useState(false);
   const [turnOrderData,   setTurnOrderData]   = useState([]);
   const [paymentRequest,  setPaymentRequest]  = useState(null);
+
+  const { isFs, toggle: toggleFs } = useFullscreen();
 
   const sockRef = useRef(null);
   const rid = roomId || roomCode;
@@ -1572,6 +1595,22 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
               fontWeight:600, fontSize:14, cursor:'pointer',
             }}
           >خروج</button>
+
+          <button
+            onClick={toggleFs}
+            style={{
+              position:'absolute',
+              top:'min(12px,2vh)', right:'min(16px,2.4vh)', zIndex:20,
+              background:'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))',
+              backdropFilter:'blur(16px) saturate(180%)',
+              WebkitBackdropFilter:'blur(16px) saturate(180%)',
+              border:'1px solid rgba(255,255,255,0.2)',
+              color:'rgba(255,255,255,0.85)',
+              padding:'min(6px,1vh) min(14px,2vh)',borderRadius:12,
+              cursor:'pointer',fontSize:'min(13px,2vh)',fontWeight:600,
+              boxShadow:'inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 12px rgba(0,0,0,0.3)',
+            }}
+          >{isFs ? '✕' : '⛶'}</button>
         </motion.div>
       )}
     </AnimatePresence>
@@ -2101,6 +2140,23 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
             </div>
           </div>
         </div>
+
+        {/* <button
+          onClick={toggleFs}
+          style={{
+            position:'absolute',
+            top:'min(12px,2vh)', right:'min(16px,2.4vh)', zIndex:20,
+            background:'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))',
+            backdropFilter:'blur(16px) saturate(180%)',
+            WebkitBackdropFilter:'blur(16px) saturate(180%)',
+            border:'1px solid rgba(255,255,255,0.2)',
+            color:'rgba(255,255,255,0.85)',
+            padding:'min(6px,1vh) min(14px,2vh)',borderRadius:12,
+            cursor:'pointer',fontSize:'min(13px,2vh)',fontWeight:600,
+            boxShadow:'inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 12px rgba(0,0,0,0.3)',
+          }}
+        >{isFs ? '✕ خروج من الشاشة' : '⛶ ملء الشاشة'}
+        </button> */}
 
         {/* زر الخروج */}
         <button

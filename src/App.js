@@ -36,6 +36,7 @@ import SwordRound from './components/SwordRound';
 import BracketRound from './components/BracketRound';
 import MainMenu from './components/EscapeRoom/MainMenu';
 import StoryGame from './components/EscapeRoom/StoryGame';
+import SpyRound from './components/SpyRound';
 
 const SOCKET_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3001' 
@@ -73,6 +74,10 @@ function App() {
   const [currentGame, setCurrentGame] = useState(null);
   const [kotshinaMode, setKotshinaMode] = useState('basra');   // ✅ طور كوتشينة الحالي
   const [selectedStoryId, setSelectedStoryId] = useState(null);
+
+  const [showSpyVoteModal, setShowSpyVoteModal] = useState(false);
+  const [votedFor, setVotedFor] = useState(null);
+  const [spyResult, setSpyResult] = useState(null);
 
   // Session & unload effects...
   useEffect(() => {
@@ -161,9 +166,14 @@ function App() {
     };
 
     const handleSpyVotingResults = (data) => {
-      if (data && data.players) {
-        setPlayers(data.players);
-      }
+      if (data && data.players) setPlayers(data.players);
+      setSpyResult(data);
+      setShowSpyVoteModal(false);
+    };
+
+    const handleOpenSpyVoting = () => {
+      setShowSpyVoteModal(true);
+      setVotedFor(null);
     };
     
     const handleResetBuzzer = () => {
@@ -257,6 +267,7 @@ function App() {
     socket.on('player_buzzed', handlePlayerBuzzed);
     socket.on('update_score', handleUpdateScore);
     socket.on('spy_voting_results', handleSpyVotingResults);
+    socket.on('open_spy_voting', handleOpenSpyVoting);
     socket.on('reset_buzzer', handleResetBuzzer);
     socket.on('question_changed', handleQuestionChanged);
     socket.on('game_ended', handleGameEnded);
@@ -267,6 +278,7 @@ function App() {
     socket.on('start_digital_detective', handleStartDigitalDetective);
     socket.on('game_launched', handleGameLaunched);
     socket.on('game_closed', handleGameClosed);
+    socket.on('spy_back_to_lobby', handleSpyBackToLobby);
 
     return () => {
       socket.off('connect'); socket.off('disconnect'); socket.off('connect_error');
@@ -276,6 +288,7 @@ function App() {
       socket.off('player_buzzed', handlePlayerBuzzed);
       socket.off('update_score', handleUpdateScore);
       socket.off('spy_voting_results', handleSpyVotingResults);
+      socket.off('open_spy_voting', handleOpenSpyVoting);
       socket.off('reset_buzzer', handleResetBuzzer);
       socket.off('question_changed', handleQuestionChanged);
       socket.off('game_ended', handleGameEnded);
@@ -286,6 +299,7 @@ function App() {
       socket.off('start_digital_detective', handleStartDigitalDetective);
       socket.off('game_launched', handleGameLaunched);
       socket.off('game_closed', handleGameClosed);
+      socket.off('spy_back_to_lobby', handleSpyBackToLobby);
       socket.off('kotshina_mode_changed', handleKotshinaModeChanged);   // ✅ التنظيف في مكانه الصح
     };
   }, [activePlayer, roomCode, playerId]);
@@ -339,6 +353,18 @@ function App() {
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
+  };
+
+  const handleSpyVote = (targetId) => {
+    setVotedFor(targetId);
+    socket.emit('submit_spy_vote', { roomCode, voterId: playerId, votedForId: targetId });
+  };
+
+  const handleSpyNewRound = () => {
+    setSpyResult(null);
+    setVotedFor(null);
+    setShowSpyVoteModal(false);
+    setCurrentQuestion(null);
   };
 
   const startWhoamiRound = (subcategoryId) => {
@@ -414,7 +440,27 @@ function App() {
   };
 
 
+  // const handleSpyBackToCategories = () => {
+  //   // صفّر حالة الجاسوس في الفرونت
+  //   setCurrentQuestion(null);
+  //   setShowSpyVoteModal(false);
+  //   setVotedFor(null);
+  //   setSpyResult(null);
+  //   // ✅ مهم: لا ترسل leave_room ولا close_game، فيبقى الجميع في الغرفة
+  //   setGameStatus('playing');
+  //   setSelectedCategory(null);
+  //   setSelectedSubcategory(null);
+  // };
 
+  const handleSpyBackToLobby = () => {
+    setCurrentQuestion(null);
+    setShowSpyVoteModal(false);
+    setVotedFor(null);
+    setSpyResult(null);
+    setGameStatus('playing');
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
+  };
 
   const playRandomQuestion = () => {
     if (!selectedCategory) return;
@@ -842,6 +888,24 @@ function App() {
                   }}
                 />
 
+                ) : currentQuestion?.category === 'spy' ? (
+                  <SpyRound
+                    currentQuestion={currentQuestion}
+                    players={players}
+                    playerId={playerId}
+                    isAdmin={isAdmin}
+                    socket={socket}
+                    roomCode={roomCode}
+                    showSpyVoteModal={showSpyVoteModal}
+                    votedFor={votedFor}
+                    spyResult={spyResult}
+                    onVote={handleSpyVote}
+                    onCloseResult={() => setSpyResult(null)}
+                    onLeaveRoom={leaveRoom}
+                    onNewRound={handleSpyNewRound}
+                    onBackToCategories={handleSpyBackToLobby}
+                  />
+
       ) : currentGame === 'kotshina' ? (
         kotshinaMode === 'bank' ? (
           <Bank
@@ -906,6 +970,11 @@ function App() {
               onSubcategorySelect={handleSubcategorySelect} socket={socket}
               questions={questions} buzzerLocked={buzzerLocked} isAdmin={true}
               cardGameState={cardGameState} onExit={closeGame}
+              onExitCardGame={() => {
+                setCardGameState(null);
+                setCurrentQuestion(null);
+                setGameStatus('playing');
+              }}
               setCurrentGame={setCurrentGame}
             />
           )}
@@ -923,7 +992,13 @@ function App() {
               gameStatus={gameStatus} socket={socket} isAdmin={false}
               setCurrentQuestion={setCurrentQuestion} setActivePlayer={setActivePlayer}
               setBuzzerLocked={setBuzzerLocked} setGameStatus={setGameStatus}
-              cardGameState={cardGameState} onExit={closeGame}
+              cardGameState={cardGameState}
+              onExitCardGame={() => {
+                setCardGameState(null);
+                setCurrentQuestion(null);
+                setGameStatus('playing');
+              }}
+              onExit={closeGame}
             />
           )}
         </div>

@@ -269,13 +269,13 @@ const categories = [
     subcategories: []
   },
 
-  {
-    id: 'investigation',
-    name: 'المحققون',
-    icon: '🕵️',
-    colors: ['#92400e', '#7f1d1d'],
-    subcategories: []
-  },
+  // {
+  //   id: 'investigation',
+  //   name: 'المحققون',
+  //   icon: '🕵️',
+  //   colors: ['#92400e', '#7f1d1d'],
+  //   subcategories: []
+  // },
 
   {
     id: 'codenames',

@@ -145,6 +145,89 @@ const GlassCard = ({ children, className = '', accent = null }) => (
 );
 
 // =====================================================
+// 📱 Landscape Lock
+// =====================================================
+const LandscapeLock = () => (
+  <div
+    className="headsup-landscape-lock"
+    style={{
+      display: 'none',
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: '#050510',
+      flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+    }}
+  >
+    <motion.div
+      animate={{ rotate: [0, 90, 90, 0] }}
+      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+      style={{ fontSize: 64 }}
+    >📱</motion.div>
+    <div style={{ color: '#fff', fontWeight: 700, fontSize: 18, textAlign: 'center' }}>
+      لف الموبايل عرضاً
+    </div>
+    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+      اللعبة تعمل بالعرض فقط
+    </div>
+  </div>
+);
+
+// =====================================================
+// 📱 Gyro Permission Modal
+// =====================================================
+const GyroPermissionModal = ({ isIOS, onEnable }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+    style={{ background: 'rgba(5,5,16,0.96)', backdropFilter: 'blur(20px)' }}
+  >
+    <motion.div
+      initial={{ scale: 0.85, y: 30 }}
+      animate={{ scale: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+      className="max-w-md w-full rounded-3xl p-8 text-center"
+      style={{
+        background: 'linear-gradient(160deg, rgba(34,211,238,0.15), rgba(168,85,247,0.10))',
+        border: '2px solid rgba(34,211,238,0.45)',
+        boxShadow: '0 30px 80px rgba(0,0,0,0.7), 0 0 60px rgba(34,211,238,0.25)',
+      }}
+    >
+      <motion.div
+        animate={{ rotate: [-10, 10, -10], y: [0, -8, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="text-7xl mb-5"
+      >
+        📱
+      </motion.div>
+      <h2 className="text-2xl font-black text-white mb-3">
+        فعّل حساس الحركة
+      </h2>
+      <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+        {isIOS
+          ? 'على الأيفون، اضغط الزر بالأسفل للسماح للمتصفح باستخدام الجيروسكوب. من دونه اللعبة لن تعمل.'
+          : 'لازم تسمح للمتصفح باستخدام حساس الحركة حتى تعمل اللعبة. اضغط الزر بالأسفل للتفعيل.'}
+      </p>
+      <motion.button
+        whileHover={{ scale: 1.04, y: -2 }}
+        whileTap={{ scale: 0.96 }}
+        onClick={onEnable}
+        className="w-full py-4 rounded-2xl font-black text-base text-[#050510]"
+        style={{
+          background: 'linear-gradient(135deg, #fbbf24, #f97316)',
+          boxShadow: '0 12px 36px rgba(251,191,36,0.5)',
+        }}
+      >
+        📱 فعّل الآن
+      </motion.button>
+      <p className="text-slate-500 text-[11px] mt-4 tracking-wide">
+        لن تبدأ اللعبة حتى تفعّل الحساس
+      </p>
+    </motion.div>
+  </motion.div>
+);
+
+// =====================================================
 // ⏱️ Countdown
 // =====================================================
 function useCountdown(startedAt, durationMs, active) {
@@ -230,7 +313,6 @@ function useGyro(active, onCorrect, onPass) {
 
       const delta = beta - baseBetaRef.current;
 
-      // back to neutral
       if (Math.abs(delta) < 12) {
         baseBetaRef.current = beta;
         return;
@@ -239,14 +321,12 @@ function useGyro(active, onCorrect, onPass) {
       const now = Date.now();
       if (now - lastTriggerRef.current < 700) return;
 
-      // tilt down = beta يزيد
       if (delta > 35) {
         lastTriggerRef.current = now;
         baseBetaRef.current = beta;
         if (navigator.vibrate) navigator.vibrate(60);
         onCorrect();
       }
-      // tilt up = beta يقل
       else if (delta < -35) {
         lastTriggerRef.current = now;
         baseBetaRef.current = beta;
@@ -287,11 +367,15 @@ export default function HeadsUp({
   const lastSyncedTeamNameRef = useRef('');
   const isEditingTeamNameRef = useRef(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   const { play: playSound, stopAll: stopAllSounds } = useSoundEffects();
 
   useEffect(() => {
     setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const ua = navigator.userAgent || '';
+    const isIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    setIsIOS(/iPad|iPhone|iPod/.test(ua) || isIPad);
   }, []);
 
   // ===== Socket =====
@@ -312,7 +396,6 @@ export default function HeadsUp({
       socket.off('headsUp_error', onError);
       socket.emit('headsUp_leave', { roomCode });
     };
-    // eslint-disable-next-line
   }, [socket, roomCode, playerId, playerName, isAdmin]);
 
   useEffect(() => {
@@ -340,11 +423,9 @@ export default function HeadsUp({
     socket?.emit(ev, { roomCode, ...payload });
   }, [socket, roomCode]);
 
-  // ===== Countdown =====
   const playingTimeLeft = useCountdown(state?.phaseStartedAt, state?.turnDuration, state?.phase === 'playing');
   const readyTimeLeft = useCountdown(state?.phaseStartedAt, state?.readyDuration, state?.phase === 'ready');
 
-  // ===== Tick sound last 5 seconds =====
   const tickRef = useRef(null);
   useEffect(() => {
     if (state?.phase !== 'playing') return;
@@ -356,7 +437,6 @@ export default function HeadsUp({
     if (sec > 5) tickRef.current = null;
   }, [state?.phase, playingTimeLeft, playSound]);
 
-  // ===== Phase sounds =====
   const prevPhaseRef = useRef(null);
   useEffect(() => {
     if (!state) return;
@@ -369,7 +449,6 @@ export default function HeadsUp({
     prevPhaseRef.current = cur;
   }, [state?.phase, playSound, stopAllSounds, state]);
 
-  // ===== Handlers for gyro =====
   const handleCorrect = useCallback(() => {
     if (!state || state.phase !== 'playing') return;
     if (!state.me?.isPhoneHolder) return;
@@ -391,10 +470,8 @@ export default function HeadsUp({
   const isPhoneHolderPlaying =
     state?.phase === 'playing' && state.me?.isPhoneHolder;
 
-  // ===== Gyro =====
   useGyro(isPhoneHolderPlaying && motionEnabled && isTouchDevice, handleCorrect, handlePass);
 
-  // ===== Keyboard =====
   useEffect(() => {
     if (!isPhoneHolderPlaying) return;
     const handler = (e) => {
@@ -405,7 +482,16 @@ export default function HeadsUp({
     return () => window.removeEventListener('keydown', handler);
   }, [isPhoneHolderPlaying, handleCorrect, handlePass]);
 
-  // ===== Loading =====
+  const enableMotion = useCallback(async () => {
+    const ok = await requestMotionPermission();
+    setMotionEnabled(ok);
+    if (!ok) {
+      setError('لم يتم منح الإذن. اضغط زر التفعيل مرة أخرى.');
+      setTimeout(() => setError(null), 4000);
+    }
+    return ok;
+  }, []);
+
   if (!state) {
     return (
       <div dir="rtl" className="relative min-h-screen bg-[#050510] text-white flex items-center justify-center">
@@ -422,9 +508,6 @@ export default function HeadsUp({
 
   const { phase, me } = state;
 
-  // ============================================================
-  // HUD
-  // ============================================================
   const renderHUD = () => (
     <div className="relative z-10 max-w-6xl mx-auto px-4 pt-4">
       <GlassCard className="px-4 py-3">
@@ -433,7 +516,6 @@ export default function HeadsUp({
             <button onClick={onExit} className="text-slate-400 hover:text-white text-sm flex items-center gap-1 transition">
               <span>←</span><span>خروج</span>
             </button>
-            {/* ✅ زرار الرئيسية للأدمن بس */}
             {me.isAdmin && (
               <motion.button
                 onClick={() => {
@@ -456,6 +538,27 @@ export default function HeadsUp({
                 <span className="relative block rounded-xl px-3 py-1.5 bg-[#0a0a1a] text-xs font-bold flex items-center gap-1.5">
                   <span>🏠</span>
                   <span>الرئيسية</span>
+                </span>
+              </motion.button>
+            )}
+            {isTouchDevice && !motionEnabled && (
+              <motion.button
+                onClick={enableMotion}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative rounded-xl p-[1.5px] overflow-hidden"
+              >
+                <motion.span
+                  className="absolute inset-[-150%]"
+                  style={{
+                    background: 'conic-gradient(from 0deg, transparent 0%, #fbbf24 20%, #f97316 40%, transparent 60%, transparent 100%)',
+                  }}
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                />
+                <span className="relative block rounded-xl px-3 py-1.5 bg-[#0a0a1a] text-xs font-bold flex items-center gap-1.5">
+                  <span>📱</span>
+                  <span>فعّل الحركة</span>
                 </span>
               </motion.button>
             )}
@@ -526,9 +629,6 @@ export default function HeadsUp({
     </div>
   );
 
-  // ============================================================
-  // ADMIN LOBBY
-  // ============================================================
   const renderAdminLobby = () => {
     const allPlayers = state.allPlayers || [];
     const onlinePlayers = allPlayers.filter((p) => p.isOnline);
@@ -544,7 +644,6 @@ export default function HeadsUp({
         : captainsSelected && bothTeamsHavePlayers && unassignedOnline.length === 0)
     );
 
-    // ✅ معلومات الأدمن كلاعب
     const myTeamKey = me?.team;
     const myTeamName = myTeamKey ? state.teams[myTeamKey]?.name : null;
     const amCaptain = me?.isCaptain;
@@ -552,7 +651,6 @@ export default function HeadsUp({
     return (
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
 
-        {/* ✅ لوحة الأدمن نفسه كلاعب */}
         <GlassCard className="p-4" accent="#a855f7">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap">
@@ -625,7 +723,6 @@ export default function HeadsUp({
           <p className="text-slate-400 text-sm">لوحة المُيسّر — اختر المود والفئة ثم ابدأ</p>
         </GlassCard>
 
-        {/* اختيار المود */}
         <GlassCard className="p-5">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300 mb-3">المود</h3>
           <div className="grid grid-cols-2 gap-3">
@@ -660,7 +757,6 @@ export default function HeadsUp({
           </div>
         </GlassCard>
 
-        {/* اختيار الفئة */}
         <GlassCard className="p-5">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300 mb-3">
             الفئة ({state.categoriesList?.length || 0})
@@ -684,7 +780,6 @@ export default function HeadsUp({
           </div>
         </GlassCard>
 
-        {/* الفرق - بس في المود الجماعي */}
         {state.mode === 'team' && (
           <>
             <div className="grid md:grid-cols-2 gap-4">
@@ -778,9 +873,6 @@ export default function HeadsUp({
     );
   };
 
-  // ============================================================
-  // PLAYER LOBBY
-  // ============================================================
   const renderPlayerLobby = () => {
     const captainsSelected = !!(state.teams.A.captainId && state.teams.B.captainId);
 
@@ -806,7 +898,6 @@ export default function HeadsUp({
       );
     }
 
-    // team mode
     const renderTeam = (key) => {
       const t = state.teams[key];
       const isMyTeam = me.team === key;
@@ -917,9 +1008,6 @@ export default function HeadsUp({
     );
   };
 
-  // ============================================================
-  // READY
-  // ============================================================
   const renderReady = () => {
     const theme = state.currentTurnTeam ? TEAM[state.currentTurnTeam] : null;
     const color = theme?.solid || '#22d3ee';
@@ -951,22 +1039,11 @@ export default function HeadsUp({
           {Math.ceil(readyTimeLeft) || 1}
         </motion.div>
 
-        <p className="text-slate-300 mb-6">حط الموبايل على جبهتك بالعرض</p>
+        <p className="text-slate-300 mb-6">ضع الموبايل على جبهتك بالعرض</p>
 
         {me.isPhoneHolder && !motionEnabled && isTouchDevice && (
           <div className="mb-4">
-            <GlassButton
-              variant="amber"
-              size="lg"
-              onClick={async () => {
-                const ok = await requestMotionPermission();
-                setMotionEnabled(ok);
-                if (!ok) {
-                  setError('لازم تسمح بالوصول للحركة عشان اللعبة تشتغل');
-                  setTimeout(() => setError(null), 4000);
-                }
-              }}
-            >
+            <GlassButton variant="amber" size="lg" onClick={enableMotion}>
               📱 فعّل حساس الحركة
             </GlassButton>
           </div>
@@ -980,9 +1057,6 @@ export default function HeadsUp({
     );
   };
 
-  // ============================================================
-  // PLAYING
-  // ============================================================
   const renderPlaying = () => {
     const isHolder = me.isPhoneHolder;
     const flashColor = flash === 'correct' ? CORRECT_COLOR : flash === 'pass' ? PASS_COLOR : null;
@@ -1091,9 +1165,6 @@ export default function HeadsUp({
     );
   };
 
-  // ============================================================
-  // TURN END
-  // ============================================================
   const renderTurnEnd = () => {
     const theme = state.currentTurnTeam ? TEAM[state.currentTurnTeam] : null;
     return (
@@ -1144,11 +1215,7 @@ export default function HeadsUp({
     );
   };
 
-  // ============================================================
-  // BETWEEN ROUNDS
-  // ============================================================
   const renderBetweenRounds = () => {
-    // ===== للأدمن: شاشة اختيار الفئة =====
     if (me.isAdmin) {
       return (
         <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
@@ -1173,7 +1240,6 @@ export default function HeadsUp({
             </p>
           </GlassCard>
 
-          {/* اختيار الفئة للجولة الجاية */}
           <GlassCard className="p-5">
             <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300 mb-3">
               🎯 اختر فئة الجولة الجاية
@@ -1197,7 +1263,6 @@ export default function HeadsUp({
             </div>
           </GlassCard>
 
-          {/* الفريقين - لو في فريق */}
           {state.mode === 'team' && (
             <div className="grid grid-cols-2 gap-4">
               {['A', 'B'].map((key) => {
@@ -1230,7 +1295,6 @@ export default function HeadsUp({
       );
     }
 
-    // ===== للاعبين العاديين: في انتظار الأدمن =====
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <GlassCard className="p-8">
@@ -1279,9 +1343,6 @@ export default function HeadsUp({
     );
   };
 
-  // ============================================================
-  // GAME OVER
-  // ============================================================
   const renderGameOver = () => {
     const isTeam = state.mode === 'team';
     const winner = isTeam
@@ -1382,69 +1443,83 @@ export default function HeadsUp({
     );
   };
 
-  // ============================================================
-  // MAIN
-  // ============================================================
   return (
-    <div dir="rtl" className="relative min-h-screen text-white overflow-hidden">
-      {phase !== 'playing' || !me?.isPhoneHolder ? (
-        <BackgroundFX accent={state.currentTurnTeam} />
-      ) : null}
+    <>
+      <style>{`
+        @media screen and (orientation: portrait) and (max-width: 1024px) {
+          .headsup-landscape-lock { display: flex !important; }
+          .headsup-game-root { display: none !important; }
+        }
+      `}</style>
 
-      {(phase !== 'playing' || me?.isAdmin) && renderHUD()}
+      <LandscapeLock />
 
-      <div className="relative z-10 pt-6 pb-12">
-        <AnimatePresence mode="wait">
-          {phase === 'lobby' && (
-            <motion.div key="lobby" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {me.isAdmin ? renderAdminLobby() : renderPlayerLobby()}
-            </motion.div>
-          )}
-          {phase === 'ready' && (
-            <motion.div key="ready" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }}>
-              {renderReady()}
-            </motion.div>
-          )}
-          {phase === 'playing' && (
-            <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {renderPlaying()}
-            </motion.div>
-          )}
-          {phase === 'turnEnd' && (
-            <motion.div key="turnEnd" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              {renderTurnEnd()}
-            </motion.div>
-          )}
-          {phase === 'betweenRounds' && (
-            <motion.div key="betweenRounds" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              {renderBetweenRounds()}
-            </motion.div>
-          )}
-          {phase === 'gameover' && (
-            <motion.div key="gameover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {renderGameOver()}
+      <div dir="rtl" className="headsup-game-root relative min-h-screen text-white overflow-hidden">
+        {phase !== 'playing' || !me?.isPhoneHolder ? (
+          <BackgroundFX accent={state.currentTurnTeam} />
+        ) : null}
+
+        {(phase !== 'playing' || me?.isAdmin) && renderHUD()}
+
+        <div className="relative z-10 pt-6 pb-12">
+          <AnimatePresence mode="wait">
+            {phase === 'lobby' && (
+              <motion.div key="lobby" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {me.isAdmin ? renderAdminLobby() : renderPlayerLobby()}
+              </motion.div>
+            )}
+            {phase === 'ready' && (
+              <motion.div key="ready" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }}>
+                {renderReady()}
+              </motion.div>
+            )}
+            {phase === 'playing' && (
+              <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {renderPlaying()}
+              </motion.div>
+            )}
+            {phase === 'turnEnd' && (
+              <motion.div key="turnEnd" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                {renderTurnEnd()}
+              </motion.div>
+            )}
+            {phase === 'betweenRounds' && (
+              <motion.div key="betweenRounds" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                {renderBetweenRounds()}
+              </motion.div>
+            )}
+            {phase === 'gameover' && (
+              <motion.div key="gameover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {renderGameOver()}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -50, scale: 0.9 }}
+              className="fixed top-4 left-1/2 -translate-x-1/2 z-50"
+            >
+              <div className="rounded-2xl p-[1.5px] overflow-hidden">
+                <motion.div className="absolute inset-[-150%]"
+                  style={{ background: 'conic-gradient(from 0deg, transparent 0%, #ef4444 20%, #fbbf24 40%, transparent 60%)' }}
+                  animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }} />
+                <div className="relative rounded-2xl bg-[#0a0a1a] px-6 py-3 font-bold">⚠️ {error}</div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
 
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -50, scale: 0.9 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-50"
-          >
-            <div className="rounded-2xl p-[1.5px] overflow-hidden">
-              <motion.div className="absolute inset-[-150%]"
-                style={{ background: 'conic-gradient(from 0deg, transparent 0%, #ef4444 20%, #fbbf24 40%, transparent 60%)' }}
-                animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }} />
-              <div className="relative rounded-2xl bg-[#0a0a1a] px-6 py-3 font-bold">⚠️ {error}</div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        <AnimatePresence>
+          {isTouchDevice && !motionEnabled && me?.isPhoneHolder && phase === 'playing' && (
+            <GyroPermissionModal isIOS={isIOS} onEnable={enableMotion} />
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }

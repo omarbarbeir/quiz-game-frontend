@@ -22,7 +22,6 @@ class SoundEngine {
       lose:    0.85,
       reset:   0.6,
     };
-    // Cache عشان نفس الملف ميحمّلش كل مرة
     this.cache = {};
   }
 
@@ -34,7 +33,6 @@ class SoundEngine {
     if (!url) return;
 
     try {
-      // نعمل نسخة كل مرة عشان لو دوس ورا بعض
       const audio = new Audio(url);
       audio.volume = this.volumes[name] ?? 0.7;
       audio.play().catch(err => {
@@ -45,7 +43,6 @@ class SoundEngine {
     }
   }
 
-  // دالة unlock بقت مش محتاجة، بس نخليها عشان الكود ما يبوظش
   unlock() {}
 }
 
@@ -354,7 +351,6 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
   const prevGuessedRef = useRef([]);
 
   useEffect(() => { soundRef.current = new SoundEngine(HANGMAN_SOUND_PATHS); }, []);
-  // ✅ متزامنة — تشتغل فوراً
   const unlockSound = useCallback(() => {
     soundRef.current?.unlock();
   }, []);
@@ -363,7 +359,6 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
   }, [soundMuted]);
   const playSound = useCallback((n) => { soundRef.current?.play(n); }, []);
 
-  // ✅ افتح الصوت على أول تفاعل من المستخدم
   useEffect(() => {
     const unlock = () => unlockSound();
     document.addEventListener('pointerdown', unlock, { once: true });
@@ -429,6 +424,69 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
 
   const wordParts = state.display ? state.display.split('   ') : [];
 
+  /* ✅ دالة موحدة لعرض الكلمة — تُستدعى في مكانين: الموبايل والسطح المكتب */
+  const renderWordDisplay = () => (
+    <div
+      className="rounded-2xl p-4 sm:p-6"
+      style={{
+        background: 'linear-gradient(160deg, rgba(31,21,12,0.65), rgba(10,7,5,0.45))',
+        backdropFilter: 'blur(18px) saturate(1.4)',
+        WebkitBackdropFilter: 'blur(18px) saturate(1.4)',
+        border: '1.5px solid rgba(212,175,55,0.28)',
+        boxShadow: wrongFlash
+          ? '0 0 60px rgba(220,38,38,0.75), inset 0 0 40px rgba(220,38,38,0.25), 0 12px 30px rgba(0,0,0,0.5)'
+          : winFlash
+            ? '0 0 60px rgba(16,185,129,0.8), inset 0 0 40px rgba(16,185,129,0.25), 0 12px 30px rgba(0,0,0,0.5)'
+            : '0 12px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)',
+        transition: 'box-shadow 0.3s',
+        animation: wrongFlash ? 'hangShake 0.4s ease-in-out' : 'none',
+      }}>
+
+      <div className="flex flex-wrap justify-center items-end gap-x-3 gap-y-4" dir="rtl">
+        {wordParts.length === 0 ? (
+          <p className="text-lg" style={{ color: 'rgba(254,243,199,0.5)' }}>جاري تحضير الكلمة...</p>
+        ) : wordParts.map((wordPart, wordIdx, arr) => (
+          <React.Fragment key={wordIdx}>
+            <div className="flex gap-1 sm:gap-1.5">
+              {wordPart.split(' ').map((c, i) => {
+                const isLetter = c !== '_' && c !== ' ';
+                return (
+                  <div key={i} className="flex flex-col items-center">
+                    <span
+                      className="flex items-center justify-center min-w-[1.8rem] sm:min-w-[2.2rem] h-10 sm:h-12
+                                 text-2xl sm:text-3xl font-extrabold"
+                      style={{
+                        color: isLetter ? '#fef3c7' : 'transparent',
+                        textShadow: isLetter ? '0 0 14px rgba(245,158,11,0.9), 0 0 24px rgba(245,158,11,0.5)' : 'none',
+                        animation: isLetter ? 'hangLetterPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both' : 'none',
+                      }}>
+                      {isLetter ? c : '‎'}
+                    </span>
+                    <div
+                      className="h-[3px] sm:h-1 w-full rounded-full mt-0.5"
+                      style={{
+                        background: isLetter
+                          ? 'linear-gradient(90deg, #fbbf24, #d97706, #fbbf24)'
+                          : 'linear-gradient(90deg, rgba(138,118,83,0.6), rgba(138,118,83,0.3))',
+                        boxShadow: isLetter ? '0 0 12px rgba(251,191,36,0.8)' : 'none',
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            {wordIdx < arr.length - 1 && (
+              <div className="flex items-end pb-2 font-bold text-2xl select-none"
+                style={{ color: 'rgba(212,175,55,0.4)' }}>
+                /
+              </div>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <style>{AnimCSS}</style>
@@ -484,7 +542,6 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* قلوب المحاولات */}
             <div
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl"
               style={{
@@ -538,7 +595,7 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
         {/* ===================== Main ===================== */}
         <main className="relative z-10 flex-1 flex flex-col lg:flex-row overflow-hidden">
 
-          {/* اليسار: المشنقة */}
+          {/* اليسار: المشنقة + الكلمة (على الموبايل) */}
           <aside className="lg:w-[38%] w-full flex-shrink-0 flex flex-col p-3 sm:p-4 gap-3
                           overflow-y-auto border-b lg:border-b-0 lg:border-l"
             style={{ borderColor: 'rgba(212,175,55,0.15)' }}>
@@ -554,6 +611,11 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
                 boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.06), inset 0 -20px 40px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.4)',
               }}>
               <HangmanDrawing attempts={state.attempts} maxAttempts={state.maxAttempts} />
+            </div>
+
+            {/* ✅ عرض الكلمة على الموبايل — داخل نفس عمود المشنقة، تحت الرسمة */}
+            <div className="lg:hidden">
+              {renderWordDisplay()}
             </div>
 
             {state.hint && (
@@ -619,67 +681,12 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
             </div>
           </aside>
 
-          {/* اليمين: الكلمة + الأزرار */}
+          {/* اليمين: الكلمة (للسطح المكتب) + الأزرار */}
           <section className="flex-1 flex flex-col p-3 sm:p-4 gap-3 overflow-y-auto">
 
-            <div
-              className="rounded-2xl p-4 sm:p-6"
-              style={{
-                background: 'linear-gradient(160deg, rgba(31,21,12,0.65), rgba(10,7,5,0.45))',
-                backdropFilter: 'blur(18px) saturate(1.4)',
-                WebkitBackdropFilter: 'blur(18px) saturate(1.4)',
-                border: '1.5px solid rgba(212,175,55,0.28)',
-                boxShadow: wrongFlash
-                  ? '0 0 60px rgba(220,38,38,0.75), inset 0 0 40px rgba(220,38,38,0.25), 0 12px 30px rgba(0,0,0,0.5)'
-                  : winFlash
-                    ? '0 0 60px rgba(16,185,129,0.8), inset 0 0 40px rgba(16,185,129,0.25), 0 12px 30px rgba(0,0,0,0.5)'
-                    : '0 12px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)',
-                transition: 'box-shadow 0.3s',
-                animation: wrongFlash ? 'hangShake 0.4s ease-in-out' : 'none',
-              }}>
-
-              <div className="flex flex-wrap justify-center items-end gap-x-3 gap-y-4" dir="rtl">
-                {wordParts.length === 0 ? (
-                  <p className="text-lg" style={{ color: 'rgba(254,243,199,0.5)' }}>جاري تحضير الكلمة...</p>
-                ) : wordParts.map((wordPart, wordIdx, arr) => (
-                  <React.Fragment key={wordIdx}>
-                    <div className="flex gap-1 sm:gap-1.5">
-                      {wordPart.split(' ').map((c, i) => {
-                        const isLetter = c !== '_' && c !== ' ';
-                        return (
-                          <div key={i} className="flex flex-col items-center">
-                            <span
-                              className="flex items-center justify-center min-w-[1.8rem] sm:min-w-[2.2rem] h-10 sm:h-12
-                                         text-2xl sm:text-3xl font-extrabold"
-                              style={{
-                                color: isLetter ? '#fef3c7' : 'transparent',
-                                textShadow: isLetter ? '0 0 14px rgba(245,158,11,0.9), 0 0 24px rgba(245,158,11,0.5)' : 'none',
-                                animation: isLetter ? 'hangLetterPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both' : 'none',
-                              }}>
-                              {isLetter ? c : '‎'}
-                            </span>
-                            <div
-                              className="h-[3px] sm:h-1 w-full rounded-full mt-0.5"
-                              style={{
-                                background: isLetter
-                                  ? 'linear-gradient(90deg, #fbbf24, #d97706, #fbbf24)'
-                                  : 'linear-gradient(90deg, rgba(138,118,83,0.6), rgba(138,118,83,0.3))',
-                                boxShadow: isLetter ? '0 0 12px rgba(251,191,36,0.8)' : 'none',
-                              }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {wordIdx < arr.length - 1 && (
-                      <div className="flex items-end pb-2 font-bold text-2xl select-none"
-                        style={{ color: 'rgba(212,175,55,0.4)' }}>
-                        /
-                      </div>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
+            {/* ✅ عرض الكلمة على السطح المكتب — مخفي على الموبايل */}
+            <div className="hidden lg:block">
+              {renderWordDisplay()}
             </div>
 
             {state.gameOver && (
@@ -720,7 +727,6 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
               </div>
             )}
 
-            {/* لوحة المفاتيح - الحروف */}
             <div className="space-y-2">
               <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-center"
                 style={{ color: 'rgba(251,191,36,0.65)' }}>
@@ -740,7 +746,6 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
               </div>
             </div>
 
-            {/* لوحة المفاتيح - الأرقام */}
             <div className="space-y-2">
               <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-center"
                 style={{ color: 'rgba(52,211,153,0.65)' }}>

@@ -5,7 +5,8 @@ import {
   FaDice, FaRandom, FaHandPaper, FaTable, FaCheck, FaTimes,
   FaTrophy, FaPlay, FaRedo, FaList, FaStar, FaCircle,
   FaHome, FaBook, FaTimesCircle, FaUserSlash, FaEye,
-  FaCrown, FaExchangeAlt, FaUsers, FaUser, FaArrowLeft
+  FaCrown, FaExchangeAlt, FaUsers, FaUser, FaArrowLeft,
+  FaBars, FaCog,
 } from 'react-icons/fa';
 import PlayingCard, { getTheme } from './PlayingCard';
 
@@ -77,6 +78,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [diceCategoryData, setDiceCategoryData] = useState(null);
   const [anyPlayerPlacedCards, setAnyPlayerPlacedCards] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // ✅ جديد: الكارت المختار من اليد
   const [selectedHandCard, setSelectedHandCard] = useState(null);
@@ -414,7 +416,18 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
   const handleExitToCategories = () => {
-    if (isAdmin) { socket.emit('card_game_exit', { roomCode }); if (onExit) onExit(); }
+    if (!isAdmin) return;
+    socket.emit('card_game_exit', { roomCode });
+    // إغلاق كل النوافذ المنبثقة قبل الخروج
+    setShowRules(false);
+    setMenuOpen(false);
+    setShowShakeSquare(false);
+    setShowExchangeModal(false);
+    setShowCollectiveExchangeModal(false);
+    setSelectedCardForCircle(null);
+    setSelectedCardForView(null);
+    setSelectedHandCard(null);
+    if (onExit) onExit();
   };
   const handleTakeFromTable = () => {
     const top = getTopTableCard();
@@ -509,85 +522,112 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   /* ═══ CARD FAN (يد اللاعب) ═══ */
   const renderHandFan = () => {
-    const count = myHand.length;
+  const count = myHand.length;
 
-    // ✅ لو لسه ما اتوزّعش — رسالة انتظار
-    if (!gameState.dealt) {
-      return (
-        <div className="h-40 flex flex-col items-center justify-center gap-2">
-          <div className="text-5xl animate-pulse">🎴</div>
-          <p className="text-amber-200/70 text-sm">
-            {isAdmin ? 'اضغط "توزيع" لبدء توزيع الورق' : 'بانتظار توزيع الورق من المسؤول...'}
-          </p>
-        </div>
-      );
-    }
+  if (!gameState.dealt) {
+    return (
+      <div className="h-40 flex flex-col items-center justify-center gap-2">
+        <div className="text-5xl animate-pulse">🎴</div>
+        <p className="text-amber-200/70 text-sm">
+          {isAdmin ? 'اضغط "توزيع" لبدء توزيع الورق' : 'بانتظار توزيع الورق من المسؤول...'}
+        </p>
+      </div>
+    );
+  }
 
-    if (count === 0) {
-      return (
-        <div className="h-40 flex items-center justify-center text-amber-200/40 text-sm">
-          لا توجد بطاقات في يدك
-        </div>
-      );
-    }
+  if (count === 0) {
+    return (
+      <div className="h-40 flex items-center justify-center text-amber-200/40 text-sm">
+        لا توجد بطاقات في يدك
+      </div>
+    );
+  }
 
-    const isMobile = window.innerWidth <= 768;
+  const isMobileNow = window.innerWidth <= 768;
 
-    const sizeKey = isMobile
-      ? (count <= 4 ? 'md' : count <= 7 ? 'sm' : 'xs')
-      : (count <= 5 ? 'lg' : count <= 8 ? 'md' : count <= 12 ? 'sm' : 'xs');
-
-    const cardWidths = { xs: 72, sm: 94, md: 118, lg: 148 };
-    const cardW = cardWidths[sizeKey];
-
-    const maxSpread = isMobile
-      ? window.innerWidth - 30
-      : Math.min(1200, window.innerWidth - 40);
-
-    // ✅ مسافة أكبر — كروت جنب بعض بدون تراكب تقيل
-    const idealSpacing = cardW * 0.82;
-    const spacing = Math.min(idealSpacing, maxSpread / Math.max(count, 1));
-
+  // ✅ على الموبايل لما الكروت تكتر → نزّلها تحت بعض في صفوف
+  if (isMobileNow && count > 6) {
     return (
       <div
-        className="relative flex justify-center items-center"
-        style={{ height: isMobile ? 200 : 260 }}
+        className="w-full flex flex-wrap justify-center gap-2 py-3"
+        style={{ minHeight: 180 }}
       >
-        {myHand.map((card, i) => {
-          const mid = (count - 1) / 2;
-          const offset = i - mid;
-          const x = offset * spacing;
-          const rot = offset * Math.min(2, 8 / Math.max(count, 1));
-
+        {myHand.map((card) => {
           const isSelected = selectedHandCard?.id === card.id;
-          const isHovered = hoveredCardId === card.id;
-
-          // ✅ كل الكروت على نفس المستوى — مش منحنية
-          const baseY = isSelected ? -30 : (isHovered ? -20 : 0);
-          const finalRot = isSelected ? 0 : (isHovered ? rot * 0.3 : rot);
-          const finalScale = isSelected ? 1.08 : (isHovered ? 1.05 : 1);
-
           return (
             <div
               key={card.id}
-              onMouseEnter={() => setHoveredCardId(card.id)}
-              onMouseLeave={() => setHoveredCardId(null)}
               onClick={() => setSelectedHandCard(isSelected ? null : card)}
-              className="absolute cursor-pointer"
+              className="cursor-pointer transition-transform duration-150"
               style={{
-                transform: `translateX(${x}px) translateY(${baseY}px) rotate(${finalRot}deg) scale(${finalScale})`,
-                transformOrigin: 'center center',
-                zIndex: isSelected ? 50 : (isHovered ? 40 : i),
-                transition: 'transform 150ms ease-out, z-index 0ms',
-                willChange: 'transform',
+                transform: isSelected ? 'translateY(-6px) scale(1.05)' : 'none',
+                filter: isSelected
+                  ? 'drop-shadow(0 0 12px rgba(252,211,77,0.9))'
+                  : 'none',
               }}
             >
-              <PlayingCard card={card} size={sizeKey} selected={isSelected} />
+              <PlayingCard card={card} size="sm" selected={isSelected} />
             </div>
           );
         })}
       </div>
     );
+  }
+
+  // باقي الحالات → الشكل المروحي المعتاد
+  const sizeKey = isMobileNow
+    ? (count <= 4 ? 'md' : count <= 7 ? 'sm' : 'xs')
+    : (count <= 5 ? 'lg' : count <= 8 ? 'md' : count <= 12 ? 'sm' : 'xs');
+
+  const cardWidths = { xs: 72, sm: 94, md: 118, lg: 148 };
+  const cardW = cardWidths[sizeKey];
+
+  const maxSpread = isMobileNow
+    ? window.innerWidth - 30
+    : Math.min(1200, window.innerWidth - 40);
+
+  const idealSpacing = cardW * 0.82;
+  const spacing = Math.min(idealSpacing, maxSpread / Math.max(count, 1));
+
+  return (
+    <div
+      className="relative flex justify-center items-center"
+      style={{ height: isMobileNow ? 200 : 260 }}
+    >
+      {myHand.map((card, i) => {
+        const mid = (count - 1) / 2;
+        const offset = i - mid;
+        const x = offset * spacing;
+        const rot = offset * Math.min(2, 8 / Math.max(count, 1));
+
+        const isSelected = selectedHandCard?.id === card.id;
+        const isHovered = hoveredCardId === card.id;
+
+        const baseY = isSelected ? -30 : (isHovered ? -20 : 0);
+        const finalRot = isSelected ? 0 : (isHovered ? rot * 0.3 : rot);
+        const finalScale = isSelected ? 1.08 : (isHovered ? 1.05 : 1);
+
+        return (
+          <div
+            key={card.id}
+            onMouseEnter={() => setHoveredCardId(card.id)}
+            onMouseLeave={() => setHoveredCardId(null)}
+            onClick={() => setSelectedHandCard(isSelected ? null : card)}
+            className="absolute cursor-pointer"
+            style={{
+              transform: `translateX(${x}px) translateY(${baseY}px) rotate(${finalRot}deg) scale(${finalScale})`,
+              transformOrigin: 'center center',
+              zIndex: isSelected ? 50 : (isHovered ? 40 : i),
+              transition: 'transform 150ms ease-out, z-index 0ms',
+              willChange: 'transform',
+            }}
+          >
+            <PlayingCard card={card} size={sizeKey} selected={isSelected} />
+          </div>
+        );
+      })}
+    </div>
+  );
   };
 
   /* ═══ ACTION BAR FOR SELECTED CARD ═══ */
@@ -664,6 +704,102 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           </button>
         </div>
       )}
+
+      {/* ═══ Menu Modal — للخيارات الإضافية ═══ */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(5,5,20,0.9)', backdropFilter: 'blur(10px)' }}
+            onClick={() => setMenuOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="max-w-sm w-full rounded-3xl p-5"
+              style={{
+                background: 'linear-gradient(155deg, #0f0a1e 0%, #1a0f2e 100%)',
+                border: '2px solid rgba(201,168,118,0.4)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-amber-100 flex items-center gap-2">
+                  <FaCog className="text-amber-400" /> خيارات إضافية
+                </h2>
+                <button onClick={() => setMenuOpen(false)} className="text-amber-200 hover:text-white">
+                  <FaTimesCircle size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  onClick={() => { socket.emit('card_game_shuffle', { roomCode }); setMenuOpen(false); }}
+                  className="w-full py-3 rounded-xl font-bold text-white flex items-center gap-3 px-4 text-right"
+                  style={{
+                    background: 'linear-gradient(155deg, rgba(168,85,247,0.35), rgba(139,92,246,0.15))',
+                    border: '1px solid rgba(168,85,247,0.5)',
+                  }}
+                >
+                  <FaRandom className="text-purple-300" />
+                  <span>خلط الكروت</span>
+                </button>
+
+                <button
+                  onClick={() => { setShowRules(true); setMenuOpen(false); }}
+                  className="w-full py-3 rounded-xl font-bold text-white flex items-center gap-3 px-4 text-right"
+                  style={{
+                    background: 'linear-gradient(155deg, rgba(59,130,246,0.35), rgba(37,99,235,0.15))',
+                    border: '1px solid rgba(59,130,246,0.5)',
+                  }}
+                >
+                  <FaBook className="text-blue-300" />
+                  <span>قواعد اللعبة</span>
+                </button>
+
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm('إعادة تعيين اللعبة للجميع؟')) {
+                        handleResetGame();
+                        setMenuOpen(false);
+                      }
+                    }}
+                    className="w-full py-3 rounded-xl font-bold text-white flex items-center gap-3 px-4 text-right"
+                    style={{
+                      background: 'linear-gradient(155deg, rgba(220,38,38,0.35), rgba(185,28,28,0.15))',
+                      border: '1px solid rgba(220,38,38,0.5)',
+                    }}
+                  >
+                    <FaRedo className="text-red-300" />
+                    <span>إعادة تعيين اللعبة</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => { setMenuOpen(false); if (onExit) onExit(); }}
+                  className="w-full py-3 rounded-xl font-bold text-white flex items-center gap-3 px-4 text-right"
+                  style={{
+                    background: 'linear-gradient(155deg, rgba(100,116,139,0.35), rgba(71,85,105,0.15))',
+                    border: '1px solid rgba(100,116,139,0.5)',
+                  }}
+                >
+                  <FaTimes className="text-slate-300" />
+                  <span>{isAdmin ? 'مغادرة الغرفة' : 'الخروج من اللعبة'}</span>
+                </button>
+              </div>
+
+              <p className="text-center text-amber-100/40 text-[10px] mt-4">
+                اضغط في أي مكان خارج النافذة للإغلاق
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       {/* ═══ Rules Modal ═══ */}
       <AnimatePresence>
@@ -1155,42 +1291,51 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {isAdmin ? (
-              <>
-                <HeaderBtn onClick={handleExitToCategories} icon={<FaHome />} label="الفئات" />
-                <HeaderBtn onClick={handleResetGame} icon={<FaRedo />} label="إعادة" color="red" />
-                <HeaderBtn onClick={() => setShowRules(true)} icon={<FaBook />} label="القواعد" color="blue" />
-                {/* ✅ زرار توزيع الورق */}
-                {!gameState.dealt && (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => socket.emit('card_game_deal', { roomCode })}
-                    className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 text-amber-950 animate-pulse"
-                    style={{
-                      background: 'linear-gradient(155deg, #fcd34d, #f59e0b)',
-                      border: '2px solid #fcd34d',
-                      boxShadow: '0 0 20px rgba(251,191,36,0.6)',
-                    }}
-                  >
-                    🎴 توزيع
-                  </motion.button>
-                )}
-              </>
-            ) : (
-              <HeaderBtn onClick={() => { if (onExit) onExit(); }} icon={<FaArrowLeft />} label="البازر" />
-            )}
-            <HeaderBtn onClick={handleRollDice} icon={<FaDice />} label="النرد" color="yellow" />
-            <HeaderBtn
-              onClick={handleDrawCard}
-              disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || gameState.drawPile.length === 0}
-              icon={<FaHandPaper />}
-              label={`سحب (${gameState.drawPile.length})`}
-              color="blue"
-            />
-            <HeaderBtn onClick={() => socket.emit('card_game_shuffle', { roomCode })} icon={<FaRandom />} label="خلط" color="purple" />
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5 justify-end">
+          {/* الزر الأساسي: رجوع / خروج */}
+          {isAdmin ? (
+            <HeaderBtn onClick={handleExitToCategories} icon={<FaHome />} label="الفئات" />
+          ) : (
+            <HeaderBtn onClick={() => { if (onExit) onExit(); }} icon={<FaArrowLeft />} label="البازر" />
+          )}
+
+          {/* زر التوزيع — يظهر فقط قبل التوزيع */}
+          {isAdmin && !gameState.dealt && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => socket.emit('card_game_deal', { roomCode })}
+              className="px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 text-amber-950 animate-pulse"
+              style={{
+                background: 'linear-gradient(155deg, #fcd34d, #f59e0b)',
+                border: '2px solid #fcd34d',
+                boxShadow: '0 0 20px rgba(251,191,36,0.6)',
+              }}
+            >
+              🎴 <span>توزيع</span>
+            </motion.button>
+          )}
+
+          {/* النرد — ظاهر دائمًا */}
+          <HeaderBtn onClick={handleRollDice} icon={<FaDice />} label="النرد" color="yellow" />
+
+          {/* السحب — ظاهر دائمًا */}
+          <HeaderBtn
+            onClick={handleDrawCard}
+            disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || gameState.drawPile.length === 0}
+            icon={<FaHandPaper />}
+            label={`سحب (${gameState.drawPile.length})`}
+            color="blue"
+          />
+
+          {/* زر القائمة لباقي الأزرار */}
+          <HeaderBtn
+            onClick={() => setMenuOpen(true)}
+            icon={<FaBars />}
+            label="المزيد"
+            color="purple"
+          />
+        </div>
         </div>
 
         {/* ═══ CATEGORIES LIST — بدون animation تقيل ═══ */}

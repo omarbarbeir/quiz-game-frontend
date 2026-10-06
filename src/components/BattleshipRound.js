@@ -419,19 +419,19 @@ export default function BattleshipRound({ socket, roomCode, players, playerId, i
           {screen === 'pick' && isAdmin && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto w-full">
               <div className="text-center mb-5">
-                <h2 className="text-2xl font-black text-cyan-50 mb-1">اختر الأدميرالين</h2>
-                <p className="text-cyan-300/50 text-xs">X يبدأ أولاً</p>
+                <h2 className="text-2xl font-black text-cyan-50 mb-1">اختر اللاعبين</h2>
+                <p className="text-cyan-300/50 text-xs">اللاعب الأول يبدأ الهجوم</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="rounded-xl p-3 text-center"
                   style={{ background: 'rgba(251,191,36,0.1)', border: '1.5px solid rgba(251,191,36,0.4)' }}>
-                  <div className="text-amber-300 text-[10px] tracking-widest uppercase mb-1">X</div>
+                  <div className="text-amber-300 text-[10px] tracking-widest uppercase mb-1">يبدأ أولاً</div>
                   <div className="text-cyan-50 text-sm font-bold truncate">{pickedX?.name || '—'}</div>
                 </div>
                 <div className="rounded-xl p-3 text-center"
                   style={{ background: 'rgba(34,211,238,0.1)', border: '1.5px solid rgba(34,211,238,0.4)' }}>
-                  <div className="text-cyan-300 text-[10px] tracking-widest uppercase mb-1">O</div>
+                  <div className="text-cyan-300 text-[10px] tracking-widest uppercase mb-1">يلعب ثانياً</div>
                   <div className="text-cyan-50 text-sm font-bold truncate">{pickedO?.name || '—'}</div>
                 </div>
               </div>
@@ -450,14 +450,26 @@ export default function BattleshipRound({ socket, roomCode, players, playerId, i
                         {p.isAdmin && <span className="text-amber-400 text-xs">👑</span>}
                         {p.name}
                       </div>
-                      <button onClick={() => { if (pickedO?.id !== p.id) setPickedX(prev => prev?.id === p.id ? null : p); }}
+                      <button
+                        onClick={() => {
+                          if (pickedO?.id !== p.id)
+                            setPickedX(prev => prev?.id === p.id ? null : p);
+                        }}
                         className={`px-3 py-1 rounded-lg text-[11px] font-black transition-all ${
                           isX ? 'bg-amber-500 text-slate-950' : 'bg-slate-800/60 text-amber-300/70 hover:bg-amber-500/20'
-                        }`}>X</button>
-                      <button onClick={() => { if (pickedX?.id !== p.id) setPickedO(prev => prev?.id === p.id ? null : p); }}
+                        }`}>
+                        الأول
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (pickedX?.id !== p.id)
+                            setPickedO(prev => prev?.id === p.id ? null : p);
+                        }}
                         className={`px-3 py-1 rounded-lg text-[11px] font-black transition-all ${
                           isO ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800/60 text-cyan-300/70 hover:bg-cyan-500/20'
-                        }`}>O</button>
+                        }`}>
+                        الثاني
+                      </button>
                     </div>
                   );
                 })}

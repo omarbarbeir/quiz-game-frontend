@@ -513,6 +513,7 @@ export default function SpyRound({
   onCloseResult,
   onLeaveRoom,
   onNewRound,
+  onBackToCategories,
 }) {
   const isSpy    = !!currentQuestion?.isSpy;
   const wordText = currentQuestion?.text ?? '';
@@ -538,6 +539,19 @@ export default function SpyRound({
     socket.on('spy_vote_progress', onProgress);
     return () => socket.off('spy_vote_progress', onProgress);
   }, [socket]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleBackToLobby = () => {
+      if (onBackToCategories) onBackToCategories();
+    };
+
+    socket.on('spy_back_to_lobby', handleBackToLobby);
+    return () => {
+      socket.off('spy_back_to_lobby', handleBackToLobby);
+    };
+  }, [socket, onBackToCategories]);
 
   return (
     <div
@@ -568,12 +582,26 @@ export default function SpyRound({
           <span className="text-white/45 text-xs">{players.length} لاعبين</span>
         </div>
         <RoomBadge roomCode={roomCode} />
-        <button
-          onClick={onLeaveRoom}
-          className="text-white/25 hover:text-white/60 transition-colors text-xs tracking-wide"
-        >
-          خروج ↗
-        </button>
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <button
+              onClick={() => {
+                // ✅ نرسل للسيرفر يبث لكل اللاعبين
+                socket.emit('spy_cleanup', { roomCode });
+                // الأدمن نفسه سيستقبل spy_back_to_lobby وسينفّذ onBackToCategories
+              }}
+              className="text-white/25 hover:text-white/60 transition-colors text-xs tracking-wide"
+            >
+              ← الفئات
+            </button>
+          )}
+          <button
+            onClick={onLeaveRoom}
+            className="text-white/25 hover:text-white/60 transition-colors text-xs tracking-wide"
+          >
+            خروج ↗
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
