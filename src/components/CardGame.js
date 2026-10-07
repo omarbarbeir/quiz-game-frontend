@@ -522,112 +522,115 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   /* ═══ CARD FAN (يد اللاعب) ═══ */
   const renderHandFan = () => {
-  const count = myHand.length;
+    const count = myHand.length;
 
-  if (!gameState.dealt) {
-    return (
-      <div className="h-40 flex flex-col items-center justify-center gap-2">
-        <div className="text-5xl animate-pulse">🎴</div>
-        <p className="text-amber-200/70 text-sm">
-          {isAdmin ? 'اضغط "توزيع" لبدء توزيع الورق' : 'بانتظار توزيع الورق من المسؤول...'}
-        </p>
-      </div>
-    );
-  }
+    if (!gameState.dealt) {
+      return (
+        <div className="h-40 flex flex-col items-center justify-center gap-2">
+          <div className="text-5xl animate-pulse">🎴</div>
+          <p className="text-amber-200/70 text-sm">
+            {isAdmin ? 'اضغط "توزيع" لبدء توزيع الورق' : 'بانتظار توزيع الورق من المسؤول...'}
+          </p>
+        </div>
+      );
+    }
 
-  if (count === 0) {
-    return (
-      <div className="h-40 flex items-center justify-center text-amber-200/40 text-sm">
-        لا توجد بطاقات في يدك
-      </div>
-    );
-  }
+    if (count === 0) {
+      return (
+        <div className="h-40 flex items-center justify-center text-amber-200/40 text-sm">
+          لا توجد بطاقات في يدك
+        </div>
+      );
+    }
 
-  const isMobileNow = window.innerWidth <= 768;
+    // ✅ اكتشاف الجهاز اللمسي أكثر من الاعتماد على العرض فقط
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const isSmallScreen = window.innerWidth <= 1024;
+    const isMobileNow = isTouch && isSmallScreen;
 
-  // ✅ على الموبايل لما الكروت تكتر → نزّلها تحت بعض في صفوف
-  if (isMobileNow && count > 6) {
+    // ✅ على الموبايل لما الكروت تكتر → نزّلها تحت بعض في صفوف
+    if (isMobileNow && count > 4) {
+      return (
+        <div
+          className="w-full flex flex-wrap justify-center gap-2 py-3"
+          style={{ minHeight: 180 }}
+        >
+          {myHand.map((card) => {
+            const isSelected = selectedHandCard?.id === card.id;
+            return (
+              <div
+                key={card.id}
+                onClick={() => setSelectedHandCard(isSelected ? null : card)}
+                className="cursor-pointer transition-transform duration-150"
+                style={{
+                  transform: isSelected ? 'translateY(-6px) scale(1.05)' : 'none',
+                  filter: isSelected
+                    ? 'drop-shadow(0 0 12px rgba(252,211,77,0.9))'
+                    : 'none',
+                }}
+              >
+                <PlayingCard card={card} size="sm" selected={isSelected} />
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // باقي الحالات → الشكل المروحي المعتاد
+    const sizeKey = isMobileNow
+      ? (count <= 4 ? 'md' : count <= 7 ? 'sm' : 'xs')
+      : (count <= 5 ? 'lg' : count <= 8 ? 'md' : count <= 12 ? 'sm' : 'xs');
+
+    const cardWidths = { xs: 72, sm: 94, md: 118, lg: 148 };
+    const cardW = cardWidths[sizeKey];
+
+    const maxSpread = isMobileNow
+      ? window.innerWidth - 30
+      : Math.min(1200, window.innerWidth - 40);
+
+    const idealSpacing = cardW * 0.82;
+    const spacing = Math.min(idealSpacing, maxSpread / Math.max(count, 1));
+
     return (
       <div
-        className="w-full flex flex-wrap justify-center gap-2 py-3"
-        style={{ minHeight: 180 }}
+        className="relative flex justify-center items-center"
+        style={{ height: isMobileNow ? 200 : 260 }}
       >
-        {myHand.map((card) => {
+        {myHand.map((card, i) => {
+          const mid = (count - 1) / 2;
+          const offset = i - mid;
+          const x = offset * spacing;
+          const rot = offset * Math.min(2, 8 / Math.max(count, 1));
+
           const isSelected = selectedHandCard?.id === card.id;
+          const isHovered = hoveredCardId === card.id;
+
+          const baseY = isSelected ? -30 : (isHovered ? -20 : 0);
+          const finalRot = isSelected ? 0 : (isHovered ? rot * 0.3 : rot);
+          const finalScale = isSelected ? 1.08 : (isHovered ? 1.05 : 1);
+
           return (
             <div
               key={card.id}
+              onMouseEnter={() => setHoveredCardId(card.id)}
+              onMouseLeave={() => setHoveredCardId(null)}
               onClick={() => setSelectedHandCard(isSelected ? null : card)}
-              className="cursor-pointer transition-transform duration-150"
+              className="absolute cursor-pointer"
               style={{
-                transform: isSelected ? 'translateY(-6px) scale(1.05)' : 'none',
-                filter: isSelected
-                  ? 'drop-shadow(0 0 12px rgba(252,211,77,0.9))'
-                  : 'none',
+                transform: `translateX(${x}px) translateY(${baseY}px) rotate(${finalRot}deg) scale(${finalScale})`,
+                transformOrigin: 'center center',
+                zIndex: isSelected ? 50 : (isHovered ? 40 : i),
+                transition: 'transform 150ms ease-out, z-index 0ms',
+                willChange: 'transform',
               }}
             >
-              <PlayingCard card={card} size="sm" selected={isSelected} />
+              <PlayingCard card={card} size={sizeKey} selected={isSelected} />
             </div>
           );
         })}
       </div>
     );
-  }
-
-  // باقي الحالات → الشكل المروحي المعتاد
-  const sizeKey = isMobileNow
-    ? (count <= 4 ? 'md' : count <= 7 ? 'sm' : 'xs')
-    : (count <= 5 ? 'lg' : count <= 8 ? 'md' : count <= 12 ? 'sm' : 'xs');
-
-  const cardWidths = { xs: 72, sm: 94, md: 118, lg: 148 };
-  const cardW = cardWidths[sizeKey];
-
-  const maxSpread = isMobileNow
-    ? window.innerWidth - 30
-    : Math.min(1200, window.innerWidth - 40);
-
-  const idealSpacing = cardW * 0.82;
-  const spacing = Math.min(idealSpacing, maxSpread / Math.max(count, 1));
-
-  return (
-    <div
-      className="relative flex justify-center items-center"
-      style={{ height: isMobileNow ? 200 : 260 }}
-    >
-      {myHand.map((card, i) => {
-        const mid = (count - 1) / 2;
-        const offset = i - mid;
-        const x = offset * spacing;
-        const rot = offset * Math.min(2, 8 / Math.max(count, 1));
-
-        const isSelected = selectedHandCard?.id === card.id;
-        const isHovered = hoveredCardId === card.id;
-
-        const baseY = isSelected ? -30 : (isHovered ? -20 : 0);
-        const finalRot = isSelected ? 0 : (isHovered ? rot * 0.3 : rot);
-        const finalScale = isSelected ? 1.08 : (isHovered ? 1.05 : 1);
-
-        return (
-          <div
-            key={card.id}
-            onMouseEnter={() => setHoveredCardId(card.id)}
-            onMouseLeave={() => setHoveredCardId(null)}
-            onClick={() => setSelectedHandCard(isSelected ? null : card)}
-            className="absolute cursor-pointer"
-            style={{
-              transform: `translateX(${x}px) translateY(${baseY}px) rotate(${finalRot}deg) scale(${finalScale})`,
-              transformOrigin: 'center center',
-              zIndex: isSelected ? 50 : (isHovered ? 40 : i),
-              transition: 'transform 150ms ease-out, z-index 0ms',
-              willChange: 'transform',
-            }}
-          >
-            <PlayingCard card={card} size={sizeKey} selected={isSelected} />
-          </div>
-        );
-      })}
-    </div>
-  );
   };
 
   /* ═══ ACTION BAR FOR SELECTED CARD ═══ */

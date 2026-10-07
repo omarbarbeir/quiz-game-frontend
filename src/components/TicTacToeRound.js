@@ -132,7 +132,7 @@ function Cell({ value, onClick, disabled, isWinning }) {
 export default function TicTacToeRound({
   socket, roomCode, players, playerId, isAdmin, onLeaveRoom
 }) {
-  const [screen, setScreen] = useState('picker'); // picker | ai | online-pick | online | online-wait
+  const [screen, setScreen] = useState(isAdmin ? 'picker' : 'online-wait'); // picker | ai | online-pick | online | online-wait
 
   // AI mode
   const [difficulty, setDifficulty] = useState('medium');
@@ -199,6 +199,13 @@ export default function TicTacToeRound({
       // ⚠️ لا نُطلق close_game هنا — هذا ما كسر اللعبة
     };
   }, [socket, roomCode]);
+
+  // ✅ حماية: لو وصل اللاعب لشاشة الاختيار بأي طريقة، أعده للانتظار
+  useEffect(() => {
+    if (!isAdmin && screen === 'picker') {
+      setScreen('online-wait');
+    }
+  }, [isAdmin, screen]);
 
   // ─── AI effect ───
   useEffect(() => {
@@ -276,7 +283,8 @@ export default function TicTacToeRound({
     setOnlineState(null);
     setPickedX(null);
     setPickedO(null);
-    setScreen('picker');
+    // ✅ الأدمن يرجع للاختيار، واللاعب يرجع للانتظار
+    setScreen(isAdmin ? 'picker' : 'online-wait');
   };
 
   // ─── Derived ───

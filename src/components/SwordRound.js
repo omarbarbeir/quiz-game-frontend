@@ -496,7 +496,7 @@ const MapCanvas = ({
   }, [gameState.ownership, layout, players]);
 
   return (
-    <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+    <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="w-full h-full" preserveAspectRatio="xMidYMid slice">
       <defs>
         <radialGradient id="sokSeaGrad" cx="50%" cy="50%" r="75%">
           <stop offset="0%" stopColor="#241345" />

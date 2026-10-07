@@ -627,7 +627,7 @@ const MoneySheet = ({ open, onClose, money, players, myPlayerId, onPay }) => {
                   >
                     <div style={{
                       width:'100%',aspectRatio:'16/9',
-                      backgroundImage:`url('${img}')`,backgroundSize:'cover',
+                      backgroundImage:`url('${(process.env.PUBLIC_URL || '') + img}')`,backgroundSize:'cover',
                       backgroundPosition:'center',backgroundColor:fallback,minHeight:56,
                     }}/>
                     <div style={{padding:'6px 8px',textAlign:'center'}}>
@@ -672,7 +672,7 @@ const LandCard = ({ tile, onBuild, onAuction }) => {
 
   return (
     <div style={{
-      borderRadius:20, overflow:'hidden', width:'min(210px, 72vw)', flexShrink:0,
+      borderRadius:20, overflow:'hidden', width:'min(210px, 60vw)', flexShrink:0,
       background:'linear-gradient(160deg, #fbf3dd 0%, #f0e2b8 100%)',
       boxShadow:`0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px ${color}40`,
       border:`3px solid ${color}`,
@@ -1731,7 +1731,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
             }}
           >
             <img
-              src="/bank/board.png"
+              src={`${process.env.PUBLIC_URL || ''}/bank/board.png`}
               alt="board"
               style={{
                 position:'absolute', inset:0,
@@ -2140,23 +2140,6 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
             </div>
           </div>
         </div>
-
-        {/* <button
-          onClick={toggleFs}
-          style={{
-            position:'absolute',
-            top:'min(12px,2vh)', right:'min(16px,2.4vh)', zIndex:20,
-            background:'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))',
-            backdropFilter:'blur(16px) saturate(180%)',
-            WebkitBackdropFilter:'blur(16px) saturate(180%)',
-            border:'1px solid rgba(255,255,255,0.2)',
-            color:'rgba(255,255,255,0.85)',
-            padding:'min(6px,1vh) min(14px,2vh)',borderRadius:12,
-            cursor:'pointer',fontSize:'min(13px,2vh)',fontWeight:600,
-            boxShadow:'inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 12px rgba(0,0,0,0.3)',
-          }}
-        >{isFs ? '✕ خروج من الشاشة' : '⛶ ملء الشاشة'}
-        </button> */}
 
         {/* زر الخروج */}
         <button

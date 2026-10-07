@@ -341,16 +341,37 @@ function useGyro(active, onCorrect, onPass) {
 }
 
 async function requestMotionPermission() {
-  try {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      const res = await DeviceOrientationEvent.requestPermission();
-      return res === 'granted';
-    }
-    return true;
-  } catch {
-    return false;
+  // لا يوجد DeviceOrientationEvent → الجهاز لا يدعم الحساس أصلًا
+  if (typeof DeviceOrientationEvent === 'undefined') {
+    return 'unsupported';
   }
+  // iOS 13+ وبعض إصدارات Chrome الحديثة تطلب إذنًا صريحًا
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const res = await DeviceOrientationEvent.requestPermission();
+      return res === 'granted' ? 'granted' : 'denied';
+    } catch {
+      return 'denied';
+    }
+  }
+  // أندرويد والأجهزة الأخرى: لا يوجد طلب إذن
+  return 'granted';
+}
+
+// ✅ اختبار فعلي: هل تُطلق الأحداث فعلًا؟
+function testMotionSensor(timeoutMs = 1200) {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') { resolve(false); return; }
+    let ok = false;
+    const handler = (e) => {
+      if (e && (e.beta != null || e.alpha != null || e.gamma != null)) ok = true;
+    };
+    window.addEventListener('deviceorientation', handler);
+    setTimeout(() => {
+      window.removeEventListener('deviceorientation', handler);
+      resolve(ok);
+    }, timeoutMs);
+  });
 }
 
 // =====================================================
@@ -368,6 +389,7 @@ export default function HeadsUp({
   const isEditingTeamNameRef = useRef(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [motionDenied, setMotionDenied] = useState(false);
 
   const { play: playSound, stopAll: stopAllSounds } = useSoundEffects();
 
@@ -418,6 +440,11 @@ export default function HeadsUp({
       if (!isEditingTeamNameRef.current) setTeamNameInput(name);
     }
   }, [state]);
+
+  useEffect(() => {
+    setMotionEnabled(false);
+    setMotionDenied(false);
+  }, [roomCode]);
 
   const emit = useCallback((ev, payload) => {
     socket?.emit(ev, { roomCode, ...payload });
@@ -483,13 +510,33 @@ export default function HeadsUp({
   }, [isPhoneHolderPlaying, handleCorrect, handlePass]);
 
   const enableMotion = useCallback(async () => {
-    const ok = await requestMotionPermission();
-    setMotionEnabled(ok);
-    if (!ok) {
-      setError('لم يتم منح الإذن. اضغط زر التفعيل مرة أخرى.');
-      setTimeout(() => setError(null), 4000);
+    const result = await requestMotionPermission();
+
+    if (result === 'unsupported') {
+      setMotionDenied(true);
+      setError('جهازك لا يدعم حساس الحركة. استخدم الأزرار اللمسية على الشاشة.');
+      setTimeout(() => setError(null), 6000);
+      return;
     }
-    return ok;
+
+    if (result === 'denied') {
+      setMotionDenied(true);
+      setError('الإذن مرفوض. اذهب لإعدادات المتصفح وفعّل الوصول للحركة.');
+      setTimeout(() => setError(null), 6000);
+      return;
+    }
+
+    // result === 'granted' → تأكد أن الحساس يعمل فعلًا
+    const works = await testMotionSensor(1200);
+    if (works) {
+      setMotionEnabled(true);
+      setMotionDenied(false);
+      setError(null);
+    } else {
+      setMotionDenied(true);
+      setError('لم يستجب الحساس. استخدم الأزرار اللمسية على الشاشة.');
+      setTimeout(() => setError(null), 6000);
+    }
   }, []);
 
   if (!state) {
@@ -1062,6 +1109,9 @@ export default function HeadsUp({
     const flashColor = flash === 'correct' ? CORRECT_COLOR : flash === 'pass' ? PASS_COLOR : null;
 
     if (isHolder) {
+      // ✅ هل نستخدم أزرار اللمس بدل الجيروسكوب؟
+      const useTouchFallback = isTouchDevice && (!motionEnabled || motionDenied);
+
       return (
         <div className="fixed inset-0 z-20" style={{ background: '#050510' }}>
           <AnimatePresence>
@@ -1122,6 +1172,34 @@ export default function HeadsUp({
               </p>
             </div>
           </div>
+
+          {/* ✅ أزرار اللمس الاحتياطية */}
+          {useTouchFallback && (
+            <>
+              <button
+                onClick={handlePass}
+                className="absolute top-0 left-0 right-0 h-1/2 z-30"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+                aria-label="تخطي"
+              />
+              <button
+                onClick={handleCorrect}
+                className="absolute bottom-0 left-0 right-0 h-1/2 z-30"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+                aria-label="صحيح"
+              />
+              <div
+                className="absolute top-2 left-1/2 -translate-x-1/2 z-40 px-3 py-1 rounded-full text-[10px] pointer-events-none"
+                style={{
+                  background: 'rgba(251,191,36,0.15)',
+                  border: '1px solid rgba(251,191,36,0.5)',
+                  color: '#fcd34d',
+                }}
+              >
+                اضغط أعلى الشاشة للتخطي، وأسفلها للصحيح
+              </div>
+            </>
+          )}
         </div>
       );
     }
@@ -1515,8 +1593,16 @@ export default function HeadsUp({
         </AnimatePresence>
 
         <AnimatePresence>
-          {isTouchDevice && !motionEnabled && me?.isPhoneHolder && phase === 'playing' && (
-            <GyroPermissionModal isIOS={isIOS} onEnable={enableMotion} />
+          {isTouchDevice &&
+          !motionEnabled &&
+          !motionDenied &&
+          me?.isPhoneHolder &&
+          phase === 'playing' && (
+            <GyroPermissionModal
+              isIOS={isIOS}
+              denied={motionDenied}
+              onEnable={enableMotion}
+            />
           )}
         </AnimatePresence>
       </div>

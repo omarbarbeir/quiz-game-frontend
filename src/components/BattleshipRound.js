@@ -263,11 +263,21 @@ export default function BattleshipRound({ socket, roomCode, players, playerId, i
       if (audio) { audio.currentTime = 0; audio.play().catch(() => {}); }
     };
 
+    const handleBackToLobby = () => {
+      setGameState(null);
+      if (isAdmin) setScreen('pick');
+      else setScreen('wait');
+      setPickedX(null);
+      setPickedO(null);
+    };
+
     socket.on('battleship_state', handleState);
     socket.on('battleship_sound', handleSound);
+    socket.on('battleship_back_to_lobby', handleBackToLobby);
     return () => {
       socket.off('battleship_state', handleState);
       socket.off('battleship_sound', handleSound);
+      socket.off('battleship_back_to_lobby', handleBackToLobby);
     };
   }, [socket, roomCode, playerId]);
 
@@ -283,7 +293,7 @@ export default function BattleshipRound({ socket, roomCode, players, playerId, i
     socket.emit('battleship_start', { roomCode, playerX: pickedX, playerO: pickedO });
   };
   const backToPicker = () => {
-    socket.emit('battleship_reset', { roomCode });
+    socket.emit('battleship_cleanup', { roomCode });
     setGameState(null);
     setPickedX(null);
     setPickedO(null);
