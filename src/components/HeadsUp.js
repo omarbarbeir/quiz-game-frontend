@@ -295,53 +295,51 @@ const Confetti = () => {
 // 📱 Gyroscope Hook
 // =====================================================
 function useGyro(active, onCorrect, onPass) {
-  const baseBetaRef = useRef(null);
+  const baseRef = useRef(null);
   const lastTriggerRef = useRef(0);
-  const zoneRef = useRef('neutral');   // 'neutral' | 'down' | 'up'
+  const zoneRef = useRef('neutral');
 
   useEffect(() => {
     if (!active) return;
-    baseBetaRef.current = null;
+    baseRef.current = null;
     zoneRef.current = 'neutral';
 
-    // ✅ يحتاج اللاعب يلف لتحت ٥٥ درجة حتى يُفعَّل "صحيح"
-    const DOWN_THRESHOLD = 55;
-    // ✅ يحتاج يرفع لفوق ٥٥ درجة حتى يُفعَّل "تخطي"
-    const UP_THRESHOLD = -55;
-    // ✅ لازم يرجع للوضع المحايد (أقل من ٢٠ درجة) حتى يُعاد ضبط الأساس
-    const RESET_DEADZONE = 20;
-
     const handler = (e) => {
-      const beta = e.beta;
-      if (beta == null) return;
+      const ag = e.accelerationIncludingGravity;
+      if (!ag) return;
+      const { x, y, z } = ag;
 
-      if (baseBetaRef.current === null) {
-        baseBetaRef.current = beta;
+      // زاوية الميل المحسوبة من متجه الجاذبية
+      // y موجب: رأس الموبايل لفوق (الشاشة ناحية السماء)
+      // y سالب: رأس الموبايل لتحت
+      const pitch = Math.atan2(y, Math.sqrt(x * x + z * z)) * (180 / Math.PI);
+
+      if (baseRef.current === null) {
+        baseRef.current = pitch;
         return;
       }
 
-      const delta = beta - baseBetaRef.current;
+      const delta = pitch - baseRef.current;
 
-      // العودة للوضع المحايد → أعِد ضبط الأساس
-      if (Math.abs(delta) < RESET_DEADZONE) {
-        baseBetaRef.current = beta;
+      // عودة للوضع المحايد → إعادة ضبط الأساس
+      if (Math.abs(delta) < 12) {
+        baseRef.current = pitch;
         zoneRef.current = 'neutral';
         return;
       }
 
-      // منع الإطلاق المتكرر بسرعة
       const now = Date.now();
-      if (now - lastTriggerRef.current < 900) return;
+      if (now - lastTriggerRef.current < 800) return;
 
-      // ✅ نزول (نود للأسفل) → صحيح
-      if (delta > DOWN_THRESHOLD && zoneRef.current !== 'down') {
+      // نزول (نود للأسفل) → صحيح
+      if (delta < -40 && zoneRef.current !== 'down') {
         lastTriggerRef.current = now;
         zoneRef.current = 'down';
         if (navigator.vibrate) navigator.vibrate(80);
         onCorrect();
       }
-      // ✅ ارتفاع (نظر للأعلى) → تخطي
-      else if (delta < UP_THRESHOLD && zoneRef.current !== 'up') {
+      // ارتفاع (ننظر للأعلى) → تخطي
+      else if (delta > 40 && zoneRef.current !== 'up') {
         lastTriggerRef.current = now;
         zoneRef.current = 'up';
         if (navigator.vibrate) navigator.vibrate(80);
@@ -349,26 +347,25 @@ function useGyro(active, onCorrect, onPass) {
       }
     };
 
-    window.addEventListener('deviceorientation', handler);
-    return () => window.removeEventListener('deviceorientation', handler);
+    window.addEventListener('devicemotion', handler);
+    return () => window.removeEventListener('devicemotion', handler);
   }, [active, onCorrect, onPass]);
 }
 
 async function requestMotionPermission() {
-  // لا يوجد DeviceOrientationEvent → الجهاز لا يدعم الحساس أصلًا
-  if (typeof DeviceOrientationEvent === 'undefined') {
+  if (typeof DeviceMotionEvent === 'undefined' && typeof DeviceOrientationEvent === 'undefined') {
     return 'unsupported';
   }
-  // iOS 13+ وبعض إصدارات Chrome الحديثة تطلب إذنًا صريحًا
-  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+  // iOS 13+ يطلب إذن DeviceMotionEvent
+  if (typeof DeviceMotionEvent !== 'undefined' &&
+      typeof DeviceMotionEvent.requestPermission === 'function') {
     try {
-      const res = await DeviceOrientationEvent.requestPermission();
+      const res = await DeviceMotionEvent.requestPermission();
       return res === 'granted' ? 'granted' : 'denied';
     } catch {
       return 'denied';
     }
   }
-  // أندرويد والأجهزة الأخرى: لا يوجد طلب إذن
   return 'granted';
 }
 
@@ -378,11 +375,14 @@ function testMotionSensor(timeoutMs = 1200) {
     if (typeof window === 'undefined') { resolve(false); return; }
     let ok = false;
     const handler = (e) => {
-      if (e && (e.beta != null || e.alpha != null || e.gamma != null)) ok = true;
+      if (e && e.accelerationIncludingGravity) {
+        const { x, y, z } = e.accelerationIncludingGravity;
+        if (x != null || y != null || z != null) ok = true;
+      }
     };
-    window.addEventListener('deviceorientation', handler);
+    window.addEventListener('devicemotion', handler);
     setTimeout(() => {
-      window.removeEventListener('deviceorientation', handler);
+      window.removeEventListener('devicemotion', handler);
       resolve(ok);
     }, timeoutMs);
   });

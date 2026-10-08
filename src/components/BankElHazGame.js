@@ -38,40 +38,40 @@ const LandscapeLock = () => (
 );
 
 const TILE_POSITIONS = {
-  0:  { left:'5.3%',  top:'91.4%' },
-  1:  { left:'2.4%',  top:'76.4%' },
-  2:  { left:'2.3%',  top:'66.5%' },
-  3:  { left:'4.4%',  top:'55.0%' },
-  4:  { left:'2.3%',  top:'44.2%' },
-  5:  { left:'2.6%',  top:'33.7%' },
-  6:  { left:'2.4%',  top:'23.2%' },
-  7:  { left:'5.5%',  top:'8.4%'  },
-  8:  { left:'15.0%', top:'4.6%'  },
-  9:  { left:'22.7%', top:'4.4%'  },
-  10: { left:'30.2%', top:'3.7%'  },
-  11: { left:'38.1%', top:'4.0%'  },
-  12: { left:'49.5%', top:'6.3%'  },
-  13: { left:'60.8%', top:'4.4%'  },
-  14: { left:'68.6%', top:'6.0%'  },
-  15: { left:'76.2%', top:'4.1%'  },
-  16: { left:'83.4%', top:'4.8%'  },
-  17: { left:'94.0%', top:'8.2%'  },
-  18: { left:'97.3%', top:'23.0%' },
-  19: { left:'97.6%', top:'33.7%' },
-  20: { left:'96.5%', top:'44.3%' },
-  21: { left:'97.2%', top:'55.8%' },
-  22: { left:'97.4%', top:'66.1%' },
-  23: { left:'97.5%', top:'76.8%' },
-  24: { left:'94.2%', top:'93.2%' },
-  25: { left:'84.9%', top:'95.4%' },
-  26: { left:'76.5%', top:'95.4%' },
-  27: { left:'68.6%', top:'95.7%' },
-  28: { left:'61.1%', top:'95.6%' },
-  29: { left:'49.5%', top:'92.9%' },
-  30: { left:'38.6%', top:'95.4%' },
-  31: { left:'30.6%', top:'95.3%' },
-  32: { left:'23.3%', top:'95.3%' },
-  33: { left:'14.9%', top:'95.9%' },
+  0:  { left:'8.1%',  top:'88.1%' },
+  1:  { left:'5.8%',  top:'74.2%' },
+  2:  { left:'5.6%',  top:'64.8%' },
+  3:  { left:'6.8%',  top:'53.8%' },
+  4:  { left:'5.8%',  top:'44.6%' },
+  5:  { left:'5.6%',  top:'34.6%' },
+  6:  { left:'5.7%',  top:'25.1%' },
+  7:  { left:'8.8%',  top:'11.0%'  },
+  8:  { left:'18.0%', top:'7.7%'  },
+  9:  { left:'25.1%', top:'7.2%'  },
+  10: { left:'32.1%', top:'8.3%'  },
+  11: { left:'39.1%', top:'7.5%'  },
+  12: { left:'49.7%', top:'8.8%'  },
+  13: { left:'60.3%', top:'7.5%'  },
+  14: { left:'67.6%', top:'7.5%'  },
+  15: { left:'74.4%', top:'7.5%'  },
+  16: { left:'81.4%', top:'7.5%'  },
+  17: { left:'90.9%', top:'11.7%'  },
+  18: { left:'94.1%', top:'25.2%' },
+  19: { left:'93.8%', top:'34.8%' },
+  20: { left:'93.6%', top:'44.6%' },
+  21: { left:'94.2%', top:'55.2%' },
+  22: { left:'93.9%', top:'65.2%' },
+  23: { left:'94.1%', top:'74.6%' },
+  24: { left:'91.1%', top:'89.4%' },
+  25: { left:'82.0%', top:'92.3%' },
+  26: { left:'74.6%', top:'92.3%' },
+  27: { left:'67.3%', top:'92.3%' },
+  28: { left:'60.1%', top:'92.3%' },
+  29: { left:'49.8%', top:'92.3%' },
+  30: { left:'39.3%', top:'92.3%' },
+  31: { left:'32.4%', top:'92.3%' },
+  32: { left:'25.7%', top:'92.3%' },
+  33: { left:'18.6%', top:'92.3%' },
 };
 const getTilePosition = (index) => TILE_POSITIONS[index % 34] || { left:'50%', top:'50%' };
 
@@ -502,48 +502,69 @@ const DieFace = ({ value, size=60 }) => {
 
 const RollingDice = ({ rolling, values, onForceStop }) => {
   const [display, setDisplay] = useState(1);
-  const intervalRef = useRef(null);
+  const [spin, setSpin] = useState(0);
 
   useEffect(() => {
-    if (rolling) {
-      intervalRef.current = setInterval(() => {
-        setDisplay(Math.ceil(Math.random()*6));
-      }, 100);
-    } else {
-      clearInterval(intervalRef.current);
+    if (!rolling) {
       if (values) setDisplay(values[0]);
+      return;
     }
-    return () => clearInterval(intervalRef.current);
+    const id = setInterval(() => {
+      setDisplay(Math.floor(Math.random() * 6) + 1);
+      setSpin(s => s + 1);
+    }, 90);
+    return () => clearInterval(id);
   }, [rolling, values]);
 
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+    <div style={{
+      display:'flex', alignItems:'center', gap:'min(20px,4vw)',
+      flexWrap:'wrap', justifyContent:'center',
+    }}>
       <motion.div
         animate={rolling
-          ? { rotate:[0,10,-10,15,-15,0], y:[0,-8,3,-6,2,0] }
-          : { rotate:0, y:0 }
+          ? {
+              rotate: [0, 15, -15, 20, -20, 0],
+              y: [0, -14, 6, -10, 4, 0],
+              scale: [1, 1.12, 0.96, 1.08, 0.97, 1],
+            }
+          : { rotate: 0, y: 0, scale: 1 }
         }
         transition={rolling
-          ? { duration:0.3, repeat:Infinity }
-          : { type:'spring', stiffness:300, damping:20 }
+          ? { duration: 0.5, repeat: Infinity, ease: 'easeInOut' }
+          : { type: 'spring', stiffness: 280, damping: 18 }
         }
+        style={{
+          filter: rolling
+            ? 'drop-shadow(0 0 30px rgba(251,191,36,0.9))'
+            : 'drop-shadow(0 0 20px rgba(251,191,36,0.5))',
+        }}
       >
-        <DieFace value={display} size={88}/>
+        <motion.div
+          key={spin}
+          initial={rolling ? { scale: 0.9 } : false}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.15 }}
+        >
+          <DieFace value={display} size={rolling ? 96 : 84} />
+        </motion.div>
       </motion.div>
 
       {!rolling && values && (
         <motion.div
-          initial={{ opacity:0, scale:0.5 }}
-          animate={{ opacity:1, scale:1 }}
-          transition={{ type:'spring', stiffness:260, damping:18 }}
+          initial={{ opacity:0, scale:0.3, rotate:-30 }}
+          animate={{ opacity:1, scale:1, rotate:0 }}
+          transition={{ type:'spring', stiffness:260, damping:14 }}
           style={{
             background:`linear-gradient(145deg, #f4d35e, #d4af37)`,
             color:'#2a1810',
-            fontWeight:900, fontSize:32,
+            fontWeight:900, fontSize:38,
             padding:'8px 24px', borderRadius:18,
             border:'2px solid #fff5d6',
-            boxShadow:`0 6px 24px rgba(212,175,55,0.55), inset 0 1px 0 rgba(255,255,255,0.5)`,
+            boxShadow:`0 8px 32px rgba(212,175,55,0.7), inset 0 2px 0 rgba(255,255,255,0.5)`,
             textShadow:'0 1px 0 rgba(255,255,255,0.4)',
+            minWidth:80,
+            textAlign:'center',
           }}
         >
           {values[0]}
@@ -564,16 +585,13 @@ const MoneySheet = ({ open, onClose, money, players, myPlayerId, onPay }) => {
         rem -= breakdown[d] * d;
       });
     } else {
-      // ندي كل فئة صغيرة لحد ورقتين الأول
       [100, 50, 20, 10, 5].forEach(d => {
         const take = Math.min(2, Math.floor(rem / d));
         breakdown[d] = take;
         rem -= take * d;
       });
-      // الباقي نحطه في فئة 200
       breakdown[200] = Math.floor(rem / 200);
       rem -= breakdown[200] * 200;
-      // لو فضل باقي، نوزعه على الفئات الصغيرة
       [100, 50, 20, 10, 5].forEach(d => {
         const extra = Math.floor(rem / d);
         if (extra > 0) {
@@ -585,42 +603,70 @@ const MoneySheet = ({ open, onClose, money, players, myPlayerId, onPay }) => {
   }
   return (
     <AnimatePresence>
-      {open&&(
+      {open && (
         <>
           <motion.div key="mb" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
             onClick={onClose}
-            style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:100,backdropFilter:'blur(4px)'}}
+            style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:100,backdropFilter:'blur(6px)'}}
           />
           <motion.div key="ms" initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}}
             transition={{type:'spring',stiffness:340,damping:34}}
             style={{
               position:'fixed',bottom:0,left:0,right:0,zIndex:101,
               background:'linear-gradient(180deg,#111827 0%,#09091c 100%)',
-              borderTop:'1px solid rgba(99,102,241,0.35)',
+              borderTop:'2px solid rgba(251,191,36,0.4)',
               borderRadius:'24px 24px 0 0',
-              boxShadow:'0 -8px 48px rgba(0,0,0,0.5)',
-              paddingBottom:32,maxHeight:'80vh',overflowY:'auto',
+              boxShadow:'0 -8px 48px rgba(0,0,0,0.7)',
+              height:'min(60vh, 460px)',
+              maxHeight:'60vh',
+              display:'flex',
+              flexDirection:'column',
+              overflow:'hidden',
+              direction:'rtl',
             }}
           >
-            <div style={{display:'flex',justifyContent:'center',padding:'12px 0 4px'}}>
-              <div style={{width:40,height:4,borderRadius:99,background:'rgba(255,255,255,0.2)'}}/>
+            {/* شريط السحب */}
+            <div style={{display:'flex',justifyContent:'center',padding:'10px 0 4px',flexShrink:0}}>
+              <div style={{width:40,height:4,borderRadius:99,background:'rgba(255,255,255,0.25)'}}/>
             </div>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 24px 12px'}}>
-              <span style={{color:'#fff',fontWeight:700,fontSize:18}}>محفظتك</span>
-              <span style={{color:'#fbbf24',fontWeight:900,fontSize:26,textShadow:'0 0 16px rgba(251,191,36,0.4)'}}>
+
+            {/* الرأس مع زر إغلاق */}
+            <div style={{
+              display:'flex',justifyContent:'space-between',alignItems:'center',
+              padding:'6px 16px 12px',
+              borderBottom:'1px solid rgba(255,255,255,0.08)',
+              flexShrink:0,
+            }}>
+              <button onClick={onClose} style={{
+                width:36,height:36,borderRadius:'50%',border:'none',
+                background:'rgba(255,255,255,0.12)',color:'#fff',
+                fontSize:18,cursor:'pointer',fontWeight:700,
+              }}>✕</button>
+              <span style={{color:'#fff',fontWeight:700,fontSize:16}}>محفظتك</span>
+              <span style={{
+                color:'#fbbf24',fontWeight:900,fontSize:20,
+                textShadow:'0 0 16px rgba(251,191,36,0.4)',
+              }}>
                 {(money||0).toLocaleString('ar-EG')} ج
               </span>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,padding:'0 16px 16px'}}>
+
+            {/* الشبكة — قابلة للتمرير */}
+            <div style={{
+              display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,
+              padding:'12px 12px 20px',
+              overflowY:'auto',flex:1,
+              WebkitOverflowScrolling:'touch',
+            }}>
               {DENOMS.map(({value,label,img,fallback},idx)=>{
                 const count=breakdown[value]||0;
                 return (
                   <motion.div key={value}
                     initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
-                    transition={{delay:idx*0.06,type:'spring',stiffness:280,damping:22}}
+                    transition={{delay:idx*0.05,type:'spring',stiffness:280,damping:22}}
                     style={{
-                      background:fallback,borderRadius:14,overflow:'hidden',
-                      opacity:count===0?0.3:1,
+                      background:fallback,borderRadius:12,overflow:'hidden',
+                      opacity:count===0?0.35:1,
                       boxShadow:count>0?'0 4px 16px rgba(0,0,0,0.4)':'none',
                       display:'flex',flexDirection:'column',
                     }}
@@ -628,13 +674,12 @@ const MoneySheet = ({ open, onClose, money, players, myPlayerId, onPay }) => {
                     <div style={{
                       width:'100%',aspectRatio:'16/9',
                       backgroundImage:`url('${(process.env.PUBLIC_URL || '') + img}')`,backgroundSize:'cover',
-                      backgroundPosition:'center',backgroundColor:fallback,minHeight:56,
+                      backgroundPosition:'center',backgroundColor:fallback,minHeight:44,
                     }}/>
-                    <div style={{padding:'6px 8px',textAlign:'center'}}>
-                      <div style={{color:'#fff',fontWeight:900,fontSize:18}}>{label}</div>
-                      <div style={{color:'rgba(255,255,255,0.5)',fontSize:10,marginBottom:4}}>جنيه</div>
-                      <div style={{background:'rgba(0,0,0,0.4)',borderRadius:8,padding:'2px 0',
-                        color:count>0?'#fff':'rgba(255,255,255,0.3)',fontWeight:700,fontSize:13}}>×{count}</div>
+                    <div style={{padding:'4px 6px',textAlign:'center'}}>
+                      <div style={{color:'#fff',fontWeight:900,fontSize:14}}>{label}</div>
+                      <div style={{background:'rgba(0,0,0,0.4)',borderRadius:6,padding:'2px 0',marginTop:3,
+                        color:count>0?'#fff':'rgba(255,255,255,0.3)',fontWeight:700,fontSize:12}}>×{count}</div>
                     </div>
                   </motion.div>
                 );
@@ -816,52 +861,66 @@ const PropsPanel = ({ open, onClose, myPlayer, gameState, onBuild, onAuction }) 
           <motion.div key="pb"
             initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
             onClick={() => { onClose(); setSelectedTile(null); }}
-            style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:100,backdropFilter:'blur(4px)'}}
+            style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:100,backdropFilter:'blur(6px)'}}
           />
           <motion.div key="pp"
             initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}}
             transition={{type:'spring',stiffness:300,damping:30}}
             style={{
               position:'fixed',bottom:0,left:0,right:0,zIndex:101,
-              background:'rgba(15,10,40,0.97)',
-              borderTop:'1px solid rgba(99,102,241,0.25)',
+              background:'rgba(15,10,40,0.98)',
+              borderTop:'2px solid rgba(99,102,241,0.4)',
               borderRadius:'24px 24px 0 0',
-              boxShadow:'0 -8px 40px rgba(0,0,0,0.5)',
+              boxShadow:'0 -8px 40px rgba(0,0,0,0.7)',
               backdropFilter:'blur(24px)',
+              height:'min(65vh, 500px)',
+              maxHeight:'65vh',
+              display:'flex',
+              flexDirection:'column',
+              overflow:'hidden',
+              direction:'rtl',
             }}
           >
-            <div style={{display:'flex',justifyContent:'center',padding:'10px 0 4px'}}>
-              <div style={{width:40,height:4,borderRadius:99,background:'rgba(255,255,255,0.2)'}}/>
+            {/* شريط السحب */}
+            <div style={{display:'flex',justifyContent:'center',padding:'10px 0 4px',flexShrink:0}}>
+              <div style={{width:40,height:4,borderRadius:99,background:'rgba(255,255,255,0.25)'}}/>
             </div>
+
+            {/* الرأس مع زر إغلاق */}
             <div style={{
               display:'flex',justifyContent:'space-between',alignItems:'center',
-              padding:'8px 20px 12px',
+              padding:'6px 16px 12px',
+              borderBottom:'1px solid rgba(255,255,255,0.08)',
+              flexShrink:0,
             }}>
-              <div>
-                <div style={{color:'#fff',fontWeight:700,fontSize:17}}>بلادك</div>
-                <div style={{color:'#818cf8',fontSize:12}}>{myPlayer?.properties?.length||0} بلد</div>
-              </div>
               <button onClick={() => { onClose(); setSelectedTile(null); }} style={{
-                width:32,height:32,borderRadius:'50%',border:'none',
-                background:'rgba(255,255,255,0.08)',color:'rgba(255,255,255,0.6)',
-                cursor:'pointer',fontSize:16,
+                width:36,height:36,borderRadius:'50%',border:'none',
+                background:'rgba(255,255,255,0.12)',color:'#fff',
+                fontSize:18,cursor:'pointer',fontWeight:700,
               }}>✕</button>
+              <div style={{textAlign:'center'}}>
+                <div style={{color:'#fff',fontWeight:700,fontSize:16}}>بلادك</div>
+                <div style={{color:'#818cf8',fontSize:11}}>{myPlayer?.properties?.length||0} بلد</div>
+              </div>
+              <div style={{width:36}}/>
             </div>
 
             {!myPlayer?.properties?.length ? (
-              <div style={{textAlign:'center',padding:'32px 0 40px',color:'rgba(255,255,255,0.35)'}}>
+              <div style={{textAlign:'center',padding:'40px 0',color:'rgba(255,255,255,0.35)',flex:1}}>
                 <div style={{fontSize:40,marginBottom:8}}>🏚️</div>
                 <div style={{fontSize:13}}>ما عندكش بلاد لسه</div>
               </div>
             ) : (
-                <div style={{
-                  display:'flex',gap:12,overflowX:'auto',
-                  padding:'0 16px 28px',
-                  scrollSnapType:'x mandatory',
-                  WebkitOverflowScrolling:'touch',
-                  direction: 'rtl',
-                  scrollPaddingInlineStart: 16,
-                }}>
+              <div style={{
+                display:'flex',gap:10,overflowX:'auto',
+                padding:'12px 16px 20px',
+                scrollSnapType:'x mandatory',
+                WebkitOverflowScrolling:'touch',
+                direction: 'rtl',
+                scrollPaddingInlineStart: 16,
+                flex: 1,
+                alignItems: 'flex-start',
+              }}>
                 {myPlayer.properties.map((tid, idx) => {
                   const tile = gameState?.board?.find(t=>t.id===tid);
                   if (!tile) return null;
@@ -869,7 +928,7 @@ const PropsPanel = ({ open, onClose, myPlayer, gameState, onBuild, onAuction }) 
                     <motion.div key={tid}
                       initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
                       transition={{delay:idx*0.06}}
-                      style={{scrollSnapAlign:'start',flexShrink:0,cursor:'pointer', maxWidth: '72vw'}}
+                      style={{scrollSnapAlign:'start',flexShrink:0,cursor:'pointer'}}
                       onClick={() => setSelectedTile(tile)}
                     >
                       <LandCard tile={tile} onBuild={onBuild} onAuction={onAuction}/>
@@ -886,7 +945,7 @@ const PropsPanel = ({ open, onClose, myPlayer, gameState, onBuild, onAuction }) 
                 <motion.div key="cp-bg"
                   initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
                   onClick={() => setSelectedTile(null)}
-                  style={{position:'fixed',inset:0,zIndex:200,background:'rgba(0,0,0,0.75)'}}
+                  style={{position:'fixed',inset:0,zIndex:200,background:'rgba(0,0,0,0.8)'}}
                 />
                 <motion.div key="cp"
                   initial={{opacity:0,scale:0.8,y:40}}
@@ -896,10 +955,10 @@ const PropsPanel = ({ open, onClose, myPlayer, gameState, onBuild, onAuction }) 
                   style={{
                     position:'fixed',inset:0,zIndex:201,
                     display:'flex',alignItems:'center',justifyContent:'center',
-                    pointerEvents:'none',
+                    pointerEvents:'none', padding: 16,
                   }}
                 >
-                  <div style={{pointerEvents:'auto',transform:'scale(1.25)'}}>
+                  <div style={{pointerEvents:'auto'}}>
                     <LandCard
                       tile={selectedTile}
                       onBuild={(id) => { onBuild(id); setSelectedTile(null); }}
@@ -1084,15 +1143,15 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
     };
 
     const onBuy = ({ tileId, price, canAfford, isClub, currentOwners }) => {
-      setTimeout(() => { setBuyOffer({ tileId, price, canAfford, isClub, currentOwners }); }, 500);
+      setTimeout(() => { setBuyOffer({ tileId, price, canAfford, isClub, currentOwners }); }, 2600);
     };
 
     const onRentOffer = ({ tileId, tileName, ownerName, ownerId, rent, canAfford, isClub }) => {
-      setTimeout(() => { setRentOffer({ tileId, tileName, ownerName, ownerId, rent, canAfford, isClub }); }, 500);
+      setTimeout(() => { setRentOffer({ tileId, tileName, ownerName, ownerId, rent, canAfford, isClub }); }, 2600);
     };
 
     const onClubOffer = (data) => {
-      setTimeout(() => { setClubOffer(data); }, 500);
+      setTimeout(() => { setClubOffer(data); }, 2600);
     };
 
     // ✅ كارت واحد (حظك أو محاكمة)
@@ -1479,58 +1538,113 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
     <div style={{
       position:'fixed', inset:0, zIndex:500,
       background:'rgba(9,9,28,0.97)',
-      display:'flex', flexDirection:'column',
-      alignItems:'center', justifyContent:'center', gap:24,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      padding:'min(16px, 3vw)',
     }}>
-      <div style={{ fontSize:48 }}>🎲</div>
-      <div style={{ color:'#fff', fontWeight:900, fontSize:22, textAlign:'center' }}>
-        ارموا النرد عشان نحدد مين يبدأ
-      </div>
-      <div style={{ color:'rgba(255,255,255,0.5)', fontSize:13 }}>الأعلى رقم هيبدأ</div>
-
-      <div style={{ display:'flex', flexDirection:'column', gap:8, width:'100%', maxWidth:280 }}>
-        {players.filter(p => !p.eliminated).map(p => (
-          <div key={p.id} style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            background:'rgba(255,255,255,0.06)',
-            border:`1px solid ${initialRolls[p.id] ? p.color : 'rgba(255,255,255,0.1)'}`,
-            borderRadius:12, padding:'10px 16px',
+      <div style={{
+        display:'flex',
+        flexDirection:'row',
+        alignItems:'stretch',
+        gap:'min(14px, 2.5vw)',
+        maxWidth: 720,
+        width: '100%',
+        flexWrap:'wrap',
+        justifyContent:'center',
+      }}>
+        {/* عمود اللاعبين - يسار */}
+        <div style={{
+          flex: '1 1 260px',
+          minWidth: 240,
+          maxWidth: 340,
+          display:'flex', flexDirection:'column', gap:6,
+          background: 'rgba(255,255,255,0.05)',
+          border:'1px solid rgba(255,255,255,0.12)',
+          borderRadius:16,
+          padding:'12px',
+          maxHeight:'60vh',
+          overflowY:'auto',
+        }}>
+          <div style={{
+            color:'#fbbf24', fontSize:12, fontWeight:900,
+            textAlign:'center', marginBottom:6,
+            letterSpacing:1,
           }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{
-                width:24, height:24, borderRadius:'50%', background:p.color || '#6366f1',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                color:'#fff', fontSize:11, fontWeight:700,
-              }}>{p.name.charAt(0)}</div>
-              <span style={{ color:'#fff', fontWeight:600, fontSize:14 }}>{p.name}</span>
-            </div>
-            <div style={{
-              color: initialRolls[p.id] ? '#fbbf24' : 'rgba(255,255,255,0.3)',
-              fontWeight:900, fontSize:22,
-            }}>
-              {initialRolls[p.id] ?? '—'}
-            </div>
+            🎲 ترتيب الرمي
           </div>
-        ))}
-      </div>
-
-      {!myInitialRolled ? (
-        <motion.button
-          whileTap={{ scale:0.93 }}
-          onClick={handleInitialRoll}
-          style={{
-            background:'linear-gradient(135deg,#4f46e5,#7c3aed)',
-            border:'none', color:'#fff',
-            padding:'14px 40px', borderRadius:999,
-            fontWeight:700, fontSize:16, cursor:'pointer',
-            boxShadow:'0 4px 20px rgba(79,70,229,0.4)',
-          }}
-        >🎲 ارمِ النرد</motion.button>
-      ) : (
-        <div style={{ color:'rgba(255,255,255,0.5)', fontSize:14 }}>
-          انتظر باقي اللاعبين...
+          {players.filter(p => !p.eliminated).map(p => (
+            <div key={p.id} style={{
+              display:'flex', alignItems:'center', justifyContent:'space-between',
+              background: initialRolls[p.id] ? `${p.color}22` : 'rgba(255,255,255,0.04)',
+              border:`1.5px solid ${initialRolls[p.id] ? p.color : 'rgba(255,255,255,0.1)'}`,
+              borderRadius:10, padding:'8px 12px',
+            }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{
+                  width:24, height:24, borderRadius:'50%', background:p.color,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  color:'#fff', fontSize:11, fontWeight:900,
+                }}>{p.name.charAt(0)}</div>
+                <span style={{ color:'#fff', fontWeight:700, fontSize:13 }}>{p.name}</span>
+              </div>
+              <div style={{
+                color: initialRolls[p.id] ? p.color : 'rgba(255,255,255,0.3)',
+                fontWeight:900, fontSize:18, minWidth:28, textAlign:'center',
+              }}>
+                {initialRolls[p.id] ?? '—'}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+
+        {/* عمود الزرار - يمين */}
+        <div style={{
+          flex: '0 1 220px',
+          minWidth: 200,
+          display:'flex', flexDirection:'column',
+          alignItems:'center', justifyContent:'center',
+          gap:10,
+          background: 'rgba(255,255,255,0.05)',
+          border:'1px solid rgba(255,255,255,0.12)',
+          borderRadius:16,
+          padding:'16px',
+        }}>
+          <div style={{ fontSize:44 }}>🎲</div>
+          <div style={{
+            color:'#fff', fontWeight:900, fontSize:14, textAlign:'center',
+          }}>
+            {myInitialRolled ? 'في انتظار الباقي' : 'دورك للرمي'}
+          </div>
+          <div style={{
+            color:'rgba(255,255,255,0.5)', fontSize:11, textAlign:'center',
+          }}>
+            الأعلى رقم يبدأ أول
+          </div>
+
+          {!myInitialRolled ? (
+            <motion.button
+              whileHover={{ scale:1.05 }}
+              whileTap={{ scale:0.93 }}
+              onClick={handleInitialRoll}
+              style={{
+                background:'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                border:'none', color:'#fff',
+                padding:'14px 28px', borderRadius:999,
+                fontWeight:900, fontSize:15, cursor:'pointer',
+                boxShadow:'0 8px 24px rgba(79,70,229,0.5)',
+                marginTop:6,
+              }}
+            >🎲 ارمِ</motion.button>
+          ) : (
+            <motion.div
+              animate={{ opacity:[0.5,1,0.5] }}
+              transition={{ duration:1.5, repeat:Infinity }}
+              style={{ color:'#fbbf24', fontSize:12, fontWeight:700, marginTop:6 }}
+            >
+              ⏳ في انتظار الباقي...
+            </motion.div>
+          )}
+        </div>
+      </div>
     </div>
   );
 
@@ -2246,26 +2360,26 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                     pointerEvents:'none', padding:20,
                 }}
                 >
-                <motion.div
-                    initial={{scale:0.6, y:50, opacity:0, rotateX:-20}}
-                    animate={{scale:1, y:0, opacity:1, rotateX:0}}
-                    exit={{scale:0.85, y:-30, opacity:0}}
-                    transition={{type:'spring', stiffness:260, damping:22}}
-                    style={{
-                    pointerEvents:'auto',
-                    background: `linear-gradient(160deg, ${tileColor}30 0%, #0f0a05 45%, #050302 100%)`,
-                    backdropFilter:'blur(28px)',
-                    border:`3px solid ${tileColor}`,
-                    borderRadius:28,
-                    padding:'clamp(16px, 4vw, 32px) clamp(14px, 3.5vw, 28px)',
-                    width:'100%', maxWidth:'min(340px, 82vw)',
-                    display:'flex',flexDirection:'column',alignItems:'center',gap:16,
-                    boxShadow:`0 30px 80px rgba(0,0,0,0.7), 0 0 60px ${tileColor}55, inset 0 1px 0 rgba(255,255,255,0.15)`,
-                    direction:'rtl',
-                    position:'relative',
-                    overflow:'hidden',
-                    }}
-                >
+                    <motion.div
+                        initial={{scale:0.6, y:50, opacity:0, rotateX:-20}}
+                        animate={{scale:1, y:0, opacity:1, rotateX:0}}
+                        exit={{scale:0.85, y:-30, opacity:0}}
+                        transition={{type:'spring', stiffness:260, damping:22}}
+                        style={{
+                          pointerEvents:'auto',
+                          background: `linear-gradient(160deg, ${tileColor}30 0%, #0f0a05 45%, #050302 100%)`,
+                          backdropFilter:'blur(28px)',
+                          border:`3px solid ${tileColor}`,
+                          borderRadius:20,
+                          padding:'clamp(12px, 3vw, 24px) clamp(10px, 2.5vw, 22px)',
+                          width:'100%', maxWidth:'min(280px, 62vw)',
+                          display:'flex',flexDirection:'column',alignItems:'center',gap:10,
+                          boxShadow:`0 20px 60px rgba(0,0,0,0.7), 0 0 40px ${tileColor}44, inset 0 1px 0 rgba(255,255,255,0.15)`,
+                          direction:'rtl',
+                          position:'relative',
+                          overflow:'hidden',
+                        }}
+                    >
                     <div style={{
                     position:'absolute', inset:0,
                     background:`repeating-linear-gradient(135deg, ${tileColor}0a 0px, ${tileColor}0a 2px, transparent 2px, transparent 14px)`,
@@ -2293,10 +2407,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                     animate={{ scale:1, rotate:0 }}
                     transition={{ delay:0.2, type:'spring', stiffness:200, damping:14 }}
                     style={{
-                        width:'clamp(60px, 18vw, 92px)', height:'clamp(60px, 18vw, 92px)', borderRadius:'50%',
+                        width:'clamp(48px, 14vw, 72px)', height:'clamp(48px, 14vw, 72px)', borderRadius:'50%',
                         background: `radial-gradient(circle at 30% 25%, ${tileColor}, ${tileColor}aa 70%)`,
                         display:'flex', alignItems:'center', justifyContent:'center',
-                        fontSize:'clamp(28px, 9vw, 46px)',
+                        fontSize:'clamp(22px, 7vw, 36px)',
                         border:`3px solid rgba(255,255,255,0.55)`,
                         boxShadow:`0 0 45px ${tileColor}90, inset 0 4px 8px rgba(255,255,255,0.45), inset 0 -6px 10px rgba(0,0,0,0.3)`,
                         marginTop:6,
@@ -2340,10 +2454,11 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                         background:`linear-gradient(145deg, rgba(212,175,55,0.25), rgba(212,175,55,0.08))`,
                         border:'2px solid #d4af37',
                         borderRadius:18,
-                        padding:'clamp(8px, 2.2vw, 14px) clamp(18px, 5vw, 34px)',
+                        padding:'clamp(6px, 1.6vw, 10px) clamp(14px, 3.5vw, 24px)',
                         display:'flex', alignItems:'center', gap:10,
                         boxShadow:`0 0 30px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.2)`,
                         position:'relative', zIndex:1,
+                        color:'#f4d35e', fontSize:'clamp(18px, 5vw, 26px)',
                     }}>
                     <motion.span
                         animate={{rotate:[0, -10, 10, -10, 0]}}
@@ -2383,10 +2498,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                         transition={{delay:0.55, type:'spring', stiffness:300}}
                         onClick={() => { emit('bank_buy', { roomId: rid, playerId: pid, tileId: buyOffer.tileId }); setBuyOffer(null); }}
                         style={{
-                            flex:1.3,padding:'15px 0',borderRadius:16,
+                            flex:1.3,padding:'11px 0',borderRadius:16,
                             background:`linear-gradient(145deg, #10b981, #047857)`,
                             color:'#fff',border:'2px solid #6ee7b7',
-                            fontWeight:900,fontSize:15,cursor:'pointer',
+                            fontWeight:900,fontSize:13,cursor:'pointer',
                             boxShadow:'0 10px 28px rgba(16,185,129,0.5), inset 0 1px 0 rgba(255,255,255,0.3)',
                             textShadow:'0 1px 2px rgba(0,0,0,0.4)',
                             display:'flex', alignItems:'center', justifyContent:'center', gap:6,
@@ -2397,7 +2512,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                         initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}}
                         transition={{delay:0.55, type:'spring', stiffness:300}}
                         style={{
-                            flex:1.3, padding:'15px 0', borderRadius:16, textAlign:'center',
+                            flex:1.3, padding:'11px 0', borderRadius:16, textAlign:'center',
                             background:'linear-gradient(145deg, rgba(220,38,38,0.3), rgba(220,38,38,0.1))',
                             border:'2px solid rgba(220,38,38,0.6)',
                             color:'#fca5a5', fontSize:13, fontWeight:800,
@@ -2414,11 +2529,11 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                           setBuyOffer(null);
                         }}
                         style={{
-                        flex:1, padding:'15px 0', borderRadius:16,
+                        flex:1, padding:'11px 0', borderRadius:16,
                         background:'linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))',
                         color:'rgba(255,255,255,0.75)',
                         border:'1.5px solid rgba(255,255,255,0.2)',
-                        fontWeight:800,fontSize:15,cursor:'pointer',
+                        fontWeight:800,fontSize:13,cursor:'pointer',
                         textShadow:'0 1px 2px rgba(0,0,0,0.5)',
                         }}
                     >✕ لا</motion.button>

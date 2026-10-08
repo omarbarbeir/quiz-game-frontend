@@ -215,7 +215,7 @@ const GlassButton = ({ char, isGuessed, isNumber, onPress, disabled }) => {
     <button
       onClick={onPress}
       disabled={disabled || isGuessed}
-      className="relative flex items-center justify-center h-12 sm:h-14 md:h-16
+      className="relative flex items-center justify-center h-12 sm:h-14 md:h-16 lg:h-20
                  rounded-2xl font-extrabold text-lg sm:text-xl md:text-2xl
                  transition-all duration-200 select-none
                  active:scale-95 disabled:cursor-not-allowed overflow-hidden"
@@ -600,85 +600,48 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
                           overflow-y-auto border-b lg:border-b-0 lg:border-l"
             style={{ borderColor: 'rgba(212,175,55,0.15)' }}>
 
+          <div
+            className="flex-1 min-h-[280px] flex flex-col items-center justify-center rounded-2xl p-2 gap-2"
+            style={{
+              background: `radial-gradient(circle at 50% 90%, rgba(168,113,66,0.18) 0%, rgba(15,8,6,0.55) 60%),
+                          linear-gradient(160deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25))`,
+              backdropFilter: 'blur(18px) saturate(1.3)',
+              WebkitBackdropFilter: 'blur(18px) saturate(1.3)',
+              border: '1px solid rgba(212,175,55,0.22)',
+              boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.06), inset 0 -20px 40px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.4)',
+            }}>
+
+            {/* التلميح + المحاولات في مستطيل واحد فوق الرسمة */}
             <div
-              className="flex-1 min-h-[240px] flex items-center justify-center rounded-2xl p-2"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl"
               style={{
-                background: `radial-gradient(circle at 50% 90%, rgba(168,113,66,0.18) 0%, rgba(15,8,6,0.55) 60%),
-                             linear-gradient(160deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25))`,
-                backdropFilter: 'blur(18px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(18px) saturate(1.3)',
-                border: '1px solid rgba(212,175,55,0.22)',
-                boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.06), inset 0 -20px 40px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.4)',
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(120,53,15,0.08))',
+                border: '1.5px solid rgba(245,158,11,0.4)',
+                boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.12)',
               }}>
-              <HangmanDrawing attempts={state.attempts} maxAttempts={state.maxAttempts} />
+              <FaLightbulb className="text-lg flex-shrink-0"
+                style={{ color: '#fbbf24', filter: 'drop-shadow(0 0 8px rgba(251,191,36,0.7))' }} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[9px] uppercase tracking-widest font-bold" style={{ color: 'rgba(254,243,199,0.55)' }}>تلميح</div>
+                <div className="text-sm font-bold truncate" style={{ color: '#fef3c7' }}>{state.hint || '—'}</div>
+              </div>
+              <div className="w-px h-8 bg-amber-500/30" />
+              <div className="text-right flex-shrink-0">
+                <div className="text-[9px] uppercase tracking-widest font-bold" style={{ color: 'rgba(254,243,199,0.55)' }}>المحاولات</div>
+                <div className="font-black text-base" style={{ color: '#fbbf24' }}>
+                  {state.attempts}<span style={{ color: '#8a7653' }}> / </span>{state.maxAttempts}
+                </div>
+              </div>
             </div>
+
+            <HangmanDrawing attempts={state.attempts} maxAttempts={state.maxAttempts} />
+          </div>
 
             {/* ✅ عرض الكلمة على الموبايل — داخل نفس عمود المشنقة، تحت الرسمة */}
             <div className="lg:hidden">
               {renderWordDisplay()}
             </div>
 
-            {state.hint && (
-              <div
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(245,158,11,0.22), rgba(180,83,9,0.08))',
-                  backdropFilter: 'blur(16px) saturate(1.4)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
-                  border: '1.5px solid rgba(245,158,11,0.5)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.15), inset 0 0 24px rgba(245,158,11,0.12)',
-                }}>
-                <FaLightbulb className="text-2xl flex-shrink-0"
-                  style={{ color: '#fbbf24', filter: 'drop-shadow(0 0 10px rgba(251,191,36,0.8))' }} />
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'rgba(254,243,199,0.65)' }}>
-                    تلميح
-                  </p>
-                  <p className="text-sm sm:text-base font-bold" style={{ color: '#fef3c7' }}>
-                    {state.hint}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div
-              className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
-              style={{
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.25))',
-                backdropFilter: 'blur(14px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(14px) saturate(1.3)',
-                border: '1px solid rgba(212,175,55,0.25)',
-                boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.08)',
-              }}>
-              <span className="text-xs" style={{ color: 'rgba(254,243,199,0.55)' }}>المحاولات:</span>
-              <span
-                className="font-extrabold text-base"
-                style={{
-                  background: state.attempts >= state.maxAttempts
-                    ? 'linear-gradient(135deg, #f43f5e, #be123c)'
-                    : 'linear-gradient(135deg, #fbbf24, #b45309)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}>
-                {state.attempts}
-              </span>
-              <span style={{ color: '#8a7653' }}>/</span>
-              <span style={{ color: '#d6c4a0' }}>{state.maxAttempts}</span>
-              <div className="flex-1 h-1.5 rounded-full overflow-hidden"
-                style={{ background: 'rgba(0,0,0,0.5)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.6)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${(state.attempts / state.maxAttempts) * 100}%`,
-                    background: state.attempts >= state.maxAttempts - 1
-                      ? 'linear-gradient(90deg, #f43f5e, #be123c)'
-                      : 'linear-gradient(90deg, #fbbf24, #d97706)',
-                    boxShadow: '0 0 12px rgba(251,191,36,0.6)',
-                  }}
-                />
-              </div>
-            </div>
           </aside>
 
           {/* اليمين: الكلمة (للسطح المكتب) + الأزرار */}
@@ -732,7 +695,7 @@ const HangmanRound = ({ socket, roomCode, playerId, playerName, isAdmin, players
                 style={{ color: 'rgba(251,191,36,0.65)' }}>
                 الحروف
               </p>
-              <div className="grid grid-cols-6 sm:grid-cols-7 md:grid-cols-8 gap-2 sm:gap-2.5">
+              <div className="grid grid-cols-7 sm:grid-cols-8 md:grid-cols-9 lg:grid-cols-10 gap-2 sm:gap-2.5">
                 {HANGMAN_CONFIG.letters.map(char => (
                   <GlassButton
                     key={char}

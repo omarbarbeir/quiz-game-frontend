@@ -270,7 +270,7 @@ const WordCell = ({ cell, canSeeColors, canGuess, onGuess }) => {
       whileTap={isClickable ? { scale: 0.97 } : {}}
       animate={revealed ? { scale: [1, 1.06, 1] } : {}}
       transition={{ duration: 0.35 }}
-      className={`relative rounded-2xl font-bold text-sm sm:text-base py-3 px-2 aspect-[5/3] flex items-center justify-center text-center transition overflow-hidden ${
+      className={`relative rounded-2xl font-bold text-base sm:text-lg py-4 sm:py-6 px-1.5 aspect-[5/3] flex items-center justify-center text-center transition overflow-hidden ${
         isClickable ? 'cursor-pointer' : 'cursor-default'
       }`}
       style={{
@@ -1328,7 +1328,7 @@ export default function Codenames({
     const awaitingHint = isMyTurn && !state.hint;
 
     return (
-      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-2">
         <div className="flex gap-4">
 
           {/* Main content */}
@@ -1499,7 +1499,7 @@ export default function Codenames({
             )}
 
             {/* Board */}
-            <div className="grid grid-cols-5 gap-2 sm:gap-3">
+            <div className="grid grid-cols-5 gap-1.5 sm:gap-3">
               {state.board.map((cell) => (
                 <WordCell
                   key={cell.index}
