@@ -1057,7 +1057,11 @@ export default function MovieTacToeRound({ socket, roomCode, players, currentPla
         <div className={`flex-1 flex ${isTeamMode && myTeam ? 'lg:flex-row flex-col' : ''} gap-4 overflow-hidden`}>
 
           {/* Board column */}
-          <div className="flex-1 flex flex-col gap-3 overflow-y-auto min-w-0">
+          <div className={`flex-1 flex flex-col gap-3 overflow-y-auto min-w-0 ${
+            (game.phase === 'playing' && selectedCellIndex !== null) || isVoting
+              ? 'pb-48 sm:pb-44'
+              : 'pb-4'
+          }`}>
 
             {/* ============ TTT BOARD ============ */}
             {isTTT && (
@@ -1163,114 +1167,6 @@ export default function MovieTacToeRound({ socket, roomCode, players, currentPla
                 </div>
               );
             })()}
-
-            {/* ---- Answer Input ---- */}
-            {game.phase === 'playing' && !isVoting && selectedCellIndex !== null && canActForMyTeam && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-2">
-                <GlassPanel accent={accent} className="p-4 max-w-xl mx-auto">
-                  <div className="text-sm font-black mb-2 text-center" style={{ color: C.text }}>
-                    <span style={{ color: active?.color }}>{selectedRowItem?.label}</span>
-                    <span className="mx-2" style={{ color: C.dim }}>×</span>
-                    <span style={{ color: active?.color }}>{selectedColItem?.label}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      value={answerInput}
-                      onChange={e => setAnswerInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && submitAnswer()}
-                      placeholder="اكتب اسم الفنان اللي يحقق الشرطين..."
-                      className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none"
-                      style={{
-                        background: 'rgba(0,0,0,0.35)',
-                        border: `1px solid rgba(${accent.rgb},0.3)`,
-                        color: C.text,
-                      }} />
-                    <GlassBtn
-                      onClick={submitAnswer}
-                      disabled={!answerInput.trim()}
-                      accent={{ rgb: hexToRgb(active?.color) || accent.rgb }}
-                      variant="primary"
-                      style={{ padding: '10px 20px', fontSize: 13 }}>
-                      اعتماد
-                    </GlassBtn>
-                  </div>
-                </GlassPanel>
-              </motion.div>
-            )}
-
-            {/* ---- Waiting for my team ---- */}
-            {game.phase === 'playing' && !isVoting && selectedCellIndex !== null && !canActForMyTeam && (
-              <GlassPanel accent={accent} className="mt-2 p-4 max-w-xl mx-auto text-center">
-                <div className="text-xs mb-1" style={{ color: C.muted }}>{active?.name} اختار:</div>
-                <div className="text-lg font-black" style={{ color: active?.color }}>
-                  <span>{selectedRowItem?.label}</span>
-                  <span className="mx-2" style={{ color: C.dim }}>×</span>
-                  <span>{selectedColItem?.label}</span>
-                </div>
-                <div className="text-xs mt-2 animate-pulse" style={{ color: C.dim }}>
-                  ⏳ في انتظار إجابتهم...
-                </div>
-              </GlassPanel>
-            )}
-
-            {/* ---- Voting ---- */}
-            {isVoting && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-2">
-                <GlassPanel accent={accent} className="p-5 max-w-xl mx-auto text-center">
-                  <div className="text-xs mb-1" style={{ color: C.muted }}>
-                    {teamOf(game.pendingAnswer.team)?.name} قال إن الإجابة هي:
-                  </div>
-                  <div className="text-2xl font-black mb-4"
-                    style={{ color: teamOf(game.pendingAnswer.team)?.color }}>
-                    {game.pendingAnswer.text}
-                  </div>
-                  {canVote ? (
-                    (() => {
-                      const alreadyVoted = game.votes && game.votes[myId] !== undefined;
-                      return alreadyVoted ? (
-                        <div className="text-sm font-black" style={{ color: C.football.primary }}>
-                          ✅ تم التصويت — بانتظار باقي أعضاء فريقك
-                          <div className="text-xs mt-1" style={{ color: C.muted }}>
-                            ({game.voteCount} من {game.voteNeeded} صوّتوا)
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex justify-center gap-3">
-                          <GlassBtn
-                            onClick={() => vote(true)}
-                            accent={{ rgb: '34,197,94' }}
-                            variant="primary"
-                            style={{ padding: '12px 32px', fontSize: 15 }}>
-                            ✅ صحيح
-                          </GlassBtn>
-                          <GlassBtn
-                            onClick={() => vote(false)}
-                            variant="danger"
-                            style={{ padding: '12px 32px', fontSize: 15 }}>
-                            ❌ غلط
-                          </GlassBtn>
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <div className="text-sm" style={{ color: C.muted }}>
-                      ⏳ في انتظار تصويت {teamOf(otherTeam(game.pendingAnswer.team))?.name}...
-                      {game.voteNeeded > 0 && (
-                        <div className="text-xs mt-1" style={{ color: C.dim }}>
-                          ({game.voteCount} من {game.voteNeeded} صوّتوا)
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </GlassPanel>
-              </motion.div>
-            )}
           </div>
 
           {/* ---- Chat ---- */}
@@ -1287,6 +1183,145 @@ export default function MovieTacToeRound({ socket, roomCode, players, currentPla
           )}
         </div>
       </div>
+
+      {/* ═════ الطبقة العائمة السفلية: إدخال الإجابة / الانتظار / التصويت ═════ */}
+      <AnimatePresence>
+        {/* ---- Answer Input ---- */}
+        {game.phase === 'playing' && !isVoting && selectedCellIndex !== null && canActForMyTeam && (
+          <motion.div
+            key="answer-overlay"
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+            className="fixed left-0 right-0 bottom-0 z-[60] px-3 sm:px-4 pb-3 sm:pb-4"
+            style={{
+              background: 'linear-gradient(to top, rgba(5,5,15,0.98) 0%, rgba(5,5,15,0.9) 60%, transparent 100%)',
+              paddingTop: 40,
+            }}>
+            <GlassPanel accent={accent} className="p-4 max-w-xl mx-auto">
+              <div className="text-sm font-black mb-2 text-center" style={{ color: C.text }}>
+                <span style={{ color: active?.color }}>{selectedRowItem?.label}</span>
+                <span className="mx-2" style={{ color: C.dim }}>×</span>
+                <span style={{ color: active?.color }}>{selectedColItem?.label}</span>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={answerInput}
+                  onChange={e => setAnswerInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && submitAnswer()}
+                  placeholder="اكتب اسم الفنان اللي يحقق الشرطين..."
+                  autoFocus
+                  className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style={{
+                    background: 'rgba(0,0,0,0.35)',
+                    border: `1px solid rgba(${accent.rgb},0.3)`,
+                    color: C.text,
+                  }} />
+                <GlassBtn
+                  onClick={submitAnswer}
+                  disabled={!answerInput.trim()}
+                  accent={{ rgb: hexToRgb(active?.color) || accent.rgb }}
+                  variant="primary"
+                  style={{ padding: '10px 20px', fontSize: 13 }}>
+                  اعتماد
+                </GlassBtn>
+              </div>
+            </GlassPanel>
+          </motion.div>
+        )}
+
+        {/* ---- Waiting for my team ---- */}
+        {game.phase === 'playing' && !isVoting && selectedCellIndex !== null && !canActForMyTeam && (
+          <motion.div
+            key="wait-overlay"
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+            className="fixed left-0 right-0 bottom-0 z-[60] px-3 sm:px-4 pb-3 sm:pb-4"
+            style={{
+              background: 'linear-gradient(to top, rgba(5,5,15,0.98) 0%, rgba(5,5,15,0.9) 60%, transparent 100%)',
+              paddingTop: 40,
+            }}>
+            <GlassPanel accent={accent} className="p-4 max-w-xl mx-auto text-center">
+              <div className="text-xs mb-1" style={{ color: C.muted }}>{active?.name} اختار:</div>
+              <div className="text-lg font-black mb-1" style={{ color: active?.color }}>
+                <span>{selectedRowItem?.label}</span>
+                <span className="mx-2" style={{ color: C.dim }}>×</span>
+                <span>{selectedColItem?.label}</span>
+              </div>
+              <div className="text-xs animate-pulse" style={{ color: C.dim }}>
+                ⏳ في انتظار إجابتهم...
+              </div>
+            </GlassPanel>
+          </motion.div>
+        )}
+
+        {/* ---- Voting ---- */}
+        {isVoting && (
+          <motion.div
+            key="vote-overlay"
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+            className="fixed left-0 right-0 bottom-0 z-[60] px-3 sm:px-4 pb-3 sm:pb-4"
+            style={{
+              background: 'linear-gradient(to top, rgba(5,5,15,0.98) 0%, rgba(5,5,15,0.9) 60%, transparent 100%)',
+              paddingTop: 40,
+            }}>
+            <GlassPanel accent={accent} className="p-4 sm:p-5 max-w-xl mx-auto text-center">
+              <div className="text-xs mb-1" style={{ color: C.muted }}>
+                {teamOf(game.pendingAnswer.team)?.name} قال إن الإجابة هي:
+              </div>
+              <div className="text-xl sm:text-2xl font-black mb-3"
+                style={{ color: teamOf(game.pendingAnswer.team)?.color }}>
+                {game.pendingAnswer.text}
+              </div>
+              {canVote ? (
+                (() => {
+                  const alreadyVoted = game.votes && game.votes[myId] !== undefined;
+                  return alreadyVoted ? (
+                    <div className="text-sm font-black" style={{ color: C.football.primary }}>
+                      ✅ تم التصويت — بانتظار باقي أعضاء فريقك
+                      <div className="text-xs mt-1" style={{ color: C.muted }}>
+                        ({game.voteCount} من {game.voteNeeded} صوّتوا)
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-center gap-2 sm:gap-3">
+                      <GlassBtn
+                        onClick={() => vote(true)}
+                        accent={{ rgb: '34,197,94' }}
+                        variant="primary"
+                        style={{ padding: '10px 24px', fontSize: 14 }}>
+                        ✅ صحيح
+                      </GlassBtn>
+                      <GlassBtn
+                        onClick={() => vote(false)}
+                        variant="danger"
+                        style={{ padding: '10px 24px', fontSize: 14 }}>
+                        ❌ غلط
+                      </GlassBtn>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-sm" style={{ color: C.muted }}>
+                  ⏳ في انتظار تصويت {teamOf(otherTeam(game.pendingAnswer.team))?.name}...
+                  {game.voteNeeded > 0 && (
+                    <div className="text-xs mt-1" style={{ color: C.dim }}>
+                      ({game.voteCount} من {game.voteNeeded} صوّتوا)
+                    </div>
+                  )}
+                </div>
+              )}
+            </GlassPanel>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       {/* ---- Winner modal ---- */}
       <AnimatePresence>

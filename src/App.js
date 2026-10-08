@@ -38,6 +38,51 @@ import MainMenu from './components/EscapeRoom/MainMenu';
 import StoryGame from './components/EscapeRoom/StoryGame';
 import SpyRound from './components/SpyRound';
 
+
+function LobbyFullscreenButton() {
+  const [isFs, setIsFs] = React.useState(false);
+
+  React.useEffect(() => {
+    const h = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', h);
+    return () => document.removeEventListener('fullscreenchange', h);
+  }, []);
+
+  const toggle = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      }
+    } catch {}
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      style={{
+        position: 'fixed',
+        top: 12,
+        right: 12,
+        zIndex: 9999,
+        padding: '10px 16px',
+        borderRadius: 12,
+        border: '1px solid rgba(251,191,36,0.5)',
+        background: 'linear-gradient(155deg, rgba(251,191,36,0.2), rgba(217,119,6,0.1))',
+        color: '#fcd34d',
+        fontWeight: 800,
+        fontSize: 13,
+        cursor: 'pointer',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      {isFs ? '⛶ تصغير' : '⛶ ملء الشاشة'}
+    </button>
+  );
+}
+
 const SOCKET_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3001' 
   : 'https://ancient-prawn-omarelbarbeir-9282bb8f.koyeb.app';
@@ -682,6 +727,7 @@ function App() {
 
   return (
       <div className="min-h-screen text-white overflow-x-hidden" style={{ background: 'radial-gradient(ellipse at 50% 0%, #1a1410 0%, #0a0a0a 70%)' }}>
+        {showJoinScreen && <LobbyFullscreenButton />}
       {showJoinScreen ? (
         <RoomJoin onCreateRoom={createRoom} onJoinRoom={joinRoom} />
 

@@ -5,8 +5,39 @@ import {
   FaStepForward, FaSignOutAlt, FaCrown, FaPlus, FaMinus,
   FaLock, FaBolt, FaFilm, FaUserTie, FaLightbulb,
   FaCheck, FaStar, FaVideo, FaTimesCircle,
-  FaPlay
+  FaPaperPlane, FaSearch
 } from 'react-icons/fa';
+
+/* ─────────────────────────────────────────────
+   تطبيع النص العربي — للـ autocomplete والمقارنة
+───────────────────────────────────────────── */
+function normalizeAr(str) {
+  if (!str) return '';
+  let s = str.toString().replace(/[\u064B-\u065F\u0670\u0640]/g, '');
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (code === 0x0622 || code === 0x0623 || code === 0x0625 ||
+        code === 0x0671 || code === 0x0672 || code === 0x0673) {
+      out += '\u0627';
+    } else if (code === 0x0649) {
+      out += '\u064A';
+    } else if (code === 0x0629) {
+      out += '\u0647';
+    } else if (code === 0x0624) {
+      out += '\u0648';
+    } else if (code === 0x0626 || code === 0x0621) {
+      // تجاهل
+    } else if (code >= 0x0600 && code <= 0x06FF) {
+      out += s[i];
+    } else if ((code >= 0x0041 && code <= 0x005A) ||
+               (code >= 0x0061 && code <= 0x007A) ||
+               (code >= 0x0030 && code <= 0x0039)) {
+      out += s[i].toLowerCase();
+    }
+  }
+  return out;
+}
 
 /* ─────────────────────────────────────────────
    Premium Glass primitives
@@ -31,7 +62,7 @@ function GlassCard({ children, className = '' }) {
 }
 
 /* ─────────────────────────────────────────────
-   Particles — elegant drifting sparkles
+   Particles
 ───────────────────────────────────────────── */
 function ParticleField() {
   const canvasRef = useRef(null);
@@ -80,7 +111,6 @@ function BackgroundGlow() {
     <div className="pointer-events-none fixed inset-0 z-0">
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 30%, transparent 20%, rgba(8,5,20,0.85) 100%)' }} />
       <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 2px,#000 2px,#000 4px)' }} />
-      {/* Top spotlight */}
       <div
         className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none"
         style={{
@@ -89,7 +119,6 @@ function BackgroundGlow() {
           filter: 'blur(40px)',
         }}
       />
-      {/* Bottom side glows */}
       <div
         className="absolute bottom-0 left-0 w-1/3 h-1/3 pointer-events-none"
         style={{
@@ -153,29 +182,19 @@ function ScoreStrip({ players, isAdmin, onScoreChange }) {
 }
 
 /* ─────────────────────────────────────────────
-   Subcategory Picker — 2 elegant cards
+   Subcategory Picker
 ───────────────────────────────────────────── */
 function SubcategoryPicker({ onPick }) {
   const options = [
     {
-      id: 'history',
-      label: 'قبل ٢٠٠٠',
-      sub: 'أفلام كلاسيكية',
-      emoji: '📽️',
+      id: 'history', label: 'قبل ٢٠٠٠', sub: 'أفلام كلاسيكية', emoji: '📽️',
       grad: 'from-rose-600/20 via-rose-500/10 to-transparent',
-      border: 'rgba(244,63,94,0.5)',
-      glow: 'rgba(244,63,94,0.3)',
-      iconColor: 'text-rose-300',
+      border: 'rgba(244,63,94,0.5)', glow: 'rgba(244,63,94,0.3)',
     },
     {
-      id: 'cinema',
-      label: 'بعد ٢٠٠٠',
-      sub: 'سينما حديثة',
-      emoji: '🎬',
+      id: 'cinema', label: 'بعد ٢٠٠٠', sub: 'سينما حديثة', emoji: '🎬',
       grad: 'from-violet-600/20 via-violet-500/10 to-transparent',
-      border: 'rgba(168,85,247,0.5)',
-      glow: 'rgba(168,85,247,0.3)',
-      iconColor: 'text-violet-300',
+      border: 'rgba(168,85,247,0.5)', glow: 'rgba(168,85,247,0.3)',
     },
   ];
 
@@ -201,7 +220,6 @@ function SubcategoryPicker({ onPick }) {
               boxShadow: `0 8px 40px ${opt.glow}, inset 0 1px 0 rgba(255,255,255,0.1)`,
             }}
           >
-            {/* Shimmer on hover */}
             <motion.div
               animate={{ x: ['-100%', '200%'] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
@@ -211,7 +229,6 @@ function SubcategoryPicker({ onPick }) {
                 width: '50%',
               }}
             />
-
             <motion.div
               animate={{ y: [0, -6, 0] }}
               transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.3 }}
@@ -229,7 +246,7 @@ function SubcategoryPicker({ onPick }) {
 }
 
 /* ─────────────────────────────────────────────
-   Actor Card — elegant chip with avatar
+   Actor Chip
 ───────────────────────────────────────────── */
 function ActorChip({ name, index }) {
   const initial = name.trim().charAt(0);
@@ -237,12 +254,7 @@ function ActorChip({ name, index }) {
     <motion.div
       initial={{ opacity: 0, y: 25, scale: 0.85 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{
-        delay: index * 0.13,
-        type: 'spring',
-        stiffness: 300,
-        damping: 22,
-      }}
+      transition={{ delay: index * 0.13, type: 'spring', stiffness: 300, damping: 22 }}
       className="relative group"
     >
       <div
@@ -253,7 +265,6 @@ function ActorChip({ name, index }) {
           boxShadow: '0 6px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,150,0.12)',
         }}
       >
-        {/* Avatar circle */}
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
           style={{
@@ -267,8 +278,6 @@ function ActorChip({ name, index }) {
         <span className="text-amber-50 font-bold text-base sm:text-lg whitespace-nowrap">
           {name}
         </span>
-
-        {/* Corner sparkle */}
         <motion.div
           animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5] }}
           transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
@@ -280,7 +289,7 @@ function ActorChip({ name, index }) {
 }
 
 /* ─────────────────────────────────────────────
-   Main Screen — display area
+   Main Screen
 ───────────────────────────────────────────── */
 function MainScreen({ currentQuestion, isAdmin }) {
   const actors = (currentQuestion?.text || '').split(' / ').map(s => s.trim()).filter(Boolean);
@@ -288,7 +297,6 @@ function MainScreen({ currentQuestion, isAdmin }) {
 
   return (
     <div className="relative w-full max-w-3xl">
-      {/* Ambient glow */}
       <div
         className="absolute -inset-6 rounded-3xl pointer-events-none"
         style={{
@@ -296,16 +304,11 @@ function MainScreen({ currentQuestion, isAdmin }) {
           filter: 'blur(30px)',
         }}
       />
-
       <GlassCard className="relative p-6 sm:p-10 min-h-[16rem] flex flex-col items-center justify-center">
-        {/* Decorative top line */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[2px] rounded-full"
           style={{ background: 'linear-gradient(90deg, transparent, rgba(255,200,120,0.7), transparent)' }}
         />
-
         <AnimatePresence mode="wait">
-
-          {/* ===== Waiting for actors ===== */}
           {!actorsRevealed && (
             <motion.div
               key="waiting"
@@ -317,7 +320,11 @@ function MainScreen({ currentQuestion, isAdmin }) {
               <motion.div
                 animate={{
                   scale: [1, 1.08, 1],
-                  filter: ['drop-shadow(0 0 15px rgba(255,180,80,0.4))', 'drop-shadow(0 0 35px rgba(255,180,80,0.8))', 'drop-shadow(0 0 15px rgba(255,180,80,0.4))'],
+                  filter: [
+                    'drop-shadow(0 0 15px rgba(255,180,80,0.4))',
+                    'drop-shadow(0 0 35px rgba(255,180,80,0.8))',
+                    'drop-shadow(0 0 15px rgba(255,180,80,0.4))',
+                  ],
                 }}
                 transition={{ duration: 2.4, repeat: Infinity }}
                 className="text-7xl mb-5"
@@ -334,7 +341,6 @@ function MainScreen({ currentQuestion, isAdmin }) {
             </motion.div>
           )}
 
-          {/* ===== Actors revealed ===== */}
           {actorsRevealed && (
             <motion.div
               key={currentQuestion.id}
@@ -343,7 +349,6 @@ function MainScreen({ currentQuestion, isAdmin }) {
               exit={{ opacity: 0 }}
               className="w-full"
             >
-              {/* Header */}
               <div className="flex items-center justify-center gap-3 mb-6">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent to-amber-500/40" />
                 <div className="flex items-center gap-2">
@@ -356,20 +361,17 @@ function MainScreen({ currentQuestion, isAdmin }) {
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-amber-500/40" />
               </div>
 
-              {/* Actor chips */}
               <div className="flex flex-wrap items-center justify-center gap-3">
                 {actors.map((actor, i) => (
                   <ActorChip key={i} name={actor} index={i} />
                 ))}
               </div>
 
-              {/* Bottom hint */}
               <p className="text-center text-amber-200/50 text-xs tracking-widest mt-7">
                 مين الفيلم؟
               </p>
             </motion.div>
           )}
-
         </AnimatePresence>
       </GlassCard>
     </div>
@@ -396,20 +398,15 @@ function HintCard({ hint }) {
           boxShadow: '0 10px 40px rgba(245,158,11,0.35), inset 0 1px 0 rgba(255,255,255,0.7)',
         }}
       >
-        {/* Sparkles */}
         {[...Array(6)].map((_, i) => (
           <motion.div
             key={i}
             animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5] }}
             transition={{ duration: 2, repeat: Infinity, delay: i * 0.35 }}
             className="absolute w-1.5 h-1.5 rounded-full bg-amber-500"
-            style={{
-              top: `${10 + (i * 15) % 80}%`,
-              left: `${5 + (i * 23) % 90}%`,
-            }}
+            style={{ top: `${10 + (i * 15) % 80}%`, left: `${5 + (i * 23) % 90}%` }}
           />
         ))}
-
         <div className="relative flex items-start gap-4">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
@@ -435,7 +432,7 @@ function HintCard({ hint }) {
 }
 
 /* ─────────────────────────────────────────────
-   Answer Reveal — cinematic grand reveal
+   Answer Reveal
 ───────────────────────────────────────────── */
 function AnswerReveal({ answer }) {
   return (
@@ -454,15 +451,12 @@ function AnswerReveal({ answer }) {
           boxShadow: '0 0 80px rgba(251,191,36,0.4), inset 0 0 60px rgba(120,40,180,0.15)',
         }}
       >
-        {/* Animated border glow */}
         <motion.div
           animate={{ opacity: [0.3, 0.7, 0.3] }}
           transition={{ duration: 2.5, repeat: Infinity }}
           className="absolute inset-0 rounded-3xl pointer-events-none"
           style={{ boxShadow: 'inset 0 0 40px rgba(255,200,120,0.3)' }}
         />
-
-        {/* Top spotlight */}
         <motion.div
           animate={{ opacity: [0.4, 0.9, 0.4] }}
           transition={{ duration: 2, repeat: Infinity }}
@@ -472,7 +466,6 @@ function AnswerReveal({ answer }) {
             filter: 'blur(20px)',
           }}
         />
-
         <div className="relative">
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
@@ -482,11 +475,9 @@ function AnswerReveal({ answer }) {
           >
             <FaLightbulb className="text-3xl text-amber-400" />
           </motion.div>
-
           <p className="text-amber-300/70 text-[10px] tracking-[0.5em] uppercase font-bold mb-3">
             الفيلم
           </p>
-
           <motion.p
             initial={{ letterSpacing: '0.4em', opacity: 0, filter: 'blur(10px)' }}
             animate={{ letterSpacing: '0.02em', opacity: 1, filter: 'blur(0px)' }}
@@ -497,8 +488,6 @@ function AnswerReveal({ answer }) {
             {answer}
           </motion.p>
         </div>
-
-        {/* Confetti sparkles */}
         {[...Array(12)].map((_, i) => (
           <motion.div
             key={i}
@@ -522,7 +511,76 @@ function AnswerReveal({ answer }) {
 }
 
 /* ─────────────────────────────────────────────
-   Reveal Button — elegant pill
+   Popups
+───────────────────────────────────────────── */
+function PopupWrong({ playerName, onClose }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: 'rgba(40,0,5,0.75)', backdropFilter: 'blur(10px)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.7, rotate: -4 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+        onClick={(e) => e.stopPropagation()}
+        className="max-w-sm w-full rounded-2xl p-6 text-center border-2 border-rose-500/60 bg-gradient-to-b from-rose-950 to-red-950 shadow-2xl"
+      >
+        <motion.div
+          animate={{ rotate: [0, -12, 12, -12, 0] }}
+          transition={{ duration: 0.6 }}
+          className="text-6xl mb-4"
+        >❌</motion.div>
+        <h2 className="text-rose-100 text-2xl font-bold mb-2">إجابة غلط!</h2>
+        <p className="text-rose-200/80 text-sm mb-1">
+          <span className="font-bold text-rose-50">{playerName}</span> جاوب غلط
+        </p>
+        <p className="text-rose-200/60 text-xs mb-6">-1 نقطة</p>
+        <button
+          onClick={onClose}
+          className="w-full py-3 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-100 font-bold hover:bg-rose-500/30 transition-colors"
+        >حسناً</button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function PopupCorrect({ playerName, onClose }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,25,15,0.75)', backdropFilter: 'blur(10px)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.5, y: 40 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="max-w-sm w-full rounded-2xl p-6 text-center border-2 border-emerald-500/60 bg-gradient-to-b from-emerald-950 to-teal-950 shadow-2xl"
+      >
+        <motion.div
+          animate={{ scale: [0.5, 1.3, 1] }}
+          transition={{ duration: 0.6 }}
+          className="text-6xl mb-4"
+        >🎉</motion.div>
+        <h2 className="text-emerald-100 text-2xl font-bold mb-2">إجابة صح!</h2>
+        <p className="text-emerald-200/80 text-sm mb-1">
+          <span className="font-bold text-emerald-50">{playerName}</span> عرف الفيلم
+        </p>
+        <p className="text-emerald-200/60 text-xs mb-6">+1 نقطة</p>
+        <button
+          onClick={onClose}
+          className="w-full py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/50 text-emerald-100 font-bold hover:bg-emerald-500/30 transition-colors"
+        >تمام</button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Reveal Button
 ───────────────────────────────────────────── */
 function RevealButton({ icon, label, state, onClick, colors }) {
   const isActive = state === 'active';
@@ -563,7 +621,6 @@ function RevealButton({ icon, label, state, onClick, colors }) {
           }}
         />
       )}
-
       <div className="relative z-10 flex items-center gap-2">
         {isDone ? (
           <motion.div
@@ -656,11 +713,8 @@ function IntroOverlay({ onDismiss, isAdmin }) {
           animate={{ rotate: [0, -6, 6, 0] }}
           transition={{ duration: 3, repeat: Infinity }}
           className="text-7xl mb-6"
-        >
-          🎬
-        </motion.div>
+        >🎬</motion.div>
         <h2 className="text-amber-50 text-3xl font-bold mb-6">سينما</h2>
-
         <div className="space-y-4 text-right bg-slate-900/50 border border-amber-700/30 rounded-2xl p-6 mb-6">
           {isAdmin ? (
             <>
@@ -679,7 +733,7 @@ function IntroOverlay({ onDismiss, isAdmin }) {
               <div className="flex items-start gap-3">
                 <span className="text-amber-400 font-bold text-xl">٣</span>
                 <p className="text-slate-100/90 leading-relaxed">
-                  <span className="text-amber-300 font-bold">"تلميح"</span> ثم <span className="text-amber-300 font-bold">"الإجابة"</span> عند الحاجة
+                  اللي يضغط البازر يكتب إجابته — صح = <span className="text-emerald-300 font-bold">+1</span> غلط = <span className="text-rose-300 font-bold">-1</span>
                 </p>
               </div>
             </>
@@ -694,7 +748,7 @@ function IntroOverlay({ onDismiss, isAdmin }) {
               <div className="flex items-start gap-3">
                 <span className="text-amber-400 font-bold text-xl">٢</span>
                 <p className="text-slate-100/90 leading-relaxed">
-                  عرفت الفيلم؟ <span className="text-amber-300 font-bold">اضغط البازر</span>
+                  عرفت الفيلم؟ <span className="text-amber-300 font-bold">اضغط البازر</span> واكتب اسمه
                 </p>
               </div>
               <div className="flex items-start gap-3">
@@ -706,7 +760,6 @@ function IntroOverlay({ onDismiss, isAdmin }) {
             </>
           )}
         </div>
-
         <motion.p
           animate={{ opacity: [0.4, 0.9, 0.4] }}
           transition={{ duration: 2, repeat: Infinity }}
@@ -720,7 +773,7 @@ function IntroOverlay({ onDismiss, isAdmin }) {
 }
 
 /* ─────────────────────────────────────────────
-   MAIN
+   MAIN COMPONENT
 ───────────────────────────────────────────── */
 export default function CinemaRound({
   currentQuestion,
@@ -737,6 +790,12 @@ export default function CinemaRound({
   onScoreChange,
 }) {
   const [showIntro, setShowIntro] = useState(true);
+  const [input, setInput] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [localSubmitted, setLocalSubmitted] = useState(false);
+
+  const [showWrong, setShowWrong] = useState(null);
+  const [showCorrect, setShowCorrect] = useState(null);
 
   const isActivePlayer = activePlayer === playerId;
   const activePlayerData = players.find(p => p.id === activePlayer);
@@ -746,13 +805,81 @@ export default function CinemaRound({
   const actorsRevealed = !!currentQuestion?.actorsRevealed;
   const hintRevealed = !!currentQuestion?.hintRevealed;
   const answerRevealed = !!currentQuestion?.answerRevealed;
+  const answeredCorrectly = !!currentQuestion?.answeredCorrectly;
 
-  const canBuzz = hasSubcategory && actorsRevealed && !answerRevealed && !activePlayer;
+  const canBuzz = hasSubcategory && actorsRevealed && !answerRevealed && !activePlayer && !answeredCorrectly;
 
+  // ════ Socket listeners ════
+  useEffect(() => {
+    if (!socket) return;
+
+    const onWrong = (data) => {
+      setShowWrong({ playerName: data.playerName });
+      setLocalSubmitted(false);
+      setInput('');
+      setSuggestions([]);
+    };
+    const onCorrect = (data) => {
+      setShowCorrect({ playerName: data.playerName });
+      setLocalSubmitted(false);
+      setInput('');
+      setSuggestions([]);
+    };
+
+    socket.on('cinema_wrong', onWrong);
+    socket.on('cinema_correct', onCorrect);
+
+    return () => {
+      socket.off('cinema_wrong', onWrong);
+      socket.off('cinema_correct', onCorrect);
+    };
+  }, [socket]);
+
+  // ════ Reset input at question change ════
+  useEffect(() => {
+    setInput('');
+    setSuggestions([]);
+    setLocalSubmitted(false);
+  }, [currentQuestion?.id]);
+
+  // ════ Autocomplete ════
+  const handleInputChange = (val) => {
+    setInput(val);
+    const typed = val.trim();
+    if (typed.length > 0 && currentQuestion?.allAnswers) {
+      const nTyped = normalizeAr(typed);
+      const matches = currentQuestion.allAnswers
+        .filter(a => {
+          if (a === typed) return false;
+          const nA = normalizeAr(a);
+          return nA.includes(nTyped) || nTyped.includes(nA);
+        })
+        .slice(0, 5);
+      setSuggestions(matches);
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const pickSuggestion = (s) => {
+    setInput(s);
+    setSuggestions([]);
+  };
+
+  const handleSubmit = () => {
+    if (!input.trim() || !isActivePlayer || localSubmitted) return;
+    setLocalSubmitted(true);
+    socket.emit('cinema_submit', {
+      roomCode,
+      playerId,
+      answer: input.trim(),
+    });
+  };
+
+  // ════ Admin actions ════
   const handlePickSub = (sub) => {
     socket.emit('cinema_start', { roomCode, subcategory: sub });
   };
-
   const handleRevealActors = () => socket.emit('cinema_reveal_actors', { roomCode });
   const handleRevealHint = () => socket.emit('cinema_reveal_hint', { roomCode });
   const handleRevealAnswer = () => socket.emit('cinema_reveal_answer', { roomCode });
@@ -773,6 +900,13 @@ export default function CinemaRound({
         {showIntro && (
           <IntroOverlay isAdmin={isAdmin} onDismiss={() => setShowIntro(false)} />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showWrong && <PopupWrong playerName={showWrong.playerName} onClose={() => setShowWrong(null)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCorrect && <PopupCorrect playerName={showCorrect.playerName} onClose={() => setShowCorrect(null)} />}
       </AnimatePresence>
 
       {/* Top bar */}
@@ -810,23 +944,19 @@ export default function CinemaRound({
       <div className="relative z-10 flex-1 flex flex-col items-center justify-start px-4 gap-4 overflow-y-auto pb-6 pt-2">
         <div className="w-full flex flex-col items-center gap-4 max-w-3xl">
 
-          {/* ═══════════════════════════════════════ */}
-          {/* ADMIN — pick subcategory (if none yet) */}
-          {/* ═══════════════════════════════════════ */}
+          {/* Admin: pick subcategory */}
           {isAdmin && !hasSubcategory && (
             <SubcategoryPicker onPick={handlePickSub} />
           )}
 
-          {/* Player waiting for subcategory */}
+          {/* Player waiting */}
           {!isAdmin && !hasSubcategory && (
             <GlassCard className="p-8 w-full max-w-md text-center">
               <motion.div
                 animate={{ scale: [1, 1.08, 1] }}
                 transition={{ duration: 2.4, repeat: Infinity }}
                 className="text-5xl mb-3"
-              >
-                🎬
-              </motion.div>
+              >🎬</motion.div>
               <p className="text-amber-100 text-lg font-bold mb-1">في انتظار المسؤول</p>
               <p className="text-amber-200/40 text-xs tracking-widest">
                 سيختار فئة اللعبة قريبًا
@@ -834,9 +964,7 @@ export default function CinemaRound({
             </GlassCard>
           )}
 
-          {/* ═══════════════════════════════════════ */}
-          {/* MAIN SCREEN — after subcategory picked */}
-          {/* ═══════════════════════════════════════ */}
+          {/* Main Screen */}
           {hasSubcategory && (
             <MainScreen currentQuestion={currentQuestion} isAdmin={isAdmin} />
           )}
@@ -855,13 +983,10 @@ export default function CinemaRound({
             )}
           </AnimatePresence>
 
-          {/* ═══════════════════════════════════════ */}
-          {/* ADMIN — reveal controls */}
-          {/* ═══════════════════════════════════════ */}
+          {/* Admin reveal controls */}
           {isAdmin && hasSubcategory && (
             <div className="w-full max-w-2xl mt-3">
               <div className="flex items-center justify-center gap-3 flex-wrap">
-
                 <RevealButton
                   icon={<FaUserTie />}
                   label="الأسماء"
@@ -873,7 +998,6 @@ export default function CinemaRound({
                     glow: 'rgba(251,113,133,0.5)',
                   }}
                 />
-
                 <RevealButton
                   icon={<FaLightbulb />}
                   label="تلميح"
@@ -885,7 +1009,6 @@ export default function CinemaRound({
                     glow: 'rgba(251,191,36,0.5)',
                   }}
                 />
-
                 <RevealButton
                   icon={<FaVideo />}
                   label="الإجابة"
@@ -897,10 +1020,7 @@ export default function CinemaRound({
                     glow: 'rgba(52,211,153,0.5)',
                   }}
                 />
-
               </div>
-
-              {/* Next button */}
               <motion.button
                 onClick={handleNext}
                 whileHover={{ scale: 1.02, y: -2 }}
@@ -918,9 +1038,7 @@ export default function CinemaRound({
             </div>
           )}
 
-          {/* ═══════════════════════════════════════ */}
           {/* Buzzer status */}
-          {/* ═══════════════════════════════════════ */}
           {activePlayer && (
             <GlassCard className="p-4 w-full max-w-md flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -949,8 +1067,90 @@ export default function CinemaRound({
             </GlassCard>
           )}
 
+          {/* ✅ Input للإجابة — للاعب اللي ضغط */}
+          {hasSubcategory && actorsRevealed && isActivePlayer && !localSubmitted && !answerRevealed && (
+            <GlassCard className="p-5 w-full max-w-md">
+              <div className="text-center mb-4">
+                <p className="text-amber-300/70 text-[10px] tracking-[0.3em] uppercase mb-2">
+                  🎤 دورك دلوقتي
+                </p>
+                <p className="text-amber-50 text-lg font-bold">
+                  اكتب اسم الفيلم
+                </p>
+              </div>
+
+              <div className="relative mb-3">
+                <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-400/50 text-sm" />
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                  placeholder="اكتب اسم الفيلم..."
+                  autoFocus
+                  dir="rtl"
+                  className="w-full bg-black/50 border border-amber-700/40 focus:border-amber-400/70 rounded-xl pr-10 pl-4 py-3 text-amber-50 text-right outline-none transition-colors"
+                />
+              </div>
+
+              <AnimatePresence>
+                {suggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-1.5 mb-3 overflow-hidden"
+                  >
+                    {suggestions.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => pickSuggestion(s)}
+                        className="w-full text-right px-3 py-2 bg-amber-950/40 border border-amber-800/40 rounded-lg text-amber-100 text-sm hover:bg-amber-900/60 transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <button
+                onClick={handleSubmit}
+                disabled={!input.trim()}
+                className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                  input.trim()
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                <FaPaperPlane /> إرسال الإجابة
+              </button>
+            </GlassCard>
+          )}
+
+          {/* لما اللاعب يبعت الإجابة */}
+          {isActivePlayer && localSubmitted && (
+            <GlassCard className="p-4 w-full max-w-md text-center">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block mr-2" />
+              <span className="text-emerald-100 text-sm">تم إرسال إجابتك...</span>
+            </GlassCard>
+          )}
+
+          {/* لما لاعب تاني ضغط */}
+          {activePlayer && !isActivePlayer && !localSubmitted && (
+            <GlassCard className="p-4 w-full max-w-md text-center">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block mr-2" />
+              <span className="text-amber-100 text-sm">
+                في انتظار إجابة{' '}
+                <span className="font-bold">
+                  {activePlayerData?.isAdmin ? 'المسؤول' : activePlayerData?.name}
+                </span>
+              </span>
+            </GlassCard>
+          )}
+
           {/* Buzzer */}
-          {hasSubcategory && actorsRevealed && !answerRevealed && !activePlayer && (
+          {hasSubcategory && actorsRevealed && !answerRevealed && !activePlayer && !answeredCorrectly && (
             <div className="w-full max-w-md">
               <Buzzer
                 isActivePlayer={isActivePlayer}
@@ -962,13 +1162,19 @@ export default function CinemaRound({
             </div>
           )}
 
+          {/* لما حد جاوب صح */}
+          {answeredCorrectly && (
+            <GlassCard className="p-4 w-full max-w-md text-center border border-emerald-600/40">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-2" />
+              <span className="text-emerald-200 text-sm">
+                ✓ تمت الإجابة على هذا الفيلم — اضغط "الفيلم التالي" للمتابعة
+              </span>
+            </GlassCard>
+          )}
+
           {/* Score strip */}
           <div className="flex justify-center w-full">
-            <ScoreStrip
-              players={players}
-              isAdmin={isAdmin}
-              onScoreChange={onScoreChange}
-            />
+            <ScoreStrip players={players} isAdmin={isAdmin} onScoreChange={onScoreChange} />
           </div>
         </div>
       </div>

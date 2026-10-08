@@ -672,7 +672,7 @@ const LandCard = ({ tile, onBuild, onAuction }) => {
 
   return (
     <div style={{
-      borderRadius:20, overflow:'hidden', width:'min(210px, 60vw)', flexShrink:0,
+      borderRadius:20, overflow:'hidden', width:'min(210px, 55vw)', flexShrink:0,
       background:'linear-gradient(160deg, #fbf3dd 0%, #f0e2b8 100%)',
       boxShadow:`0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px ${color}40`,
       border:`3px solid ${color}`,
@@ -691,7 +691,7 @@ const LandCard = ({ tile, onBuild, onAuction }) => {
         borderBottom:`2px solid rgba(212,175,55,0.5)`,
       }}>
         <span style={{
-          color:textCol, fontWeight:900, fontSize:17,
+          color:textCol, fontWeight:900, fontSize:'clamp(11px, 3.2vw, 17px)',
           textShadow:'0 1px 3px rgba(0,0,0,0.4)',
           letterSpacing:0.5,
         }}>{tile.name}</span>
@@ -1039,6 +1039,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
   const [showTurnOrder,   setShowTurnOrder]   = useState(false);
   const [turnOrderData,   setTurnOrderData]   = useState([]);
   const [paymentRequest,  setPaymentRequest]  = useState(null);
+  const [awaitingMyResponse, setAwaitingMyResponse] = useState(false);
 
   const { isFs, toggle: toggleFs } = useFullscreen();
 
@@ -1060,11 +1061,12 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
     sockRef.current = sock;
     sock.emit('bank_join', { roomId: rid, playerId: pid, playerName, isAdmin });
 
-    const onState = s => {
-      setGameState(s);
-      setPlayers(s.players || []);
-      setMyPlayer(s.players.find(p => p.id === pid));
-    };
+  const onState = s => {
+    setGameState(s);
+    setPlayers(s.players || []);
+    setMyPlayer(s.players.find(p => p.id === pid));
+    setAwaitingMyResponse(s.awaitingResponseFrom === pid);
+  };
 
     const onDice = ({ playerId:rp, dice1 }) => {
       setRolling(true);
@@ -1682,6 +1684,8 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
     </AnimatePresence>
   );
 
+  const isSmallScreen = typeof window !== 'undefined' && window.innerWidth <= 900;
+
   return (
     <>
       <style>{`
@@ -1716,22 +1720,22 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
         <div style={{ position:'absolute', inset:0, background:'#0a0a14' }}/>
 
         {/* البورد */}
-        <div style={{
-          position:'absolute', inset:0,
-          display:'flex', alignItems:'center', justifyContent:'center',
-        }}>
-          <div
-            id="board-container"
-            style={{
-              position:'relative',
-              width: '100%',
-              height: '100%',
-              maxWidth: `min(100vw, calc(100vh * 1240 / 930))`,
-              maxHeight: `min(100vh, calc(100vw * 930 / 1240))`,
-            }}
-          >
+          <div style={{
+            position:'absolute', inset:0,
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
+            <div
+              id="board-container"
+              style={{
+                position:'relative',
+                width: '100%',
+                height: '100%',
+                maxWidth: `min(100vw, calc(100vh * (16 / 9)))`,
+                maxHeight: `min(100vh, calc(100vw * (9 / 16)))`,
+              }}
+            >
             <img
-              src={`${process.env.PUBLIC_URL || ''}/bank/board.png`}
+              src={`${process.env.PUBLIC_URL || ''}/bank/board.jpg`}
               alt="board"
               style={{
                 position:'absolute', inset:0,
@@ -2037,7 +2041,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                     whileTap={!rolling ? { scale:0.88 } : {}}
                     whileHover={myTurn && !rolling && !myPlayer?.skipNextTurn ? {scale:1.05} : {}}
                     onClick={handleRoll}
-                    disabled={rolling || !myTurn || myPlayer?.skipNextTurn}
+                    disabled={rolling || !myTurn || myPlayer?.skipNextTurn || awaitingMyResponse}
                     style={{
                       width:'min(64px, 11.5vh)',
                       height:'min(64px, 11.5vh)',
@@ -2253,8 +2257,8 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                     backdropFilter:'blur(28px)',
                     border:`3px solid ${tileColor}`,
                     borderRadius:28,
-                    padding:'32px 28px 26px',
-                    width:'100%', maxWidth:340,
+                    padding:'clamp(16px, 4vw, 32px) clamp(14px, 3.5vw, 28px)',
+                    width:'100%', maxWidth:'min(340px, 82vw)',
                     display:'flex',flexDirection:'column',alignItems:'center',gap:16,
                     boxShadow:`0 30px 80px rgba(0,0,0,0.7), 0 0 60px ${tileColor}55, inset 0 1px 0 rgba(255,255,255,0.15)`,
                     direction:'rtl',
@@ -2289,10 +2293,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                     animate={{ scale:1, rotate:0 }}
                     transition={{ delay:0.2, type:'spring', stiffness:200, damping:14 }}
                     style={{
-                        width:92, height:92, borderRadius:'50%',
+                        width:'clamp(60px, 18vw, 92px)', height:'clamp(60px, 18vw, 92px)', borderRadius:'50%',
                         background: `radial-gradient(circle at 30% 25%, ${tileColor}, ${tileColor}aa 70%)`,
                         display:'flex', alignItems:'center', justifyContent:'center',
-                        fontSize:46,
+                        fontSize:'clamp(28px, 9vw, 46px)',
                         border:`3px solid rgba(255,255,255,0.55)`,
                         boxShadow:`0 0 45px ${tileColor}90, inset 0 4px 8px rgba(255,255,255,0.45), inset 0 -6px 10px rgba(0,0,0,0.3)`,
                         marginTop:6,
@@ -2336,7 +2340,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                         background:`linear-gradient(145deg, rgba(212,175,55,0.25), rgba(212,175,55,0.08))`,
                         border:'2px solid #d4af37',
                         borderRadius:18,
-                        padding:'14px 34px',
+                        padding:'clamp(8px, 2.2vw, 14px) clamp(18px, 5vw, 34px)',
                         display:'flex', alignItems:'center', gap:10,
                         boxShadow:`0 0 30px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.2)`,
                         position:'relative', zIndex:1,
@@ -2349,7 +2353,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                     </motion.span>
                     <div style={{display:'flex', alignItems:'baseline', gap:4}}>
                         <span style={{
-                        color:'#f4d35e', fontSize:34, fontWeight:900,
+                        color:'#f4d35e', fontSize:'clamp(24px, 7vw, 34px)',
                         textShadow:'0 0 16px rgba(212,175,55,0.8)',
                         fontVariantNumeric:'tabular-nums',
                         }}>{buyOffer.price}</span>
@@ -2405,7 +2409,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                         whileHover={{scale:1.04, y:-2}} whileTap={{scale:0.95}}
                         initial={{opacity:0, y:20}} animate={{opacity:1, y:0}}
                         transition={{delay:0.6, type:'spring', stiffness:300}}
-                        onClick={() => setBuyOffer(null)}
+                        onClick={() => {
+                          emit('bank_dismiss_offer', { roomId: rid, playerId: pid });
+                          setBuyOffer(null);
+                        }}
                         style={{
                         flex:1, padding:'15px 0', borderRadius:16,
                         background:'linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))',
@@ -2640,7 +2647,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                         whileHover={{scale:1.03}} whileTap={{scale:0.95}}
                         initial={{opacity:0, y:10}} animate={{opacity:1, y:0}}
                         transition={{delay:0.65, type:'spring', stiffness:300}}
-                        onClick={() => setRentOffer(null)}
+                        onClick={() => {
+                          emit('bank_dismiss_offer', { roomId: rid, playerId: pid });
+                          setRentOffer(null);
+                        }}
                         style={{
                             width:'100%', padding:'12px 0', borderRadius:16,
                             background:'rgba(255,255,255,0.06)',
@@ -2728,7 +2738,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                         {!clubOffer.canAffordFull && !clubOffer.canAffordHalf && (
                           <div style={{color:'#fca5a5',textAlign:'center',fontSize:13}}>ما معكش فلوس كافية!</div>
                         )}
-                        <button onClick={() => setClubOffer(null)} style={{
+                        <button onClick={() => {
+                          emit('bank_dismiss_offer', { roomId: rid, playerId: pid });
+                          setClubOffer(null);
+                        }} style={{
                           padding:'10px 0', borderRadius:14,
                           background:'rgba(255,255,255,0.06)',
                           color:'rgba(255,255,255,0.5)',
@@ -2768,7 +2781,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                             fontWeight:700, fontSize:14, cursor:'pointer',
                           }}
                         >💸 ادفع إيجار — {clubOffer.rent} جنيه</button>
-                        <button onClick={() => setClubOffer(null)} style={{
+                        <button onClick={() => {
+                          emit('bank_dismiss_offer', { roomId: rid, playerId: pid });
+                          setClubOffer(null);
+                        }} style={{
                           padding:'10px 0', borderRadius:14,
                           background:'rgba(255,255,255,0.06)',
                           color:'rgba(255,255,255,0.5)',

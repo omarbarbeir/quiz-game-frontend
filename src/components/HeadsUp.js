@@ -297,10 +297,19 @@ const Confetti = () => {
 function useGyro(active, onCorrect, onPass) {
   const baseBetaRef = useRef(null);
   const lastTriggerRef = useRef(0);
+  const zoneRef = useRef('neutral');   // 'neutral' | 'down' | 'up'
 
   useEffect(() => {
     if (!active) return;
     baseBetaRef.current = null;
+    zoneRef.current = 'neutral';
+
+    // ✅ يحتاج اللاعب يلف لتحت ٥٥ درجة حتى يُفعَّل "صحيح"
+    const DOWN_THRESHOLD = 55;
+    // ✅ يحتاج يرفع لفوق ٥٥ درجة حتى يُفعَّل "تخطي"
+    const UP_THRESHOLD = -55;
+    // ✅ لازم يرجع للوضع المحايد (أقل من ٢٠ درجة) حتى يُعاد ضبط الأساس
+    const RESET_DEADZONE = 20;
 
     const handler = (e) => {
       const beta = e.beta;
@@ -313,24 +322,29 @@ function useGyro(active, onCorrect, onPass) {
 
       const delta = beta - baseBetaRef.current;
 
-      if (Math.abs(delta) < 12) {
+      // العودة للوضع المحايد → أعِد ضبط الأساس
+      if (Math.abs(delta) < RESET_DEADZONE) {
         baseBetaRef.current = beta;
+        zoneRef.current = 'neutral';
         return;
       }
 
+      // منع الإطلاق المتكرر بسرعة
       const now = Date.now();
-      if (now - lastTriggerRef.current < 700) return;
+      if (now - lastTriggerRef.current < 900) return;
 
-      if (delta > 35) {
+      // ✅ نزول (نود للأسفل) → صحيح
+      if (delta > DOWN_THRESHOLD && zoneRef.current !== 'down') {
         lastTriggerRef.current = now;
-        baseBetaRef.current = beta;
-        if (navigator.vibrate) navigator.vibrate(60);
+        zoneRef.current = 'down';
+        if (navigator.vibrate) navigator.vibrate(80);
         onCorrect();
       }
-      else if (delta < -35) {
+      // ✅ ارتفاع (نظر للأعلى) → تخطي
+      else if (delta < UP_THRESHOLD && zoneRef.current !== 'up') {
         lastTriggerRef.current = now;
-        baseBetaRef.current = beta;
-        if (navigator.vibrate) navigator.vibrate(60);
+        zoneRef.current = 'up';
+        if (navigator.vibrate) navigator.vibrate(80);
         onPass();
       }
     };
