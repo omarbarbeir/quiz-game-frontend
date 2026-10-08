@@ -305,41 +305,38 @@ function useGyro(active, onCorrect, onPass) {
     zoneRef.current = 'neutral';
 
     const handler = (e) => {
-      const ag = e.accelerationIncludingGravity;
-      if (!ag) return;
-      const { x, y, z } = ag;
+      const beta = e.beta;
+      if (beta == null) return;
 
-      // زاوية الميل المحسوبة من متجه الجاذبية
-      // y موجب: رأس الموبايل لفوق (الشاشة ناحية السماء)
-      // y سالب: رأس الموبايل لتحت
-      const pitch = Math.atan2(y, Math.sqrt(x * x + z * z)) * (180 / Math.PI);
-
+      // أول قراءة → خزّنها كأساس
       if (baseRef.current === null) {
-        baseRef.current = pitch;
+        baseRef.current = beta;
         return;
       }
 
-      const delta = pitch - baseRef.current;
+      const delta = beta - baseRef.current;
 
-      // عودة للوضع المحايد → إعادة ضبط الأساس
-      if (Math.abs(delta) < 12) {
-        baseRef.current = pitch;
+      // عودة للوضع المحايد → أعِد ضبط الأساس
+      if (Math.abs(delta) < 15) {
+        baseRef.current = beta;
         zoneRef.current = 'neutral';
         return;
       }
 
       const now = Date.now();
-      if (now - lastTriggerRef.current < 800) return;
+      if (now - lastTriggerRef.current < 900) return;
 
-      // نزول (نود للأسفل) → صحيح
-      if (delta < -40 && zoneRef.current !== 'down') {
+      const TILT = 45;
+
+      // beta تقل عند إمالة الرأس لأسفل
+      if (delta < -TILT && zoneRef.current !== 'down') {
         lastTriggerRef.current = now;
         zoneRef.current = 'down';
         if (navigator.vibrate) navigator.vibrate(80);
         onCorrect();
       }
-      // ارتفاع (ننظر للأعلى) → تخطي
-      else if (delta > 40 && zoneRef.current !== 'up') {
+      // beta تزيد عند إمالة الرأس لأعلى
+      else if (delta > TILT && zoneRef.current !== 'up') {
         lastTriggerRef.current = now;
         zoneRef.current = 'up';
         if (navigator.vibrate) navigator.vibrate(80);
@@ -347,20 +344,18 @@ function useGyro(active, onCorrect, onPass) {
       }
     };
 
-    window.addEventListener('devicemotion', handler);
-    return () => window.removeEventListener('devicemotion', handler);
+    window.addEventListener('deviceorientation', handler);
+    return () => window.removeEventListener('deviceorientation', handler);
   }, [active, onCorrect, onPass]);
 }
 
 async function requestMotionPermission() {
-  if (typeof DeviceMotionEvent === 'undefined' && typeof DeviceOrientationEvent === 'undefined') {
+  if (typeof DeviceOrientationEvent === 'undefined') {
     return 'unsupported';
   }
-  // iOS 13+ يطلب إذن DeviceMotionEvent
-  if (typeof DeviceMotionEvent !== 'undefined' &&
-      typeof DeviceMotionEvent.requestPermission === 'function') {
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     try {
-      const res = await DeviceMotionEvent.requestPermission();
+      const res = await DeviceOrientationEvent.requestPermission();
       return res === 'granted' ? 'granted' : 'denied';
     } catch {
       return 'denied';
@@ -374,16 +369,23 @@ function testMotionSensor(timeoutMs = 1200) {
   return new Promise((resolve) => {
     if (typeof window === 'undefined') { resolve(false); return; }
     let ok = false;
+    let lastBeta = null;
+    let changes = 0;
+
     const handler = (e) => {
-      if (e && e.accelerationIncludingGravity) {
-        const { x, y, z } = e.accelerationIncludingGravity;
-        if (x != null || y != null || z != null) ok = true;
+      if (e && e.beta != null) {
+        if (lastBeta !== null && Math.abs(e.beta - lastBeta) > 0.5) {
+          changes++;
+        }
+        lastBeta = e.beta;
+        if (changes >= 2) ok = true;
       }
     };
-    window.addEventListener('devicemotion', handler);
+
+    window.addEventListener('deviceorientation', handler);
     setTimeout(() => {
-      window.removeEventListener('devicemotion', handler);
-      resolve(ok);
+      window.removeEventListener('deviceorientation', handler);
+      resolve(ok || lastBeta !== null);
     }, timeoutMs);
   });
 }
