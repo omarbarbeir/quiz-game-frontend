@@ -2548,239 +2548,169 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
         {/* popup الإيجار */}
         <AnimatePresence>
         {rentOffer && (() => {
-            const tile = gameState?.board?.find(t => t.id === rentOffer.tileId);
-            const tileColor = tile ? (LAND_COLORS[tile.name] || '#6366f1') : '#6366f1';
-            const owner = players.find(p => p.id === rentOffer.ownerId);
-            const ownerColor = owner?.color || '#f59e0b';
-            return (
+          const tile = gameState?.board?.find(t => t.id === rentOffer.tileId);
+          const tileColor = tile ? (LAND_COLORS[tile.name] || '#6366f1') : '#6366f1';
+          const owner = players.find(p => p.id === rentOffer.ownerId);
+          const ownerColor = owner?.color || '#f59e0b';
+          return (
             <>
-                <motion.div key="rent-bg"
-                initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
-                transition={{duration:0.3}}
-                style={{
-                    position:'fixed', inset:0, zIndex:300,
-                    background:`radial-gradient(ellipse at 50% 50%, rgba(220,38,38,0.22) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.95) 100%)`,
-                    backdropFilter:'blur(10px)',
-                }}
-                />
-                <motion.div key="rent-popup"
+              <motion.div key="rent-bg"
                 initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
                 style={{
-                    position:'fixed',inset:0,zIndex:301,
-                    display:'flex',alignItems:'center',justifyContent:'center',
-                    pointerEvents:'none', padding:20,
+                  position:'fixed', inset:0, zIndex:300,
+                  background:`radial-gradient(ellipse at 50% 50%, rgba(220,38,38,0.22) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.95) 100%)`,
+                  backdropFilter:'blur(10px)',
                 }}
-                >
+              />
+              <motion.div key="rent-popup"
+                initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+                style={{
+                  position:'fixed',inset:0,zIndex:301,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  pointerEvents:'none', padding:12,
+                }}
+              >
                 <motion.div
-                    initial={{scale:0.6, y:50, opacity:0, rotateX:-20}}
-                    animate={{scale:1, y:0, opacity:1, rotateX:0}}
-                    exit={{scale:0.85, y:-30, opacity:0}}
-                    transition={{type:'spring', stiffness:260, damping:22}}
-                    style={{
+                  initial={{scale:0.6, y:50, opacity:0, rotateX:-20}}
+                  animate={{scale:1, y:0, opacity:1, rotateX:0}}
+                  exit={{scale:0.85, y:-30, opacity:0}}
+                  transition={{type:'spring', stiffness:260, damping:22}}
+                  style={{
                     pointerEvents:'auto',
                     background:`linear-gradient(160deg, rgba(220,38,38,0.18) 0%, #1a0505 45%, #050202 100%)`,
                     backdropFilter:'blur(28px)',
-                    border:`3px solid #dc2626`,
-                    borderRadius:28,
-                    padding:'clamp(16px, 4vw, 32px) clamp(14px, 3.5vw, 28px)',
-                    width:'100%', maxWidth:'min(340px, 82vw)',
-                    display:'flex',flexDirection:'column',alignItems:'center',gap:16,
-                    boxShadow:`0 30px 80px rgba(0,0,0,0.7), 0 0 60px rgba(220,38,38,0.4), inset 0 1px 0 rgba(255,255,255,0.15)`,
+                    border:`2px solid #dc2626`,
+                    borderRadius:14,
+                    padding:'10px 8px 12px',
+                    width:'100%',
+                    maxWidth:'min(220px, 58vw)',
+                    display:'flex',flexDirection:'column',alignItems:'center',gap:6,
+                    boxShadow:`0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(220,38,38,0.4)`,
                     direction:'rtl',
                     position:'relative',
                     overflow:'hidden',
-                    }}
+                  }}
                 >
-                    <div style={{
-                    position:'absolute', inset:0,
-                    background:`repeating-linear-gradient(135deg, rgba(220,38,38,0.05) 0px, rgba(220,38,38,0.05) 2px, transparent 2px, transparent 14px)`,
-                    pointerEvents:'none',
-                    }} />
-
-                    <motion.div
-                    initial={{y:-30, opacity:0}} animate={{y:0, opacity:1}}
-                    transition={{delay:0.15, type:'spring', stiffness:300}}
-                    style={{
-                        position:'absolute', top:-2, left:'50%', transform:'translateX(-50%)',
-                        background:`linear-gradient(135deg, #dc2626, #991b1b)`,
-                        color:'#fff', fontSize:11, fontWeight:900, letterSpacing:2,
-                        padding:'4px 18px', borderRadius:'0 0 12px 12px',
-                        textShadow:'0 1px 2px rgba(0,0,0,0.5)',
-                        boxShadow:`0 4px 12px rgba(220,38,38,0.6)`,
-                        zIndex:2,
-                    }}>
+                  <div style={{
+                    position:'absolute', top:-2, left:'50%', transform:'translateX(-50%)',
+                    background:`linear-gradient(135deg, #dc2626, #991b1b)`,
+                    color:'#fff', fontSize:9, fontWeight:900, letterSpacing:1,
+                    padding:'2px 12px', borderRadius:'0 0 8px 8px',
+                    zIndex:2,
+                  }}>
                     ⚠️ مطلوب دفع
-                    </motion.div>
+                  </div>
 
-                    <motion.div
-                    initial={{ scale:0, rotate:-180 }}
-                    animate={{ scale:1, rotate:0 }}
-                    transition={{ delay:0.2, type:'spring', stiffness:200, damping:14 }}
-                    style={{
-                        width:'clamp(60px, 18vw, 92px)', height:'clamp(60px, 18vw, 92px)', borderRadius:'50%',
-                        background: `radial-gradient(circle at 30% 25%, #dc2626, #7f1d1d 70%)`,
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        fontSize:'clamp(28px, 9vw, 46px)',
-                        border:`3px solid rgba(252,165,165,0.6)`,
-                        boxShadow:`0 0 45px rgba(220,38,38,0.7), inset 0 4px 8px rgba(255,255,255,0.35), inset 0 -6px 10px rgba(0,0,0,0.35)`,
-                        marginTop:6,
-                        position:'relative', zIndex:1,
-                    }}>
-                    💸
-                    </motion.div>
+                  <div style={{
+                    width:'min(48px, 13vw)',
+                    height:'min(48px, 13vw)',
+                    borderRadius:'50%',
+                    background: `radial-gradient(circle at 30% 25%, #dc2626, #7f1d1d 70%)`,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    fontSize:'min(22px, 6vw)',
+                    border:`2px solid rgba(252,165,165,0.6)`,
+                    boxShadow:`0 0 25px rgba(220,38,38,0.7)`,
+                    marginTop:4,
+                  }}>💸</div>
 
-                    <motion.div
-                    initial={{opacity:0, y:10}} animate={{opacity:1, y:0}}
-                    transition={{delay:0.3}}
-                    style={{
-                        color:'rgba(255,255,255,0.75)', fontSize:13, fontWeight:600,
-                        textAlign:'center', position:'relative', zIndex:1,
-                    }}>
+                  <div style={{
+                    color:'rgba(255,255,255,0.75)', fontSize:'min(10px, 2.8vw)', fontWeight:600,
+                  }}>
                     إيجار <span style={{color: tileColor, fontWeight:800}}>{rentOffer.tileName}</span>
-                    </motion.div>
+                  </div>
 
-                    <motion.div
-                    initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}}
-                    transition={{delay:0.35, type:'spring', stiffness:260}}
-                    style={{
-                        display:'flex', alignItems:'center', gap:10,
-                        background:'rgba(0,0,0,0.35)',
-                        padding:'8px 18px', borderRadius:99,
-                        border:`1.5px solid ${ownerColor}80`,
-                        position:'relative', zIndex:1,
-                    }}>
-                    <div style={{
-                        width:26, height:26, borderRadius:'50%',
-                        background:`linear-gradient(145deg, ${ownerColor}, ${ownerColor}cc)`,
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        color:'#fff', fontSize:11, fontWeight:900,
-                        border:'2px solid #fff',
-                        boxShadow:`0 0 12px ${ownerColor}90`,
-                    }}>{rentOffer.ownerName?.charAt(0)}</div>
-                    <span style={{color:'#fff', fontSize:13, fontWeight:700}}>
-                        {rentOffer.ownerName}
-                    </span>
-                    </motion.div>
-
-                    <motion.div
-                    initial={{opacity:0, scale:0.5}} animate={{opacity:1, scale:1}}
-                    transition={{delay:0.45, type:'spring', stiffness:220, damping:14}}
-                    style={{
-                        background:`linear-gradient(145deg, rgba(220,38,38,0.3), rgba(220,38,38,0.08))`,
-                        border:'2px solid #dc2626',
-                        borderRadius:18,
-                        padding:'clamp(8px, 2.2vw, 14px) clamp(18px, 5vw, 34px)',
-                        display:'flex', alignItems:'center', gap:10,
-                        boxShadow:`0 0 30px rgba(220,38,38,0.5), inset 0 1px 0 rgba(255,255,255,0.2)`,
-                        position:'relative', zIndex:1,
-                        color:'#fca5a5', fontSize:'clamp(24px, 7vw, 34px)', fontWeight:900,
-                    }}>
-                    <motion.span
-                        animate={{
-                        x: [0, 6, 0],
-                        filter: ['drop-shadow(0 0 4px rgba(252,165,165,0.8))', 'drop-shadow(0 0 12px rgba(252,165,165,1))', 'drop-shadow(0 0 4px rgba(252,165,165,0.8))'],
-                        }}
-                        transition={{duration:1.2, repeat:Infinity}}
-                        style={{fontSize:24}}>
-                        💸
-                    </motion.span>
-                    <div style={{display:'flex', alignItems:'baseline', gap:4}}>
-                        <span style={{
-                        color:'#fca5a5', fontSize:38, fontWeight:900,
-                        textShadow:'0 0 20px rgba(220,38,38,0.9)',
-                        fontVariantNumeric:'tabular-nums',
-                        }}>{rentOffer.rent}</span>
-                        <span style={{color:'rgba(252,165,165,0.6)', fontSize:13, fontWeight:700}}>
-                        جنيه
-                        </span>
-                    </div>
-                    </motion.div>
-
-                    <div style={{
-                    color:'rgba(255,255,255,0.45)', fontSize:12,
-                    position:'relative', zIndex:1,
+                  <div style={{
                     display:'flex', alignItems:'center', gap:6,
-                    }}>
+                    background:'rgba(0,0,0,0.35)',
+                    padding:'4px 12px', borderRadius:99,
+                    border:`1px solid ${ownerColor}80`,
+                  }}>
+                    <div style={{
+                      width:'min(18px, 4.5vw)', height:'min(18px, 4.5vw)', borderRadius:'50%',
+                      background:`linear-gradient(145deg, ${ownerColor}, ${ownerColor}cc)`,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      color:'#fff', fontSize:'min(9px, 2.4vw)', fontWeight:900,
+                      border:'1px solid #fff',
+                    }}>{rentOffer.ownerName?.charAt(0)}</div>
+                    <span style={{color:'#fff', fontSize:'min(11px, 2.9vw)', fontWeight:700}}>
+                      {rentOffer.ownerName}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    background:`linear-gradient(145deg, rgba(220,38,38,0.3), rgba(220,38,38,0.08))`,
+                    border:'1.5px solid #dc2626',
+                    borderRadius:10,
+                    padding:'4px 12px',
+                    display:'flex', alignItems:'center', gap:6,
+                  }}>
+                    <span style={{fontSize:'min(14px, 4vw)'}}>💸</span>
+                    <span style={{
+                      color:'#fca5a5', fontSize:'min(20px, 5.5vw)', fontWeight:900,
+                      fontVariantNumeric:'tabular-nums',
+                    }}>{rentOffer.rent}</span>
+                    <span style={{color:'rgba(252,165,165,0.6)', fontSize:'min(10px, 2.8vw)', fontWeight:700}}>جنيه</span>
+                  </div>
+
+                  <div style={{
+                    color:'rgba(255,255,255,0.45)', fontSize:'min(10px, 2.8vw)',
+                    display:'flex', alignItems:'center', gap:4,
+                  }}>
                     <span>رصيدك:</span>
                     <span style={{
-                        color: rentOffer.canAfford ? '#6ee7b7' : '#fca5a5',
-                        fontWeight:700,
+                      color: rentOffer.canAfford ? '#6ee7b7' : '#fca5a5',
+                      fontWeight:700,
                     }}>{(myPlayer?.money || 0).toLocaleString('ar-EG')} ج</span>
-                    </div>
+                  </div>
 
-                    {rentOffer.canAfford ? (
+                  {rentOffer.canAfford ? (
                     <motion.button
-                        whileHover={{scale:1.03, y:-2}} whileTap={{scale:0.95}}
-                        initial={{opacity:0, y:20}} animate={{opacity:1, y:0}}
-                        transition={{delay:0.55, type:'spring', stiffness:300}}
-                        onClick={() => {
+                      whileHover={{scale:1.03}} whileTap={{scale:0.95}}
+                      onClick={() => {
                         emit('bank_pay_rent', { roomId: rid, playerId: pid, tileId: rentOffer.tileId });
                         setRentOffer(null);
-                        }}
-                        style={{
-                        width:'100%', padding:'16px 0', borderRadius:16,
+                      }}
+                      style={{
+                        width:'100%', padding:'9px 0', borderRadius:10,
                         background:`linear-gradient(145deg, #dc2626, #991b1b)`,
-                        color:'#fff', border:'2px solid #fca5a5',
-                        fontWeight:900, fontSize:16, cursor:'pointer',
-                        boxShadow:'0 10px 28px rgba(220,38,38,0.5), inset 0 1px 0 rgba(255,255,255,0.3)',
-                        textShadow:'0 1px 2px rgba(0,0,0,0.5)',
-                        display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                        marginTop:4, position:'relative', zIndex:1,
-                        }}
-                    >💸 ادفع الإيجار</motion.button>
-                    ) : (
-                    <div style={{
-                        display:'flex', flexDirection:'column', gap:10,
-                        width:'100%', position:'relative', zIndex:1, marginTop:4,
-                    }}>
-                        <motion.div
-                        initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}}
-                        transition={{delay:0.55, type:'spring', stiffness:300}}
-                        style={{
-                            padding:'14px 0', borderRadius:16, textAlign:'center',
-                            background:'linear-gradient(145deg, rgba(220,38,38,0.3), rgba(220,38,38,0.1))',
-                            border:'2px solid rgba(220,38,38,0.6)',
-                            color:'#fca5a5', fontSize:14, fontWeight:800,
-                            display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                        }}
-                        >🚫 ما معكش فلوس كافية!</motion.div>
-
-                        <motion.button
-                        whileHover={{scale:1.03, y:-2}} whileTap={{scale:0.95}}
-                        initial={{opacity:0, y:10}} animate={{opacity:1, y:0}}
-                        transition={{delay:0.6, type:'spring', stiffness:300}}
+                        color:'#fff', border:'1.5px solid #fca5a5',
+                        fontWeight:900, fontSize:'min(12px, 3.2vw)', cursor:'pointer',
+                        display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+                        marginTop:2,
+                      }}
+                    >💸 ادفع</motion.button>
+                  ) : (
+                    <div style={{display:'flex', flexDirection:'column', gap:5, width:'100%', marginTop:2}}>
+                      <div style={{
+                        padding:'7px 0', borderRadius:10, textAlign:'center',
+                        background:'rgba(220,38,38,0.2)', border:'1px solid rgba(220,38,38,0.5)',
+                        color:'#fca5a5', fontSize:'min(10px, 2.6vw)', fontWeight:800,
+                      }}>🚫 ما معكش كفاية!</div>
+                      <button
                         onClick={() => { setRentOffer(null); setShowBankrupt(true); }}
                         style={{
-                            width:'100%', padding:'14px 0', borderRadius:16,
-                            background:'rgba(185,28,28,0.9)',
-                            border:'1px solid rgba(239,68,68,0.5)',
-                            color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer',
-                            boxShadow:'0 6px 20px rgba(185,28,28,0.4)',
+                          width:'100%', padding:'7px 0', borderRadius:10,
+                          background:'rgba(185,28,28,0.9)', border:'none',
+                          color:'#fff', fontWeight:700, fontSize:'min(11px, 2.9vw)', cursor:'pointer',
                         }}
-                        >💔 أعلن الإفلاس</motion.button>
-
-                        <motion.button
-                        whileHover={{scale:1.03}} whileTap={{scale:0.95}}
-                        initial={{opacity:0, y:10}} animate={{opacity:1, y:0}}
-                        transition={{delay:0.65, type:'spring', stiffness:300}}
+                      >💔 إفلاس</button>
+                      <button
                         onClick={() => {
                           emit('bank_dismiss_offer', { roomId: rid, playerId: pid });
                           setRentOffer(null);
                         }}
                         style={{
-                            width:'100%', padding:'12px 0', borderRadius:16,
-                            background:'rgba(255,255,255,0.06)',
-                            border:'1px solid rgba(255,255,255,0.12)',
-                            color:'rgba(255,255,255,0.7)',
-                            fontWeight:700, fontSize:13, cursor:'pointer',
+                          width:'100%', padding:'6px 0', borderRadius:10,
+                          background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)',
+                          color:'rgba(255,255,255,0.7)', fontWeight:700, fontSize:'min(11px, 2.9vw)', cursor:'pointer',
                         }}
-                        >حسنًا</motion.button>
+                      >حسنًا</button>
                     </div>
-                    )}
+                  )}
                 </motion.div>
-                </motion.div>
+              </motion.div>
             </>
-            );
+          );
         })()}
         </AnimatePresence>
 

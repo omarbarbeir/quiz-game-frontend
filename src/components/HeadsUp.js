@@ -304,37 +304,57 @@ function useGyro(active, onCorrect, onPass) {
     baseRef.current = null;
     zoneRef.current = 'neutral';
 
+    const getTilt = (e) => {
+      const beta = e.beta;   // -180..180
+      const gamma = e.gamma; // -90..90
+
+      // نكتشف اتجاه الشاشة
+      let angle = 0;
+      if (typeof screen !== 'undefined' && screen.orientation) {
+        angle = screen.orientation.angle || 0;
+      } else if (typeof window.orientation === 'number') {
+        angle = window.orientation;
+      }
+
+      // في الوضع الأفقي، المحور الصحيح للميل لأعلى/أسفل هو gamma أو beta
+      // حسب اتجاه الدوران. نستخدم gamma في الوضع الأفقي لأنه لا يعبر الـ 180.
+      if (angle === 90 || angle === -90 || angle === 270) {
+        return gamma;
+      }
+      return beta;
+    };
+
     const handler = (e) => {
-      const gamma = e.gamma;
-      if (gamma == null) return;
+      const tilt = getTilt(e);
+      if (tilt == null) return;
 
       if (baseRef.current === null) {
-        baseRef.current = gamma;
+        baseRef.current = tilt;
         return;
       }
 
-      const delta = gamma - baseRef.current;
+      const delta = tilt - baseRef.current;
 
-      // النطاق الميت
-      if (Math.abs(delta) < 12) {
-        baseRef.current = gamma;
+      // نطاق ميت صغير جدًا حتى يتراكم الفرق
+      if (Math.abs(delta) < 3) {
+        baseRef.current = tilt;
         zoneRef.current = 'neutral';
         return;
       }
 
       const now = Date.now();
-      if (now - lastTriggerRef.current < 900) return;
+      if (now - lastTriggerRef.current < 800) return;
 
-      const TILT = 30;
+      const TILT = 22;
 
-      // ✅ نزول لتحت → صحيح
+      // نزول لتحت → صحيح
       if (delta < -TILT && zoneRef.current !== 'down') {
         lastTriggerRef.current = now;
         zoneRef.current = 'down';
         if (navigator.vibrate) navigator.vibrate(80);
         onCorrect();
       }
-      // ✅ رفع لفوق → تخطي
+      // رفع لفوق → تخطي
       else if (delta > TILT && zoneRef.current !== 'up') {
         lastTriggerRef.current = now;
         zoneRef.current = 'up';
