@@ -305,20 +305,19 @@ function useGyro(active, onCorrect, onPass) {
     zoneRef.current = 'neutral';
 
     const handler = (e) => {
-      const beta = e.beta;
-      if (beta == null) return;
+      const gamma = e.gamma;
+      if (gamma == null) return;
 
-      // أول قراءة → خزّنها كأساس
       if (baseRef.current === null) {
-        baseRef.current = beta;
+        baseRef.current = gamma;
         return;
       }
 
-      const delta = beta - baseRef.current;
+      const delta = gamma - baseRef.current;
 
-      // عودة للوضع المحايد → أعِد ضبط الأساس
-      if (Math.abs(delta) < 15) {
-        baseRef.current = beta;
+      // النطاق الميت
+      if (Math.abs(delta) < 12) {
+        baseRef.current = gamma;
         zoneRef.current = 'neutral';
         return;
       }
@@ -326,16 +325,16 @@ function useGyro(active, onCorrect, onPass) {
       const now = Date.now();
       if (now - lastTriggerRef.current < 900) return;
 
-      const TILT = 45;
+      const TILT = 30;
 
-      // beta تقل عند إمالة الرأس لأسفل
+      // ✅ نزول لتحت → صحيح
       if (delta < -TILT && zoneRef.current !== 'down') {
         lastTriggerRef.current = now;
         zoneRef.current = 'down';
         if (navigator.vibrate) navigator.vibrate(80);
         onCorrect();
       }
-      // beta تزيد عند إمالة الرأس لأعلى
+      // ✅ رفع لفوق → تخطي
       else if (delta > TILT && zoneRef.current !== 'up') {
         lastTriggerRef.current = now;
         zoneRef.current = 'up';

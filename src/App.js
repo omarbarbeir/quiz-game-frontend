@@ -727,7 +727,7 @@ function App() {
 
   return (
       <div className="min-h-screen text-white overflow-x-hidden" style={{ background: 'radial-gradient(ellipse at 50% 0%, #1a1410 0%, #0a0a0a 70%)' }}>
-        {showJoinScreen && <LobbyFullscreenButton />}
+      {(showJoinScreen || (!currentGame && !currentQuestion)) && <LobbyFullscreenButton />}
       {showJoinScreen ? (
         <RoomJoin onCreateRoom={createRoom} onJoinRoom={joinRoom} />
 

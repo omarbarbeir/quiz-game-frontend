@@ -2582,8 +2582,8 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                     backdropFilter:'blur(28px)',
                     border:`3px solid #dc2626`,
                     borderRadius:28,
-                    padding:'32px 28px 26px',
-                    width:'100%', maxWidth:360,
+                    padding:'clamp(16px, 4vw, 32px) clamp(14px, 3.5vw, 28px)',
+                    width:'100%', maxWidth:'min(340px, 82vw)',
                     display:'flex',flexDirection:'column',alignItems:'center',gap:16,
                     boxShadow:`0 30px 80px rgba(0,0,0,0.7), 0 0 60px rgba(220,38,38,0.4), inset 0 1px 0 rgba(255,255,255,0.15)`,
                     direction:'rtl',
@@ -2617,10 +2617,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                     animate={{ scale:1, rotate:0 }}
                     transition={{ delay:0.2, type:'spring', stiffness:200, damping:14 }}
                     style={{
-                        width:92, height:92, borderRadius:'50%',
+                        width:'clamp(60px, 18vw, 92px)', height:'clamp(60px, 18vw, 92px)', borderRadius:'50%',
                         background: `radial-gradient(circle at 30% 25%, #dc2626, #7f1d1d 70%)`,
                         display:'flex', alignItems:'center', justifyContent:'center',
-                        fontSize:46,
+                        fontSize:'clamp(28px, 9vw, 46px)',
                         border:`3px solid rgba(252,165,165,0.6)`,
                         boxShadow:`0 0 45px rgba(220,38,38,0.7), inset 0 4px 8px rgba(255,255,255,0.35), inset 0 -6px 10px rgba(0,0,0,0.35)`,
                         marginTop:6,
@@ -2669,10 +2669,11 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
                         background:`linear-gradient(145deg, rgba(220,38,38,0.3), rgba(220,38,38,0.08))`,
                         border:'2px solid #dc2626',
                         borderRadius:18,
-                        padding:'14px 34px',
+                        padding:'clamp(8px, 2.2vw, 14px) clamp(18px, 5vw, 34px)',
                         display:'flex', alignItems:'center', gap:10,
                         boxShadow:`0 0 30px rgba(220,38,38,0.5), inset 0 1px 0 rgba(255,255,255,0.2)`,
                         position:'relative', zIndex:1,
+                        color:'#fca5a5', fontSize:'clamp(24px, 7vw, 34px)', fontWeight:900,
                     }}>
                     <motion.span
                         animate={{
