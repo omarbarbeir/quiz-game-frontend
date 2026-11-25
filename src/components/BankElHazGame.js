@@ -1099,6 +1099,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
   const [turnOrderData,   setTurnOrderData]   = useState([]);
   const [paymentRequest,  setPaymentRequest]  = useState(null);
   const [awaitingMyResponse, setAwaitingMyResponse] = useState(false);
+  const [fullClubOffer, setFullClubOffer] = useState(null);
 
   const { isFs, toggle: toggleFs } = useFullscreen();
 
@@ -1273,6 +1274,10 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
       setAuction(prev => prev ? { ...prev, timeLeft } : prev);
     };
 
+    const onFullClubOffer = (data) => {
+      setTimeout(() => setFullClubOffer(data), 500);
+    };
+
     sock.on('bank_state_update',        onState);
     sock.on('bank_dice_rolled',         onDice);
     sock.on('bank_player_moved',        onMove);
@@ -1294,6 +1299,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
     sock.on('bank_auction_bid',         onAuctionBid);
     sock.on('bank_auction_end',         onAuctionEnd);
     sock.on('bank_auction_tick',        onAuctionTick);
+    sock.on('bank_offer_full_club', onFullClubOffer);
 
     return () => {
       ['bank_state_update','bank_dice_rolled','bank_offer_buy','bank_card_drawn','bank_cards_drawn',
@@ -1301,7 +1307,8 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
        'bank_initial_roll_phase','bank_initial_roll_tie','bank_initial_roll_result',
        'bank_auction_start','bank_auction_bid','bank_auction_end','bank_auction_tick',
        'bank_offer_rent','bank_offer_club','bank_card_dismissed',
-       'bank_card_action','bank_player_moved','bank_payment_request'
+       'bank_card_action','bank_player_moved','bank_payment_request',
+       'bank_offer_full_club'
       ].forEach(e => sock.off(e));
       if (!extSocket) sock.disconnect();
     };
@@ -1701,16 +1708,19 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
           </div>
 
           <button
-            onClick={() => { emit('close_game', { roomCode: rid }); onExit?.(); }}
-            style={{
-              marginTop:8,
-              background:'rgba(255,255,255,0.08)',
-              border:'1px solid rgba(255,255,255,0.15)',
-              color:'rgba(255,255,255,0.7)',
-              padding:'10px 28px', borderRadius:999,
-              fontWeight:600, fontSize:14, cursor:'pointer',
+            onClick={() => {
+              if (isAdmin) {
+                emit('close_game', { roomCode: rid });
+              } else {
+                emit('player_leave_game', { roomCode: rid, playerId: pid });
+              }
+              onExit?.();
             }}
-          >خروج</button>
+            style={{
+              position:'absolute',
+              top:'min(12px,2vh)', left:'min(16px,2.4vh)', zIndex:20,
+            }}
+          >✕ خروج</button>
 
           <button
             onClick={toggleFs}
@@ -2261,7 +2271,7 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
 
         {/* زر الخروج */}
         <button
-          onClick={() => { emit('close_game', { roomCode: rid }); onExit?.(); }}
+          onClick={() => onExit?.()}
           style={{
             position:'absolute',
             top:'min(12px,2vh)', left:'min(16px,2.4vh)', zIndex:20,
@@ -2712,6 +2722,156 @@ const BankElHazGame = ({ roomId, playerId, playerName, serverUrl, onExit, socket
             </>
           );
         })()}
+        </AnimatePresence>
+
+
+        <AnimatePresence>
+          {fullClubOffer && (() => {
+            const tile = gameState?.board?.find(t => t.id === fullClubOffer.tileId);
+            const tileColor = '#eab308';
+            return (
+              <>
+                <motion.div key="full-club-bg"
+                  initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+                  style={{
+                    position:'fixed', inset:0, zIndex:300,
+                    background:'radial-gradient(ellipse at 50% 50%, rgba(234,179,8,0.2) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.95) 100%)',
+                    backdropFilter:'blur(10px)',
+                  }}
+                />
+                <motion.div key="full-club-popup"
+                  initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+                  style={{
+                    position:'fixed',inset:0,zIndex:301,
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    pointerEvents:'none', padding:12,
+                  }}
+                >
+                  <motion.div
+                    initial={{scale:0.7, y:30, opacity:0}}
+                    animate={{scale:1, y:0, opacity:1}}
+                    exit={{scale:0.9, opacity:0}}
+                    transition={{type:'spring', stiffness:260, damping:22}}
+                    style={{
+                      pointerEvents:'auto',
+                      background:'linear-gradient(160deg, rgba(234,179,8,0.2) 0%, #1a1205 45%, #050302 100%)',
+                      backdropFilter:'blur(28px)',
+                      border:'3px solid #eab308',
+                      borderRadius:20,
+                      padding:'clamp(14px, 3.5vw, 22px) clamp(12px, 3vw, 20px)',
+                      width:'100%', maxWidth:'min(290px, 64vw)',
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:10,
+                      boxShadow:'0 20px 60px rgba(0,0,0,0.7), 0 0 50px rgba(234,179,8,0.35)',
+                      direction:'rtl',
+                    }}
+                  >
+                    <div style={{
+                      position:'absolute', top:-2, left:'50%', transform:'translateX(-50%)',
+                      background:'linear-gradient(135deg, #eab308, #a16207)',
+                      color:'#000', fontSize:10, fontWeight:900, letterSpacing:1,
+                      padding:'3px 14px', borderRadius:'0 0 10px 10px',
+                    }}>عرض خاص</div>
+
+                    <div style={{
+                      width:'min(56px, 15vw)', height:'min(56px, 15vw)',
+                      borderRadius:'50%',
+                      background:'radial-gradient(circle at 30% 25%, #eab308, #a16207)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:'min(28px, 8vw)',
+                      border:'2px solid rgba(255,255,255,0.6)',
+                      boxShadow:'0 0 30px rgba(234,179,8,0.8)',
+                      marginTop:6,
+                    }}>🎰</div>
+
+                    <div style={{
+                      color:'#fde68a', fontSize:'min(13px, 3.4vw)',
+                      fontWeight:700, textAlign:'center', lineHeight:1.5,
+                    }}>
+                      شريكك خرج من اللعبة
+                    </div>
+
+                    <div style={{
+                      color:'#fff', fontSize:'min(15px, 4vw)',
+                      fontWeight:900, textAlign:'center',
+                    }}>
+                      {fullClubOffer.tileName || 'النادي'}
+                    </div>
+
+                    <div style={{
+                      color:'rgba(255,255,255,0.65)', fontSize:'min(11px, 2.9vw)',
+                      textAlign:'center', lineHeight:1.6,
+                    }}>
+                      تريد شراء النص الآخر وتصبح المالك الوحيد؟
+                    </div>
+
+                    <div style={{
+                      background:'linear-gradient(145deg, rgba(212,175,55,0.25), rgba(212,175,55,0.08))',
+                      border:'2px solid #d4af37',
+                      borderRadius:14,
+                      padding:'6px 16px',
+                      display:'flex', alignItems:'center', gap:6,
+                    }}>
+                      <span style={{fontSize:'min(14px, 4vw)'}}>💰</span>
+                      <span style={{
+                        color:'#f4d35e', fontSize:'min(20px, 5.5vw)', fontWeight:900,
+                      }}>{fullClubOffer.halfPrice}</span>
+                      <span style={{
+                        color:'rgba(244,211,94,0.6)', fontSize:'min(10px, 2.8vw)', fontWeight:700,
+                      }}>جنيه</span>
+                    </div>
+
+                    <div style={{
+                      color:'rgba(255,255,255,0.5)', fontSize:'min(10px, 2.8vw)',
+                    }}>
+                      رصيدك: <span style={{
+                        color: fullClubOffer.canAfford ? '#6ee7b7' : '#fca5a5',
+                        fontWeight:700,
+                      }}>{(myPlayer?.money || 0).toLocaleString('ar-EG')} ج</span>
+                    </div>
+
+                    <div style={{display:'flex',gap:8,width:'100%',marginTop:4}}>
+                      {fullClubOffer.canAfford && (
+                        <motion.button
+                          whileHover={{scale:1.04}} whileTap={{scale:0.95}}
+                          onClick={() => {
+                            emit('bank_buy_other_half', {
+                              roomId: rid, playerId: pid,
+                              tileId: fullClubOffer.tileId, accept: true,
+                            });
+                            setFullClubOffer(null);
+                          }}
+                          style={{
+                            flex:1.2, padding:'10px 0', borderRadius:12,
+                            background:'linear-gradient(145deg, #eab308, #a16207)',
+                            color:'#1a0f05', border:'1.5px solid #fde68a',
+                            fontWeight:900, fontSize:'min(12px, 3.2vw)', cursor:'pointer',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                          }}
+                        >👑 اشتري بالكامل</motion.button>
+                      )}
+                      <motion.button
+                        whileHover={{scale:1.04}} whileTap={{scale:0.95}}
+                        onClick={() => {
+                          emit('bank_buy_other_half', {
+                            roomId: rid, playerId: pid,
+                            tileId: fullClubOffer.tileId, accept: false,
+                          });
+                          setFullClubOffer(null);
+                        }}
+                        style={{
+                          flex:1, padding:'10px 0', borderRadius:12,
+                          background:'rgba(255,255,255,0.08)',
+                          color:'rgba(255,255,255,0.75)',
+                          border:'1px solid rgba(255,255,255,0.2)',
+                          fontWeight:800, fontSize:'min(12px, 3.2vw)', cursor:'pointer',
+                        }}
+                      >✕ أبقى بالنص</motion.button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              </>
+            );
+          })()}
         </AnimatePresence>
 
         {/* popup النادي */}

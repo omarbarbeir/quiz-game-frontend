@@ -1,0 +1,336 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 17492,
+      "max": [
+        0.23206500709056854,
+        0.2507149875164032,
+        1.3676639795303345
+      ],
+      "min": [
+        0.15855899453163147,
+        0.04256799817085266,
+        1.2133740186691284
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 209904,
+      "componentType": 5126,
+      "count": 17492,
+      "max": [
+        1.0,
+        1.0,
+        0.9999997615814209
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 17492,
+      "max": [
+        1.041700005531311,
+        2.3350000381469727
+      ],
+      "min": [
+        -0.12700000405311584,
+        -7.63640022277832
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 91500,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 419808,
+      "componentType": 5126,
+      "count": 2864,
+      "max": [
+        0.35329699516296387,
+        0.16425900161266327,
+        1.0254759788513184
+      ],
+      "min": [
+        0.03291799873113632,
+        -0.10081999748945236,
+        0.05050100013613701
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 454176,
+      "componentType": 5126,
+      "count": 2864,
+      "max": [
+        0.9985529780387878,
+        0.9998681545257568,
+        0.9999899864196777
+      ],
+      "min": [
+        -0.9994438886642456,
+        -0.999563992023468,
+        -0.9999903440475464
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 139936,
+      "componentType": 5126,
+      "count": 2864,
+      "max": [
+        0.3732999861240387,
+        0.9656000137329102
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 366000,
+      "componentType": 5125,
+      "count": 17172,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 488544,
+      "componentType": 5126,
+      "count": 4307,
+      "max": [
+        0.5881239771842957,
+        0.3134100139141083,
+        1.2406949996948242
+      ],
+      "min": [
+        -0.18863999843597412,
+        -0.34016698598861694,
+        1.0108799934387207
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 540228,
+      "componentType": 5126,
+      "count": 4307,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 162848,
+      "componentType": 5126,
+      "count": 4307,
+      "max": [
+        4.036300182342529,
+        9.994999885559082
+      ],
+      "min": [
+        -10.828499794006348,
+        -4.036300182342529
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 434688,
+      "componentType": 5125,
+      "count": 23796,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "Yaiyeondurising (https://sketchfab.com/5Life)",
+      "license": "CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)",
+      "source": "https://sketchfab.com/3d-models/president-washbasinsink-with-pedestal-8322b90d53f648f1a088bfaae7341e00",
+      "title": "President Washbasin/Sink With Pedestal"
+    },
+    "generator": "Sketchfab-12.68.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 529872,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 197304,
+      "byteOffset": 529872,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 591912,
+      "byteOffset": 727176,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 1319088,
+      "uri": "scene.bin"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "02___Default",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.0
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "02___Default.001",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.0
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Chrom",
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.6
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Object_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Object_1",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 5,
+            "POSITION": 4,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Object_2",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 9,
+            "POSITION": 8,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        0.7094994783401489,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.5754053136255418e-16,
+        -0.7094994783401489,
+        0.0,
+        0.0,
+        0.7094994783401489,
+        1.5754053136255418e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2,
+        3,
+        4
+      ],
+      "name": "Sink Washbasin.obj.cleaner.materialmerger.gles"
+    },
+    {
+      "mesh": 0,
+      "name": "Object_2"
+    },
+    {
+      "mesh": 1,
+      "name": "Object_3"
+    },
+    {
+      "mesh": 2,
+      "name": "Object_4"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}

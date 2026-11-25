@@ -1,0 +1,11 @@
+Model Information:
+* title:	Bean bag
+* source:	https://sketchfab.com/3d-models/bean-bag-3c4c14879628490989bd9222942dc738
+* author:	Power (https://sketchfab.com/UpOwerA)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Bean bag" (https://sketchfab.com/3d-models/bean-bag-3c4c14879628490989bd9222942dc738) by Power (https://sketchfab.com/UpOwerA) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

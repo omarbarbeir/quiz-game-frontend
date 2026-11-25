@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fa';
 import PlayingCard, { getTheme } from './PlayingCard';
 
-/* ═══════════ Dice — lighter ═══════════ */
+/* ═══════════ Dice ═══════════ */
 function DiceRoller({ rolling, value }) {
   const [display, setDisplay] = useState(1);
   useEffect(() => {
@@ -38,7 +38,7 @@ function DiceRoller({ rolling, value }) {
 
 /* ═══════════ MAIN ═══════════ */
 const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit }) => {
-  // ═══ STATE — كله زي ما هو ═══
+  // ═══ STATE ═══
   const [gameState, setGameState] = useState(null);
   const [error, setError] = useState('');
   const [draggedCard, setDraggedCard] = useState(null);
@@ -66,24 +66,31 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const [exchangePhase, setExchangePhase] = useState('waiting');
   const [exchangeWaitingWithCards, setExchangeWaitingWithCards] = useState(false);
   const [exchangePlayerCards, setExchangePlayerCards] = useState([]);
-  const [showCollectiveExchangeModal, setShowCollectiveExchangeModal] = useState(false);
-  const [collectiveExchangeInitiator, setCollectiveExchangeInitiator] = useState(null);
-  const [collectiveExchangeActionCard, setCollectiveExchangeActionCard] = useState(null);
-  const [collectiveExchangeSelectedCard, setCollectiveExchangeSelectedCard] = useState(null);
-  const [collectiveExchangeTargetCard, setCollectiveExchangeTargetCard] = useState(null);
-  const [collectiveExchangePhase, setCollectiveExchangePhase] = useState('waiting');
-  const [collectiveExchangeWaitingWithCards, setCollectiveExchangeWaitingWithCards] = useState(false);
-  const [collectiveExchangePlayerCards, setCollectiveExchangePlayerCards] = useState([]);
+
   const [showDiceCategoryBanner, setShowDiceCategoryBanner] = useState(false);
   const [diceCategoryData, setDiceCategoryData] = useState(null);
   const [anyPlayerPlacedCards, setAnyPlayerPlacedCards] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // ✅ جديد: الكارت المختار من اليد
   const [selectedHandCard, setSelectedHandCard] = useState(null);
 
-  // ═══ HELPERS — كلها زي ما هي ═══
+  // ═══ CE (Collective Exchange — كل واحد يطلع اللي معاه) ═══
+  const [ceOpen, setCeOpen] = useState(false);
+  const [ceAskerId, setCeAskerId] = useState(null);
+  const [ceAskerName, setCeAskerName] = useState("");
+  const [cePlayersList, setCePlayersList] = useState([]);
+  const [ceAskedPlayers, setCeAskedPlayers] = useState([]);
+  const [ceTargetId, setCeTargetId] = useState(null);
+  const [ceTargetName, setCeTargetName] = useState("");
+  const [cePhase, setCePhase] = useState("picking_player");
+  const [ceMyHand, setCeMyHand] = useState([]);
+  const [ceMyRole, setCeMyRole] = useState(null);
+  const [ceWaitingMsg, setCeWaitingMsg] = useState("");
+  const [ceNotif, setCeNotif] = useState(null);
+  const [ceMyPickedCardId, setCeMyPickedCardId] = useState(null);
+  const [ceWaitingForOther, setCeWaitingForOther] = useState(false);
+
+  // ═══ HELPERS ═══
   const canTakeCardFromTable = (card) => !(!card || card.type === 'action');
   const areButtonsEnabled = () => {
     if (!gameState || !currentPlayer) return false;
@@ -96,7 +103,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setWinner(null);
     setShowShakeSquare(false);
     setShowExchangeModal(false);
-    setShowCollectiveExchangeModal(false);
     setAnyPlayerPlacedCards(false);
     socket.emit('card_game_reset_any_player', { roomCode });
   };
@@ -131,29 +137,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     }
   };
 
-  const handleOpenCollectiveExchangeChooseCard = (data) => {
-    setShowCollectiveExchangeModal(true); setCollectiveExchangeInitiator(data.initiatorId);
-    setCollectiveExchangeActionCard(data.actionCard); setCollectiveExchangeSelectedCard(null);
-    setCollectiveExchangeTargetCard(null); setCollectiveExchangePhase('initiator_choose');
-    setCollectiveExchangeWaitingWithCards(false); setCollectiveExchangePlayerCards(data.playerCards || []);
-  };
-
-  const handleOpenCollectiveExchangeWaitingWithCards = (data) => {
-    setShowCollectiveExchangeModal(true); setCollectiveExchangeInitiator(data.initiatorId);
-    setCollectiveExchangeActionCard(null); setCollectiveExchangeSelectedCard(null);
-    setCollectiveExchangeTargetCard(null); setCollectiveExchangePhase('waiting');
-    setCollectiveExchangeWaitingWithCards(true);
-  };
-
-  const handleCollectiveExchangeInitiatorChosen = (data) => {
-    setCollectiveExchangeSelectedCard(data.initiatorCard);
-    if (currentPlayer.id === data.initiatorId) {
-      setCollectiveExchangePhase('waiting_responder'); setCollectiveExchangeWaitingWithCards(false);
-    } else {
-      setCollectiveExchangePhase('responder_choose'); setCollectiveExchangeWaitingWithCards(false);
-    }
-  };
-
   const getAllExchangeCards = () => {
     if (!gameState || !currentPlayer) return [];
     const myHand = gameState.playerHands[currentPlayer.id] || [];
@@ -183,34 +166,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setExchangeSelectedCard(card); setExchangePhase('waiting_responder');
     }
   };
-  const handleCollectiveInitiatorChooseCard = (card) => {
-    if (currentPlayer.id === collectiveExchangeInitiator && collectiveExchangePhase === 'initiator_choose') {
-      socket.emit('card_game_collective_exchange_choose_card', { roomCode, playerId: currentPlayer.id, cardId: card.id, source: card.source });
-      setCollectiveExchangeSelectedCard(card); setCollectiveExchangePhase('waiting_responder');
-    }
-  };
   const handleResponderChooseCard = (card) => {
     if (currentPlayer.id !== exchangeInitiator && exchangePhase === 'responder_choose') {
       socket.emit('card_game_exchange_respond', { roomCode, playerId: currentPlayer.id, cardId: card.id, source: card.source });
       setExchangeTargetCard(card); setExchangePhase('completed');
     }
   };
-  const handleCollectiveExchangeRespond = (card) => {
-    if (currentPlayer.id !== collectiveExchangeInitiator && collectiveExchangePhase === 'responder_choose') {
-      socket.emit('card_game_collective_exchange_respond', { roomCode, playerId: currentPlayer.id, cardId: card.id, source: card.source });
-      setCollectiveExchangeTargetCard(card); setCollectiveExchangePhase('completed');
-    }
-  };
   const handleCancelExchange = () => {
     if (currentPlayer.id === exchangeInitiator) {
       socket.emit('card_game_exchange_cancel', { roomCode, playerId: currentPlayer.id });
       setShowExchangeModal(false);
-    }
-  };
-  const handleCancelCollectiveExchange = () => {
-    if (currentPlayer.id === collectiveExchangeInitiator) {
-      socket.emit('card_game_collective_exchange_cancel', { roomCode, playerId: currentPlayer.id });
-      setShowCollectiveExchangeModal(false);
     }
   };
   const handlePlaceAllCardsInShake = () => {
@@ -234,7 +199,36 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     setShowDiceCategoryBanner(false);
   };
 
-  // ═══ EFFECTS — كلها زي ما هي ═══
+  // ═══ CE HANDLERS ═══
+  const handleCEPickedPlayer = (targetId) => {
+    if (ceMyRole !== "asker") return;
+    socket.emit("card_game_ce_pick_player", {
+      roomCode, playerId: currentPlayer.id, targetId,
+    });
+  };
+
+  const handleCEYes = () => {
+    if (ceMyRole !== "asker") return;
+    socket.emit("card_game_ce_yes", { roomCode, playerId: currentPlayer.id });
+  };
+
+  const handleCENo = () => {
+    if (ceMyRole !== "asker") return;
+    socket.emit("card_game_ce_no", { roomCode, playerId: currentPlayer.id });
+  };
+
+  const handleCEPickCard = (cardId) => {
+    socket.emit("card_game_ce_pick_card", {
+      roomCode, playerId: currentPlayer.id, cardId,
+    });
+  };
+
+  const handleCEClose = () => {
+    if (ceMyRole !== "asker") return;
+    socket.emit("card_game_ce_close", { roomCode, playerId: currentPlayer.id });
+  };
+
+  // ═══ EFFECTS ═══
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
@@ -268,6 +262,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
 
   useEffect(() => {
     if (!socket) return;
+
     const handleGameUpdate = (s) => { setGameState(s); setError(''); };
     const handleGameError = (e) => setError(e.message);
     const handleDiceRolled = (data) => {
@@ -286,9 +281,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     const handleGameExited = () => { if (onExit) onExit(); };
     const handleGameReset = () => {
       setWinner(null); setShowShakeSquare(false); setShowExchangeModal(false);
-      setShowCollectiveExchangeModal(false); setShakePlacedCards({});
+      setShakePlacedCards({});
       setShowDiceCategoryBanner(false); setDiceCategoryData(null);
       setAnyPlayerPlacedCards(false); setShakeCanComplete(false);
+      setCeOpen(false); setCeAskerId(null); setCeTargetId(null);
+      setCePhase("picking_player"); setCeMyHand([]); setCeMyRole(null);
+      setCeWaitingMsg(""); setCeAskedPlayers([]);
     };
     const handleWinnerAnnounced = (data) => {
       const wp = players.find(p => p.id === data.playerId);
@@ -312,17 +310,85 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       setExchangeSelectedCard(null); setExchangeTargetCard(null); setExchangeCompleted(false);
       setExchangePhase('waiting'); setExchangeWaitingWithCards(false); setExchangePlayerCards([]);
     };
-    const handleCollectiveExchangeCompleted = () => {
-      setShowCollectiveExchangeModal(false); setCollectiveExchangeInitiator(null);
-      setCollectiveExchangeActionCard(null); setCollectiveExchangeSelectedCard(null);
-      setCollectiveExchangeTargetCard(null); setCollectiveExchangePhase('waiting');
-      setCollectiveExchangeWaitingWithCards(false); setCollectiveExchangePlayerCards([]);
+
+    // ═══ CE LISTENERS (NEW) ═══
+    const handleCEOpen = (data) => {
+      setCeOpen(true);
+      setCeAskerId(data.askerId);
+      setCeAskerName(data.askerName);
+      setCePlayersList(data.players || []);
+      setCeAskedPlayers([]);
+      setCeTargetId(null);
+      setCeTargetName("");
+      setCePhase("picking_player");
+      setCeMyRole(data.askerId === currentPlayer?.id ? "asker" : "watcher");
+      setCeWaitingMsg(data.askerId === currentPlayer?.id ? "" : `${data.askerName} بيسأل...`);
+      setCeMyHand([]);
     };
-    const handleCollectiveExchangeCancelled = () => {
-      setShowCollectiveExchangeModal(false); setCollectiveExchangeInitiator(null);
-      setCollectiveExchangeActionCard(null); setCollectiveExchangeSelectedCard(null);
-      setCollectiveExchangeTargetCard(null); setCollectiveExchangePhase('waiting');
-      setCollectiveExchangeWaitingWithCards(false); setCollectiveExchangePlayerCards([]);
+
+    const handleCEAsking = ({ targetId, targetName }) => {
+      setCeTargetId(targetId);
+      setCeTargetName(targetName);
+      setCePhase("asking");
+    };
+
+    const handleCEYouAreAsked = ({ askerName }) => {
+      setCeMyRole("target");
+      setCeWaitingMsg(`${askerName} بيسألك على كارت. اختار من إيدك`);
+    };
+
+    const handleCEPickYourCard = ({ role, playerHand }) => {
+      setCeMyRole(role);
+      setCeMyHand(playerHand || []);
+      setCePhase("picking_cards");
+      setCeMyPickedCardId(null);
+      setCeWaitingForOther(false);
+};
+
+    const handleCEPickConfirmed = ({ role, cardId, cardName, waitingForOther }) => {
+      setCeMyPickedCardId(cardId);
+      setCeWaitingForOther(waitingForOther);
+      if (waitingForOther) {
+        setCeNotif(`✓ اخترت "${cardName}" — بانتظار الطرف التاني`);
+        setTimeout(() => setCeNotif(null), 3000);
+      }
+    };
+
+    const handleCESwap = ({ askerName, targetName, askerGave, askerReceived }) => {
+      setCeNotif(`🔄 ${askerName} تبادل مع ${targetName}`);
+      setTimeout(() => setCeNotif(null), 3000);
+    };
+
+    const handleCEBackToPicking = ({ askedPlayers }) => {
+      setCeAskedPlayers(askedPlayers || []);
+      setCePhase("picking_player");
+      setCeTargetId(null);
+      setCeTargetName("");
+      setCeMyHand([]);
+      setCeMyRole("asker");
+      setCeMyPickedCardId(null);
+      setCeWaitingForOther(false);
+    };
+
+    const handleCETargetDone = () => {
+      setCeMyRole("watcher");
+      setCeWaitingMsg("تم التبادل ✓");
+      setCeMyHand([]);
+      setCePhase("waiting");
+    };
+
+    const handleCEClosed = () => {
+      setCeOpen(false);
+      setCeAskerId(null);
+      setCeTargetId(null);
+      setCePhase("picking_player");
+      setCeMyHand([]);
+      setCeMyRole(null);
+      setCeWaitingMsg("");
+      setCeAskedPlayers([]);
+      setCeNotif(null);
+      setCeMyPickedCardId(null);
+      setCeWaitingForOther(false);
     };
 
     socket.on('card_game_state_update', handleGameUpdate);
@@ -340,11 +406,17 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     socket.on('card_game_exchange_initiator_chosen', handleExchangeInitiatorChosen);
     socket.on('card_game_exchange_completed', handleExchangeCompleted);
     socket.on('card_game_exchange_cancelled', handleExchangeCancelled);
-    socket.on('card_game_collective_exchange_choose_card', handleOpenCollectiveExchangeChooseCard);
-    socket.on('card_game_collective_exchange_waiting_with_cards', handleOpenCollectiveExchangeWaitingWithCards);
-    socket.on('card_game_collective_exchange_initiator_chosen', handleCollectiveExchangeInitiatorChosen);
-    socket.on('card_game_collective_exchange_completed', handleCollectiveExchangeCompleted);
-    socket.on('card_game_collective_exchange_cancelled', handleCollectiveExchangeCancelled);
+
+    // CE
+    socket.on('card_game_ce_open', handleCEOpen);
+    socket.on('card_game_ce_asking', handleCEAsking);
+    socket.on('card_game_ce_you_are_asked', handleCEYouAreAsked);
+    socket.on('card_game_ce_pick_your_card', handleCEPickYourCard);
+    socket.on('card_game_ce_pick_confirmed', handleCEPickConfirmed);
+    socket.on('card_game_ce_swap', handleCESwap);
+    socket.on('card_game_ce_back_to_picking', handleCEBackToPicking);
+    socket.on('card_game_ce_target_done', handleCETargetDone);
+    socket.on('card_game_ce_closed', handleCEClosed);
 
     return () => {
       socket.off('card_game_state_update', handleGameUpdate);
@@ -362,11 +434,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       socket.off('card_game_exchange_initiator_chosen', handleExchangeInitiatorChosen);
       socket.off('card_game_exchange_completed', handleExchangeCompleted);
       socket.off('card_game_exchange_cancelled', handleExchangeCancelled);
-      socket.off('card_game_collective_exchange_choose_card', handleOpenCollectiveExchangeChooseCard);
-      socket.off('card_game_collective_exchange_waiting_with_cards', handleOpenCollectiveExchangeWaitingWithCards);
-      socket.off('card_game_collective_exchange_initiator_chosen', handleCollectiveExchangeInitiatorChosen);
-      socket.off('card_game_collective_exchange_completed', handleCollectiveExchangeCompleted);
-      socket.off('card_game_collective_exchange_cancelled', handleCollectiveExchangeCancelled);
+
+      socket.off('card_game_ce_open', handleCEOpen);
+      socket.off('card_game_ce_asking', handleCEAsking);
+      socket.off('card_game_ce_you_are_asked', handleCEYouAreAsked);
+      socket.off('card_game_ce_pick_your_card', handleCEPickYourCard);
+      socket.off('card_game_ce_pick_confirmed', handleCEPickConfirmed);
+      socket.off('card_game_ce_swap', handleCESwap);
+      socket.off('card_game_ce_back_to_picking', handleCEBackToPicking);
+      socket.off('card_game_ce_target_done', handleCETargetDone);
+      socket.off('card_game_ce_closed', handleCEClosed);
     };
   }, [socket, currentPlayer?.id, onExit, players]);
 
@@ -411,19 +488,16 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const handleResetGame = () => {
     if (isAdmin) {
       setWinner(null); setShowShakeSquare(false); setShowExchangeModal(false);
-      setShowCollectiveExchangeModal(false);
       socket.emit('card_game_reset', { roomCode });
     }
   };
   const handleExitToCategories = () => {
     if (!isAdmin) return;
     socket.emit('card_game_exit', { roomCode });
-    // إغلاق كل النوافذ المنبثقة قبل الخروج
     setShowRules(false);
     setMenuOpen(false);
     setShowShakeSquare(false);
     setShowExchangeModal(false);
-    setShowCollectiveExchangeModal(false);
     setSelectedCardForCircle(null);
     setSelectedCardForView(null);
     setSelectedHandCard(null);
@@ -480,7 +554,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   const allExchangeCards = getAllExchangeCards();
   const shakeInitiatorPlayer = players.find(p => p.id === shakeInitiator);
   const exchangeInitiatorPlayer = players.find(p => p.id === exchangeInitiator);
-  const collectiveExchangeInitiatorPlayer = players.find(p => p.id === collectiveExchangeInitiator);
   const canPlaceCardsInShake = currentPlayer.id !== shakeInitiator && !anyPlayerPlacedCards && !shakePlacedCards[currentPlayer.id];
 
   /* ═══ SMALL COMPONENTS ═══ */
@@ -520,7 +593,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     </motion.button>
   );
 
-  /* ═══ CARD FAN (يد اللاعب) ═══ */
+  /* ═══ CARD FAN ═══ */
   const renderHandFan = () => {
     const count = myHand.length;
 
@@ -543,32 +616,22 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       );
     }
 
-    // ✅ اكتشاف الجهاز اللمسي أكثر من الاعتماد على العرض فقط
     const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     const isSmallScreen = window.innerWidth <= 1024;
     const isMobileNow = isTouch && isSmallScreen;
 
-    // ✅ على الموبايل لما الكروت تكتر → نزّلها تحت بعض في صفوف
     if (isMobileNow && count > 4) {
       return (
-        <div
-          className="w-full flex flex-wrap justify-center gap-2 py-3"
-          style={{ minHeight: 180 }}
-        >
+        <div className="w-full flex flex-wrap justify-center gap-2 py-3" style={{ minHeight: 180 }}>
           {myHand.map((card) => {
             const isSelected = selectedHandCard?.id === card.id;
             return (
-              <div
-                key={card.id}
-                onClick={() => setSelectedHandCard(isSelected ? null : card)}
+              <div key={card.id} onClick={() => setSelectedHandCard(isSelected ? null : card)}
                 className="cursor-pointer transition-transform duration-150"
                 style={{
                   transform: isSelected ? 'translateY(-6px) scale(1.05)' : 'none',
-                  filter: isSelected
-                    ? 'drop-shadow(0 0 12px rgba(252,211,77,0.9))'
-                    : 'none',
-                }}
-              >
+                  filter: isSelected ? 'drop-shadow(0 0 12px rgba(252,211,77,0.9))' : 'none',
+                }}>
                 <PlayingCard card={card} size="sm" selected={isSelected} />
               </div>
             );
@@ -577,7 +640,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       );
     }
 
-    // باقي الحالات → الشكل المروحي المعتاد
     const sizeKey = isMobileNow
       ? (count <= 4 ? 'md' : count <= 7 ? 'sm' : 'xs')
       : (count <= 5 ? 'lg' : count <= 8 ? 'md' : count <= 12 ? 'sm' : 'xs');
@@ -585,34 +647,25 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     const cardWidths = { xs: 72, sm: 94, md: 118, lg: 148 };
     const cardW = cardWidths[sizeKey];
 
-    const maxSpread = isMobileNow
-      ? window.innerWidth - 30
-      : Math.min(1200, window.innerWidth - 40);
-
+    const maxSpread = isMobileNow ? window.innerWidth - 30 : Math.min(1200, window.innerWidth - 40);
     const idealSpacing = cardW * 0.82;
     const spacing = Math.min(idealSpacing, maxSpread / Math.max(count, 1));
 
     return (
-      <div
-        className="relative flex justify-center items-center"
-        style={{ height: isMobileNow ? 200 : 260 }}
-      >
+      <div className="relative flex justify-center items-center" style={{ height: isMobileNow ? 200 : 260 }}>
         {myHand.map((card, i) => {
           const mid = (count - 1) / 2;
           const offset = i - mid;
           const x = offset * spacing;
           const rot = offset * Math.min(2, 8 / Math.max(count, 1));
-
           const isSelected = selectedHandCard?.id === card.id;
           const isHovered = hoveredCardId === card.id;
-
           const baseY = isSelected ? -30 : (isHovered ? -20 : 0);
           const finalRot = isSelected ? 0 : (isHovered ? rot * 0.3 : rot);
           const finalScale = isSelected ? 1.08 : (isHovered ? 1.05 : 1);
 
           return (
-            <div
-              key={card.id}
+            <div key={card.id}
               onMouseEnter={() => setHoveredCardId(card.id)}
               onMouseLeave={() => setHoveredCardId(null)}
               onClick={() => setSelectedHandCard(isSelected ? null : card)}
@@ -623,8 +676,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 zIndex: isSelected ? 50 : (isHovered ? 40 : i),
                 transition: 'transform 150ms ease-out, z-index 0ms',
                 willChange: 'transform',
-              }}
-            >
+              }}>
               <PlayingCard card={card} size={sizeKey} selected={isSelected} />
             </div>
           );
@@ -633,7 +685,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
     );
   };
 
-  /* ═══ ACTION BAR FOR SELECTED CARD ═══ */
+  /* ═══ ACTION BAR ═══ */
   const renderSelectedCardActions = () => {
     if (!selectedHandCard) return null;
     const card = selectedHandCard;
@@ -645,19 +697,12 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 10 }}
         className="flex flex-wrap gap-2 justify-center mt-3 p-3 rounded-2xl max-w-2xl mx-auto"
-        style={{ background: 'rgba(15,10,46,0.85)', border: '1px solid rgba(201,168,118,0.3)' }}
-      >
+        style={{ background: 'rgba(15,10,46,0.85)', border: '1px solid rgba(201,168,118,0.3)' }}>
         <div className="w-full text-center text-xs text-amber-200/60 mb-1">
           البطاقة المختارة: <span className="text-amber-300 font-bold">{card.name}</span>
         </div>
 
-        {/* 👁️ عرض الكارت — جديد */}
-        <ActionBtn
-          icon={<FaEye />}
-          label="عرض"
-          onClick={() => handleCardImageClick(card)}
-          color="from-indigo-500 to-indigo-700"
-        />
+        <ActionBtn icon={<FaEye />} label="عرض" onClick={() => handleCardImageClick(card)} color="from-indigo-500 to-indigo-700" />
 
         {(card.type !== 'action' || card.subtype === 'joker') && (
           <ActionBtn icon={<FaCircle />} label="وضع في الدائرة"
@@ -691,7 +736,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
   /* ═══ RENDER ═══ */
   return (
     <div className="relative min-h-screen">
-      {/* Background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(139,92,246,0.08), transparent 60%)' }} />
       </div>
@@ -708,27 +752,36 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         </div>
       )}
 
-      {/* ═══ Menu Modal — للخيارات الإضافية ═══ */}
+      {/* ═══ CE Notification Toast ═══ */}
+      <AnimatePresence>
+        {ceNotif && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl font-bold text-white"
+            style={{
+              background: 'linear-gradient(155deg, rgba(240,171,252,0.9), rgba(139,92,246,0.9))',
+              boxShadow: '0 10px 30px rgba(240,171,252,0.5)',
+            }}>
+            {ceNotif}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ Menu Modal ═══ */}
       <AnimatePresence>
         {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background: 'rgba(5,5,20,0.9)', backdropFilter: 'blur(10px)' }}
-            onClick={() => setMenuOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+            onClick={() => setMenuOpen(false)}>
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
               className="max-w-sm w-full rounded-3xl p-5"
               style={{
                 background: 'linear-gradient(155deg, #0f0a1e 0%, #1a0f2e 100%)',
                 border: '2px solid rgba(201,168,118,0.4)',
                 boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-              }}
-            >
+              }}>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-amber-100 flex items-center gap-2">
                   <FaCog className="text-amber-400" /> خيارات إضافية
@@ -739,70 +792,36 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               </div>
 
               <div className="space-y-2">
-                <button
-                  onClick={() => { socket.emit('card_game_shuffle', { roomCode }); setMenuOpen(false); }}
+                <button onClick={() => { socket.emit('card_game_shuffle', { roomCode }); setMenuOpen(false); }}
                   className="w-full py-3 rounded-xl font-bold text-white flex items-center gap-3 px-4 text-right"
-                  style={{
-                    background: 'linear-gradient(155deg, rgba(168,85,247,0.35), rgba(139,92,246,0.15))',
-                    border: '1px solid rgba(168,85,247,0.5)',
-                  }}
-                >
-                  <FaRandom className="text-purple-300" />
-                  <span>خلط الكروت</span>
+                  style={{ background: 'linear-gradient(155deg, rgba(168,85,247,0.35), rgba(139,92,246,0.15))', border: '1px solid rgba(168,85,247,0.5)' }}>
+                  <FaRandom className="text-purple-300" /> <span>خلط الكروت</span>
                 </button>
 
-                <button
-                  onClick={() => { setShowRules(true); setMenuOpen(false); }}
+                <button onClick={() => { setShowRules(true); setMenuOpen(false); }}
                   className="w-full py-3 rounded-xl font-bold text-white flex items-center gap-3 px-4 text-right"
-                  style={{
-                    background: 'linear-gradient(155deg, rgba(59,130,246,0.35), rgba(37,99,235,0.15))',
-                    border: '1px solid rgba(59,130,246,0.5)',
-                  }}
-                >
-                  <FaBook className="text-blue-300" />
-                  <span>قواعد اللعبة</span>
+                  style={{ background: 'linear-gradient(155deg, rgba(59,130,246,0.35), rgba(37,99,235,0.15))', border: '1px solid rgba(59,130,246,0.5)' }}>
+                  <FaBook className="text-blue-300" /> <span>قواعد اللعبة</span>
                 </button>
 
                 {isAdmin && (
-                  <button
-                    onClick={() => {
-                      if (window.confirm('إعادة تعيين اللعبة للجميع؟')) {
-                        handleResetGame();
-                        setMenuOpen(false);
-                      }
-                    }}
+                  <button onClick={() => { if (window.confirm('إعادة تعيين اللعبة للجميع؟')) { handleResetGame(); setMenuOpen(false); } }}
                     className="w-full py-3 rounded-xl font-bold text-white flex items-center gap-3 px-4 text-right"
-                    style={{
-                      background: 'linear-gradient(155deg, rgba(220,38,38,0.35), rgba(185,28,28,0.15))',
-                      border: '1px solid rgba(220,38,38,0.5)',
-                    }}
-                  >
-                    <FaRedo className="text-red-300" />
-                    <span>إعادة تعيين اللعبة</span>
+                    style={{ background: 'linear-gradient(155deg, rgba(220,38,38,0.35), rgba(185,28,28,0.15))', border: '1px solid rgba(220,38,38,0.5)' }}>
+                    <FaRedo className="text-red-300" /> <span>إعادة تعيين اللعبة</span>
                   </button>
                 )}
 
-                <button
-                  onClick={() => { setMenuOpen(false); if (onExit) onExit(); }}
+                <button onClick={() => { setMenuOpen(false); if (onExit) onExit(); }}
                   className="w-full py-3 rounded-xl font-bold text-white flex items-center gap-3 px-4 text-right"
-                  style={{
-                    background: 'linear-gradient(155deg, rgba(100,116,139,0.35), rgba(71,85,105,0.15))',
-                    border: '1px solid rgba(100,116,139,0.5)',
-                  }}
-                >
-                  <FaTimes className="text-slate-300" />
-                  <span>{isAdmin ? 'مغادرة الغرفة' : 'الخروج من اللعبة'}</span>
+                  style={{ background: 'linear-gradient(155deg, rgba(100,116,139,0.35), rgba(71,85,105,0.15))', border: '1px solid rgba(100,116,139,0.5)' }}>
+                  <FaTimes className="text-slate-300" /> <span>{isAdmin ? 'مغادرة الغرفة' : 'الخروج من اللعبة'}</span>
                 </button>
               </div>
-
-              <p className="text-center text-amber-100/40 text-[10px] mt-4">
-                اضغط في أي مكان خارج النافذة للإغلاق
-              </p>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
 
       {/* ═══ Rules Modal ═══ */}
       <AnimatePresence>
@@ -833,7 +852,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         )}
       </AnimatePresence>
 
-      {/* ═══ Dice Category Popup (يظهر لما يدوس على بادج فئتك) ═══ */}
+      {/* ═══ Dice Category Popup ═══ */}
       <AnimatePresence>
         {showDiceCategoryBanner && diceCategoryData && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -841,7 +860,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             style={{ background: 'rgba(5,5,20,0.85)', backdropFilter: 'blur(8px)' }}
             onClick={handleCloseDiceCategoryBanner}>
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.2 }}
               onClick={e => e.stopPropagation()}
               className="max-w-md w-full rounded-3xl p-6 text-center"
               style={{
@@ -874,14 +892,11 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
       <AnimatePresence>
         {showDice && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
             className="fixed inset-0 z-[55] flex items-center justify-center pointer-events-none"
             style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}>
             <div className="text-center">
               <DiceRoller rolling={showDice && diceValue === 0} value={diceValue} />
-              {diceValue > 0 && (
-                <p className="mt-4 text-amber-100 text-lg font-bold tracking-widest">فئة {diceValue}</p>
-              )}
+              {diceValue > 0 && <p className="mt-4 text-amber-100 text-lg font-bold tracking-widest">فئة {diceValue}</p>}
             </div>
           </motion.div>
         )}
@@ -894,7 +909,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)' }}>
             <motion.div initial={{ scale: 0.85 }} animate={{ scale: 1 }}
-              transition={{ duration: 0.3 }}
               className="max-w-lg w-full rounded-3xl p-8 text-center"
               style={{
                 background: 'linear-gradient(155deg, #78350f 0%, #f59e0b 45%, #b45309 100%)',
@@ -941,8 +955,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 {[0, 1, 2, 3].map(ci => {
                   const isOccupied = myCircles[ci] !== null;
                   return (
-                    <button key={ci}
-                      onClick={() => handlePlaceInCircle(ci)} disabled={isOccupied}
+                    <button key={ci} onClick={() => handlePlaceInCircle(ci)} disabled={isOccupied}
                       className={`p-4 rounded-xl text-center ${isOccupied ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed border border-slate-700' : 'text-emerald-100 border-2 border-emerald-500/60 bg-emerald-950/40 hover:bg-emerald-900/60'}`}>
                       <div className="font-bold">دائرة {ci + 1}</div>
                       {isOccupied && <div className="text-xs mt-1">محجوزة</div>}
@@ -974,14 +987,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               </div>
               <div className="p-3 sm:p-6 flex flex-col items-center">
                 {selectedCardForView.image && (
-                  <img
-                    src={`${process.env.PUBLIC_URL}${selectedCardForView.image}`}
-                    alt={selectedCardForView.name}
-                    className="rounded-2xl shadow-2xl w-auto max-w-full"
-                    style={{
-                      maxHeight: '75vh',   // ✅ من 55% لـ 75% من الشاشة
-                    }}
-                  />
+                  <img src={`${process.env.PUBLIC_URL}${selectedCardForView.image}`} alt={selectedCardForView.name}
+                    className="rounded-2xl shadow-2xl w-auto max-w-full" style={{ maxHeight: '75vh' }} />
                 )}
                 <div className="text-center mt-4">
                   <p className="text-xl font-bold text-amber-100">{selectedCardForView.name}</p>
@@ -1015,17 +1022,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               <div className="bg-black/30 p-4 rounded-2xl mb-4 border border-amber-500/20">
                 <h3 className="font-bold mb-3 text-amber-100 text-sm">البطاقات المقدمة:</h3>
                 <div className="flex flex-wrap justify-center gap-2">
-                  {gameState.declaredCategory.cards.map((card, index) => (
-                    <PlayingCard key={index} card={card} size="xs" />
-                  ))}
+                  {gameState.declaredCategory.cards.map((card, index) => <PlayingCard key={index} card={card} size="xs" />)}
                 </div>
-              </div>
-              <div className="rounded-xl p-3 mb-4 text-center bg-amber-950/40 border border-amber-600/30">
-                <p className="text-sm text-amber-200/90">
-                  ✅ قبول: <span className="font-bold text-emerald-400">{Object.values(gameState.challengeResponses).filter(v => v === true).length}</span>
-                  <span className="mx-3 opacity-40">|</span>
-                  ❌ رفض: <span className="font-bold text-rose-400">{Object.values(gameState.challengeResponses).filter(v => v === false).length}</span>
-                </p>
               </div>
               {(() => {
                 const isDeclarer = currentPlayer.id === gameState.declaredCategory.playerId;
@@ -1050,78 +1048,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         )}
       </AnimatePresence>
 
-      {/* ═══ Collective Exchange Modal ═══ */}
-      <AnimatePresence>
-        {showCollectiveExchangeModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(5,5,20,0.92)', backdropFilter: 'blur(10px)' }}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              className="max-w-4xl w-full rounded-3xl p-6 max-h-[90vh] overflow-y-auto"
-              style={{ background: 'linear-gradient(155deg, #1a0520, #2e0a2e)', border: '2px solid rgba(240,171,252,0.5)' }}>
-              <div className="mb-6 text-center">
-                <h2 className="text-2xl font-bold text-fuchsia-100 mb-1">👥 كل واحد يطلع باللي معاه</h2>
-                <p className="text-fuchsia-200/60 text-sm">بدأ بواسطة: {collectiveExchangeInitiatorPlayer?.name}</p>
-              </div>
-              {collectiveExchangePhase === 'waiting' && collectiveExchangeWaitingWithCards && (
-                <div className="text-center">
-                  <div className="text-amber-300 text-lg mb-4">⏳ بانتظار {collectiveExchangeInitiatorPlayer?.name}</div>
-                  <div className="rounded-2xl p-4 bg-black/30">
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {allExchangeCards.map(card => <PlayingCard key={card.id} card={card} size="xs" />)}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {collectiveExchangePhase === 'initiator_choose' && currentPlayer.id === collectiveExchangeInitiator && (
-                <div>
-                  <div className="text-center mb-4 text-amber-300 text-lg">📝 اختر بطاقة للتبادل</div>
-                  <div className="rounded-2xl p-4 bg-black/30 max-h-[50vh] overflow-y-auto">
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {collectiveExchangePlayerCards.map(card => (
-                        <div key={card.id} onClick={() => handleCollectiveInitiatorChooseCard(card)} className="cursor-pointer">
-                          <PlayingCard card={card} size="sm" selected={collectiveExchangeSelectedCard?.id === card.id} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <button onClick={handleCancelCollectiveExchange}
-                    className="mt-4 mx-auto block bg-red-600 hover:bg-red-700 px-6 py-2 rounded-xl font-bold text-white">
-                    إلغاء
-                  </button>
-                </div>
-              )}
-              {collectiveExchangePhase === 'waiting_responder' && currentPlayer.id === collectiveExchangeInitiator && (
-                <div className="text-center">
-                  <div className="text-emerald-300 text-lg mb-4">✓ اخترت بطاقتك — بانتظار الباقي</div>
-                  {collectiveExchangeSelectedCard && (
-                    <div className="flex justify-center mb-4"><PlayingCard card={collectiveExchangeSelectedCard} size="sm" /></div>
-                  )}
-                </div>
-              )}
-              {collectiveExchangePhase === 'responder_choose' && currentPlayer.id !== collectiveExchangeInitiator && (
-                <div>
-                  <div className="text-center mb-4 text-amber-300 text-lg">🔄 اختر بطاقة للتبادل</div>
-                  <div className="rounded-2xl p-4 bg-black/30 max-h-[50vh] overflow-y-auto">
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {allExchangeCards.map(card => (
-                        <div key={card.id} onClick={() => handleCollectiveExchangeRespond(card)} className="cursor-pointer">
-                          <PlayingCard card={card} size="sm" selected={collectiveExchangeTargetCard?.id === card.id} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {collectiveExchangePhase === 'completed' && (
-                <div className="text-center text-emerald-300 text-xl">✓ تم التبادل</div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ Exchange Modal ═══ */}
+      {/* ═══ Exchange Modal (هات وخد) ═══ */}
       <AnimatePresence>
         {showExchangeModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -1161,9 +1088,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               {exchangePhase === 'waiting_responder' && currentPlayer.id === exchangeInitiator && (
                 <div className="text-center">
                   <div className="text-emerald-300 text-lg mb-4">✓ اخترت بطاقتك</div>
-                  {exchangeSelectedCard && (
-                    <div className="flex justify-center mb-4"><PlayingCard card={exchangeSelectedCard} size="sm" /></div>
-                  )}
+                  {exchangeSelectedCard && <div className="flex justify-center mb-4"><PlayingCard card={exchangeSelectedCard} size="sm" /></div>}
                   <p className="text-teal-100">⏳ بانتظار اللاعبين</p>
                 </div>
               )}
@@ -1181,9 +1106,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                   </div>
                 </div>
               )}
-              {exchangePhase === 'completed' && (
-                <div className="text-center text-emerald-300 text-xl">✓ تم التبادل</div>
-              )}
+              {exchangePhase === 'completed' && <div className="text-center text-emerald-300 text-xl">✓ تم التبادل</div>}
             </motion.div>
           </motion.div>
         )}
@@ -1255,9 +1178,219 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
         )}
       </AnimatePresence>
 
-      {/* ══════════════════════════════════════════
+      {/* ═══════════════════════════════════════════
+          COLLECTIVE EXCHANGE MODAL (جديد)
+      ═══════════════════════════════════════════ */}
+      <AnimatePresence>
+        {ceOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            style={{ background: "rgba(5,5,20,0.95)", backdropFilter: "blur(12px)" }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+              className="max-w-3xl w-full rounded-3xl p-6 max-h-[90vh] overflow-y-auto"
+              style={{
+                background: "linear-gradient(155deg, #1a0530, #2e0a2e)",
+                border: "2px solid rgba(240,171,252,0.5)",
+                boxShadow: "0 20px 60px rgba(240,171,252,0.3)",
+              }}
+            >
+              {/* Header */}
+              <div className="text-center mb-6">
+                <div className="text-4xl mb-2">👥</div>
+                <h2 className="text-2xl font-bold text-fuchsia-100 mb-1">
+                  كل واحد يطلع اللي معاه
+                </h2>
+                <p className="text-fuchsia-200/70 text-sm">
+                  {ceMyRole === "asker"
+                    ? cePhase === "picking_player"
+                      ? "اختر لاعب واسأله شفويًا عن كارت"
+                      : cePhase === "asking"
+                        ? `بتسأل ${ceTargetName}`
+                        : "اختار الكارت اللي هتديه"
+                    : ceMyRole === "target"
+                      ? "اختار الكارت من إيدك"
+                      : `${ceAskerName} بيسأل...`}
+                </p>
+              </div>
+
+              {/* Asker: Picking Player */}
+              {ceMyRole === "asker" && cePhase === "picking_player" && (() => {
+                const otherPlayers = cePlayersList.filter(p => p.id !== currentPlayer.id);
+                const remainingPlayers = otherPlayers.filter(p => !ceAskedPlayers.includes(p.id));
+                const allAsked = otherPlayers.length > 0 && remainingPlayers.length === 0;
+
+                // ✅ لو خلّص كل اللاعبين → شاشة "خلصت"
+                if (allAsked) {
+                  return (
+                    <div className="text-center py-8">
+                      <div className="text-6xl mb-4">🎉</div>
+                      <h3 className="text-xl font-bold text-emerald-300 mb-2">
+                        خلّصت كل اللاعبين!
+                      </h3>
+                      <p className="text-fuchsia-200/70 text-sm mb-6">
+                        سألت {otherPlayers.length} لاعبين. تقدر تقفل وتنقل الدور.
+                      </p>
+                      <button
+                        onClick={handleCEClose}
+                        className="px-8 py-4 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 text-lg"
+                      >
+                        🔒 إغلاق ونقل الدور
+                      </button>
+                    </div>
+                  );
+                }
+
+                // ✅ عرض اللاعبين المتاحين
+                return (
+                  <>
+                    <div className="text-center text-amber-300 text-sm mb-3">
+                      اسأل مين؟ <span className="text-fuchsia-300">(فاضل {remainingPlayers.length})</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                      {otherPlayers.map(p => {
+                        const wasAsked = ceAskedPlayers.includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => !wasAsked && handleCEPickedPlayer(p.id)}
+                            disabled={wasAsked}
+                            className={`p-4 rounded-xl font-bold text-base border-2 transition-all ${
+                              wasAsked
+                                ? "opacity-40 cursor-not-allowed bg-slate-800 border-slate-600"
+                                : "bg-fuchsia-900/40 hover:bg-fuchsia-800/60 border-fuchsia-500/60 hover:border-fuchsia-400 text-fuchsia-100"
+                            }`}
+                          >
+                            {p.name}
+                            {wasAsked && <div className="text-xs mt-1 opacity-60">اتسأل ✓</div>}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* ✅ زرار إغلاق دايماً موجود */}
+                    <button
+                      onClick={handleCEClose}
+                      className="w-full py-3 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 border border-slate-500 mt-2"
+                    >
+                      🔒 إغلاق وإنهاء الدور
+                    </button>
+                  </>
+                );
+              })()}
+
+              {/* Asker: Asking (yes/no) */}
+              {ceMyRole === "asker" && cePhase === "asking" && (
+                <div className="text-center">
+                  <div className="text-lg text-amber-100 mb-4">
+                    بتسأل <span className="font-bold text-amber-300">{ceTargetName}</span>:
+                  </div>
+                  <div className="text-sm text-amber-200/60 mb-6">
+                    اسأله شفويًا: "معاك [اسم الكارت]؟"
+                  </div>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={handleCEYes}
+                      className="px-8 py-4 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 text-lg"
+                    >
+                      ✅ معاه
+                    </button>
+                    <button
+                      onClick={handleCENo}
+                      className="px-8 py-4 rounded-xl font-bold text-white bg-rose-600 hover:bg-rose-700 text-lg"
+                    >
+                      ❌ مش معاه
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Picking cards */}
+              {cePhase === "picking_cards" && (
+                <div>
+                  <div className="text-center mb-4">
+                    <div className="text-lg font-bold text-amber-100 mb-2">
+                      {ceMyRole === "asker"
+                        ? `اختار كارت تديه لـ ${ceTargetName}`
+                        : `اختار الكارت اللي هتديه لـ ${ceAskerName}`}
+                    </div>
+                    <div className="text-sm text-amber-200/60">
+                      {ceMyPickedCardId
+                        ? "✓ اخترت — بانتظار الطرف التاني"
+                        : ceMyRole === "target"
+                          ? "اختار الكارت اللي سألك عليه"
+                          : "اختار أي كارت من كروتك"}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 justify-center p-4 rounded-2xl bg-black/30 max-h-[50vh] overflow-y-auto">
+                    {ceMyHand.map(card => {
+                      const isPicked = ceMyPickedCardId === card.id;
+                      const isDisabled = !!ceMyPickedCardId && !isPicked;
+
+                      return (
+                        <div
+                          key={card.id}
+                          onClick={() => !ceMyPickedCardId && handleCEPickCard(card.id)}
+                          className={`relative transition-transform ${
+                            ceMyPickedCardId
+                              ? isPicked
+                                ? "cursor-default scale-105"
+                                : "cursor-default opacity-30"
+                              : "cursor-pointer hover:scale-105"
+                          }`}
+                          style={{
+                            filter: isPicked ? 'drop-shadow(0 0 18px rgba(74,222,128,0.9))' : 'none',
+                          }}
+                        >
+                          <PlayingCard card={card} size="sm" selected={isPicked} />
+                          {isPicked && (
+                            <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold border-2 border-white shadow-lg">
+                              ✓
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {ceMyPickedCardId && (
+                    <div className="mt-4 text-center">
+                      <div className="inline-block px-6 py-3 rounded-xl bg-emerald-900/40 border border-emerald-500/60 text-emerald-200 font-bold animate-pulse">
+                        ⏳ بانتظار الطرف التاني يختار...
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Watcher / Waiting */}
+              {(ceMyRole === "watcher" || (ceMyRole === "target" && cePhase !== "picking_cards")) && (
+                <div className="text-center py-12">
+                  <div className="text-5xl mb-4 animate-pulse">⏳</div>
+                  <p className="text-amber-200 text-lg">{ceWaitingMsg || "..."}</p>
+                </div>
+              )}
+
+              {/* Close button (asker only) */}
+              {ceMyRole === "asker" && cePhase === "picking_player" && (
+                <button
+                  onClick={handleCEClose}
+                  className="mt-6 w-full py-3 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-600 border border-slate-500"
+                >
+                  🔒 إغلاق وإنهاء الدور
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════════════════════════════════════════
           MAIN GAME BOARD
-      ══════════════════════════════════════════ */}
+      ═══════════════════════════════════════════ */}
       <div className="relative rounded-3xl p-4 overflow-hidden"
         style={{
           background: 'linear-gradient(155deg, rgba(15,10,46,0.7), rgba(30,27,75,0.6))',
@@ -1273,10 +1406,8 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             </div>
             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-amber-300/80">
               <span>المستوى: <span className="font-bold text-amber-300">{myLevel}/5</span></span>
-              {/* بادج الفئة — دايم */}
               {myCategory && (
-                <button
-                  onClick={() => setShowDiceCategoryBanner(true)}
+                <button onClick={() => setShowDiceCategoryBanner(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-transform hover:scale-105"
                   style={{
                     background: 'linear-gradient(155deg, rgba(59,7,100,0.95), rgba(30,4,60,0.95))',
@@ -1294,57 +1425,42 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               )}
             </div>
           </div>
-        <div className="flex flex-wrap items-center gap-1.5 justify-end">
-          {/* الزر الأساسي: رجوع / خروج */}
-          {isAdmin ? (
-            <HeaderBtn onClick={handleExitToCategories} icon={<FaHome />} label="الفئات" />
-          ) : (
-            <HeaderBtn onClick={() => { if (onExit) onExit(); }} icon={<FaArrowLeft />} label="البازر" />
-          )}
+          <div className="flex flex-wrap items-center gap-1.5 justify-end">
+            {isAdmin ? (
+              <HeaderBtn onClick={handleExitToCategories} icon={<FaHome />} label="الفئات" />
+            ) : (
+              <HeaderBtn onClick={() => { if (onExit) onExit(); }} icon={<FaArrowLeft />} label="البازر" />
+            )}
 
-          {/* زر التوزيع — يظهر فقط قبل التوزيع */}
-          {isAdmin && !gameState.dealt && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => socket.emit('card_game_deal', { roomCode })}
-              className="px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 text-amber-950 animate-pulse"
-              style={{
-                background: 'linear-gradient(155deg, #fcd34d, #f59e0b)',
-                border: '2px solid #fcd34d',
-                boxShadow: '0 0 20px rgba(251,191,36,0.6)',
-              }}
-            >
-              🎴 <span>توزيع</span>
-            </motion.button>
-          )}
+            {isAdmin && !gameState.dealt && (
+              <motion.button
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={() => socket.emit('card_game_deal', { roomCode })}
+                className="px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 text-amber-950 animate-pulse"
+                style={{
+                  background: 'linear-gradient(155deg, #fcd34d, #f59e0b)',
+                  border: '2px solid #fcd34d',
+                  boxShadow: '0 0 20px rgba(251,191,36,0.6)',
+                }}>
+                🎴 <span>توزيع</span>
+              </motion.button>
+            )}
 
-          {/* النرد — ظاهر دائمًا */}
-          <HeaderBtn onClick={handleRollDice} icon={<FaDice />} label="النرد" color="yellow" />
-
-          {/* السحب — ظاهر دائمًا */}
-          <HeaderBtn
-            onClick={handleDrawCard}
-            disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || gameState.drawPile.length === 0}
-            icon={<FaHandPaper />}
-            label={`سحب (${gameState.drawPile.length})`}
-            color="blue"
-          />
-
-          {/* زر القائمة لباقي الأزرار */}
-          <HeaderBtn
-            onClick={() => setMenuOpen(true)}
-            icon={<FaBars />}
-            label="المزيد"
-            color="purple"
-          />
-        </div>
+            <HeaderBtn onClick={handleRollDice} icon={<FaDice />} label="النرد" color="yellow" />
+            <HeaderBtn
+              onClick={handleDrawCard}
+              disabled={!isMyTurn || gameState.playerHasDrawn?.[currentPlayer.id] || gameState.drawPile.length === 0}
+              icon={<FaHandPaper />}
+              label={`سحب (${gameState.drawPile.length})`}
+              color="blue"
+            />
+            <HeaderBtn onClick={() => setMenuOpen(true)} icon={<FaBars />} label="المزيد" color="purple" />
+          </div>
         </div>
 
-        {/* ═══ CATEGORIES LIST — بدون animation تقيل ═══ */}
+        {/* ═══ CATEGORIES LIST ═══ */}
         <div className="mb-4">
-          <button
-            onClick={() => setShowCategories(!showCategories)}
+          <button onClick={() => setShowCategories(!showCategories)}
             className="w-full py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-amber-100"
             style={{ background: 'linear-gradient(155deg, rgba(30,27,75,0.6), rgba(15,10,46,0.7))', border: '1px solid rgba(201,168,118,0.3)' }}>
             <FaList /> {showCategories ? 'إخفاء الفئات' : 'عرض الفئات'}
@@ -1367,7 +1483,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
           )}
         </div>
 
-        {/* ═══ PLAYER HAND — HORIZONTAL FAN ═══ */}
+        {/* ═══ PLAYER HAND ═══ */}
         <div className="relative rounded-2xl p-4"
           style={{ background: 'rgba(30,27,75,0.4)', border: '1px solid rgba(201,168,118,0.15)' }}>
           <div className="flex justify-between items-center mb-2">
@@ -1376,18 +1492,14 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
               {myHand.length}
             </span>
           </div>
-
           {renderHandFan()}
-
-          {/* Selected card actions */}
           <AnimatePresence>
             {selectedHandCard && renderSelectedCardActions()}
           </AnimatePresence>
         </div>
 
-        {/* ═══ TABLE + PLAYERS LIST ═══ */}
+        {/* ═══ TABLE + SIDEBAR ═══ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-          {/* Table — 2 cols */}
           <div className="lg:col-span-2 rounded-2xl p-4"
             style={{ background: 'rgba(30,27,75,0.4)', border: '1px solid rgba(201,168,118,0.15)' }}>
             <div className="flex justify-between items-center mb-3">
@@ -1414,14 +1526,13 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                       <PlayingCard card={card} size="sm" hideImage />
                     </div>
                   ))}
-                    {topTableCard && (
-                      <motion.div
-                        initial={{ scale: 0.8, y: -20, opacity: 0 }}
-                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                        transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                        className="absolute z-30"
-                        style={{ filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.6))' }}
-                      >
+                  {topTableCard && (
+                    <motion.div
+                      initial={{ scale: 0.8, y: -20, opacity: 0 }}
+                      animate={{ scale: 1, y: 0, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                      className="absolute z-30"
+                      style={{ filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.6))' }}>
                       <PlayingCard card={topTableCard} size="md" elevated onImageClick={handleCardImageClick} />
                     </motion.div>
                   )}
@@ -1442,9 +1553,7 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             )}
           </div>
 
-          {/* Progress + Circles — 1 col */}
           <div className="space-y-4">
-            {/* Progress */}
             <div className="rounded-2xl p-4"
               style={{ background: 'rgba(30,27,75,0.4)', border: '1px solid rgba(201,168,118,0.15)' }}>
               <h3 className="font-bold text-amber-100 text-xs mb-3">📊 المستوى {myLevel}/5</h3>
@@ -1452,36 +1561,33 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
                 <div className="absolute top-3.5 left-0 right-0 h-1 bg-slate-700 rounded" />
                 <div className="absolute top-3.5 left-0 h-1 rounded bg-gradient-to-r from-emerald-500 to-amber-500 transition-all duration-300"
                   style={{ width: `${(playerToken / 4) * 100}%` }} />
-                  {[0, 1, 2, 3, 4].map(level => {
-                    const active = level <= playerToken;
-                    const isFinal = level === 4;
-
-                    const stageColors = [
-                      { from: '#10b981', to: '#047857', border: '#34d399' },  // 1 — أخضر
-                      { from: '#06b6d4', to: '#0e7490', border: '#22d3ee' },  // 2 — أزرق
-                      { from: '#8b5cf6', to: '#6d28d9', border: '#a78bfa' },  // 3 — بنفسجي
-                      { from: '#f43f5e', to: '#9f1239', border: '#fb7185' },  // 4 — أحمر وردي
-                      { from: '#fcd34d', to: '#b45309', border: '#fcd34d' },  // 5 — ذهبي (الفوز)
-                    ];
-                    const c = stageColors[level];
-
-                    return (
-                      <div key={level}
-                        className="relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
-                        style={{
-                          background: active ? `linear-gradient(155deg, ${c.from}, ${c.to})` : 'rgba(30,30,50,0.8)',
-                          border: active ? `2px solid ${c.border}` : '2px solid rgba(148,163,184,0.3)',
-                          color: active ? '#ffffff' : '#94a3b8',
-                          boxShadow: active ? `0 0 10px ${c.border}80` : 'none',
-                        }}>
-                        {isFinal ? <FaCrown /> : level + 1}
-                      </div>
-                    );
-                  })}
+                {[0, 1, 2, 3, 4].map(level => {
+                  const active = level <= playerToken;
+                  const isFinal = level === 4;
+                  const stageColors = [
+                    { from: '#10b981', to: '#047857', border: '#34d399' },
+                    { from: '#06b6d4', to: '#0e7490', border: '#22d3ee' },
+                    { from: '#8b5cf6', to: '#6d28d9', border: '#a78bfa' },
+                    { from: '#f43f5e', to: '#9f1239', border: '#fb7185' },
+                    { from: '#fcd34d', to: '#b45309', border: '#fcd34d' },
+                  ];
+                  const c = stageColors[level];
+                  return (
+                    <div key={level}
+                      className="relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
+                      style={{
+                        background: active ? `linear-gradient(155deg, ${c.from}, ${c.to})` : 'rgba(30,30,50,0.8)',
+                        border: active ? `2px solid ${c.border}` : '2px solid rgba(148,163,184,0.3)',
+                        color: active ? '#ffffff' : '#94a3b8',
+                        boxShadow: active ? `0 0 10px ${c.border}80` : 'none',
+                      }}>
+                      {isFinal ? <FaCrown /> : level + 1}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Circles — HORIZONTAL */}
             <div className="rounded-2xl p-4"
               style={{ background: 'rgba(30,27,75,0.4)', border: '1px solid rgba(201,168,118,0.15)' }}>
               <h3 className="font-bold text-amber-100 text-xs mb-3">⭕ دوائري ({filledCircles}/3)</h3>
@@ -1529,8 +1635,6 @@ const CardGame = ({ socket, roomCode, players, currentPlayer, isAdmin, onExit })
             </div>
           </div>
         </div>
-
-
       </div>
     </div>
   );

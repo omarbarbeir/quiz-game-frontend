@@ -39,7 +39,7 @@ const HOTSPOTS = {
 };
 
 const PANORAMAS = {
-  judge:       "/court/panorama_judge.jpg",
+  judge:       "/court/6.jpg",
   prosecution: "/court/panorama_prosecution.jpg",
   defense:     "/court/panorama_defense.jpg",
   accused:     "/court/panorama_accused.jpg",

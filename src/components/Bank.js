@@ -391,6 +391,7 @@ export default function Bank({ socket, roomCode, playerId, playerName, isAdmin =
   const [captureEvent, setCaptureEvent] = useState(null);
   const prevStateRef = React.useRef(null);
   const [showRules, setShowRules] = useState(false);
+  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
 
   useEffect(() => {
     if (!socket) return;
@@ -460,6 +461,12 @@ export default function Bank({ socket, roomCode, playerId, playerName, isAdmin =
     
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [isAdmin, socket, roomCode, roomPlayers]);
+
+  useEffect(() => {
+    const h = () => setVw(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   const emit = useCallback((ev, payload) => {
     socket?.emit(ev, { roomCode, ...payload });
@@ -785,6 +792,23 @@ export default function Bank({ socket, roomCode, playerId, playerName, isAdmin =
     const grouped = { Q: 0, K: 0, J: 0 };
     me.loanCards.forEach(c => { grouped[c.rank] = (grouped[c.rank] || 0) + 1; });
 
+    // ✅ اختيار مقاس الكارت حسب عدد الكروت
+    const n = me.hand.length;
+    const cardSize =
+      n <= 6  ? 'xl' :
+      n <= 10 ? 'lg' :
+      n <= 16 ? 'md' :
+      n <= 22 ? 'sm' : 'xs';
+
+    // ✅ عرض الكارت حسب المقاس
+    const cardWidths = { xs: 46, sm: 58, md: 78, lg: 98, xl: 118 };
+    const cardH = { xs: 64, sm: 82, md: 110, lg: 138, xl: 166 };
+    const cardW = cardWidths[cardSize];
+    const ch = cardH[cardSize];
+
+    // ✅ المساحة المتاحة على الشاشة
+    const availW = Math.min(vw - 60, 720);
+
     return (
       <div>
         <p className="text-[10px] uppercase tracking-widest mb-2 px-1 flex items-center justify-between" style={{ color: C.textMuted }}>
@@ -799,68 +823,61 @@ export default function Bank({ socket, roomCode, playerId, playerName, isAdmin =
         </p>
 
         <div
-          className="rounded-2xl p-4"
+          className="rounded-2xl p-3"
           style={{
             background: mustBorrow ? 'linear-gradient(145deg, rgba(245,158,11,0.1), rgba(0,0,0,0.25))'
                                    : 'linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.15))',
             border: `1.5px solid ${mustBorrow ? C.amber + '60' : C.border}`,
-            minHeight: 200,
+            minHeight: ch + 20,
             overflow: 'hidden',
           }}>
-          {me.hand.length === 0 ? (
+          {n === 0 ? (
             <p className="text-sm text-center py-6" style={{ color: C.textMuted }}>
               {iAmOut ? 'أنت خارج اللعبة' : 'إيدك فاضية — استلف'}
             </p>
-          ) : (
-            <div
-              className="flex justify-center items-center"
-              style={{
-                position: 'relative',
-                minHeight: 180,
-                paddingRight: Math.max(0, (me.hand.length - 1) * 35) / 2 + 'px',
-              }}
-            >
-              <div
-                style={{
-                  position: 'relative',
-                  width: me.hand.length > 0
-                    ? 118 + (me.hand.length - 1) * 35
-                    : 118,
-                  height: 166,
-                  transform: `translateX(${((me.hand.length - 1) * 35) / 2}px)`,
-                }}
-              >
-                {me.hand.map((card, idx) => {
-                  // ✅ الترتيب من اليمين للشمال (RTL) — أول كارت على اليمين
-                  const xPos = (me.hand.length - 1 - idx) * 35;
-                  // ✅ بس الكارت اللي على الوش (آخر واحد في المصفوفة) هو اللي ينفع يتداس عليه
-                  const isTopCard = idx === me.hand.length - 1;
-                  const canClickThis = canPlay && isTopCard;
+          ) : (() => {
+            // ✅ التباعد الديناميكي
+            const maxOverlap = cardW * 0.55;
+            const minOverlap = 6;
+            const idealOverlap = n > 1 ? (availW - cardW) / (n - 1) : 0;
+            const overlap = Math.max(minOverlap, Math.min(maxOverlap, idealOverlap));
+            const totalW = cardW + (n - 1) * overlap;
 
-                  return (
-                    <motion.div
-                      key={card.id}
-                      layout
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0, x: xPos }}
-                      whileHover={canClickThis ? { y: -14, zIndex: 999 } : {}}
-                      transition={{ type: 'spring', stiffness: 300, damping: 25, delay: idx * 0.03 }}
-                      onClick={() => { if (canClickThis) emit('bank_play_card', { cardId: card.id }); }}
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        zIndex: idx + 1,
-                        cursor: canClickThis ? 'pointer' : 'default',
-                      }}
-                    >
-                      <PlayingCard faceDown size="xl" disabled={!canClickThis} />
-                    </motion.div>
-                  );
-                })}
+            return (
+              <div className="flex justify-center items-center" style={{ position: 'relative', height: ch + 14 }}>
+                <div style={{ position: 'relative', width: totalW, height: ch }}>
+                  {me.hand.map((card, idx) => {
+                    // ✅ كارت 0 على اليمين — كل كارت بعده يتحرك شمال
+                    const xPos = (n - 1 - idx) * overlap;
+                    // ✅ الكارت الأخير هو اللي على الوش (ينفع يتداس عليه)
+                    const isTopCard = idx === n - 1;
+                    const canClickThis = canPlay && isTopCard;
+
+                    return (
+                      <motion.div
+                        key={card.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0, x: xPos }}
+                        whileHover={canClickThis ? { y: -14, zIndex: 999 } : {}}
+                        transition={{ type: 'spring', stiffness: 300, damping: 25, delay: Math.min(idx * 0.02, 0.4) }}
+                        onClick={() => { if (canClickThis) emit('bank_play_card', { cardId: card.id }); }}
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          zIndex: idx + 1,
+                          cursor: canClickThis ? 'pointer' : 'default',
+                        }}
+                      >
+                        <PlayingCard faceDown size={cardSize} disabled={!canClickThis} />
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">

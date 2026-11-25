@@ -1,0 +1,11 @@
+Model Information:
+* title:	Old Style Hospital Bed
+* source:	https://sketchfab.com/3d-models/old-style-hospital-bed-016dae4bf4da4c9ca6363e08e5cc96b0
+* author:	Connor Wassall (https://sketchfab.com/connorwassall)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Old Style Hospital Bed" (https://sketchfab.com/3d-models/old-style-hospital-bed-016dae4bf4da4c9ca6363e08e5cc96b0) by Connor Wassall (https://sketchfab.com/connorwassall) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

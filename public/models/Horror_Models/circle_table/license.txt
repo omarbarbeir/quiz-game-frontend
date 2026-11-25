@@ -1,0 +1,11 @@
+Model Information:
+* title:	Circle Table
+* source:	https://sketchfab.com/3d-models/circle-table-b2b5d9ad8e264b5f94588fba0e475c72
+* author:	mzlm.fatih (https://sketchfab.com/mzlm.fatih)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Circle Table" (https://sketchfab.com/3d-models/circle-table-b2b5d9ad8e264b5f94588fba0e475c72) by mzlm.fatih (https://sketchfab.com/mzlm.fatih) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

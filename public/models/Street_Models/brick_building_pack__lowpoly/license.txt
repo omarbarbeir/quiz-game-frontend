@@ -1,0 +1,11 @@
+Model Information:
+* title:	Brick Building Pack | Lowpoly
+* source:	https://sketchfab.com/3d-models/brick-building-pack-lowpoly-f4ee9c9f2ae849c0b74a0859a2404da0
+* author:	Fridqeir (https://sketchfab.com/Fridqeir)
+
+Model License:
+* license type:	CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)
+* requirements:	Author must be credited. Modified versions must have the same license. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Brick Building Pack | Lowpoly" (https://sketchfab.com/3d-models/brick-building-pack-lowpoly-f4ee9c9f2ae849c0b74a0859a2404da0) by Fridqeir (https://sketchfab.com/Fridqeir) licensed under CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)

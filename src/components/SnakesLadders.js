@@ -209,9 +209,18 @@ export default function SnakesLadders({
     const calc = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const sizeByW = (vw - 20) / 10;
-      const sizeByH = (vh - 280) / 10;
-      setCellSize(Math.max(28, Math.min(sizeByW, sizeByH, 62)));
+      const sizeByW = (vw - 40) / 10;
+      const sizeByH = (vh - 300) / 10;
+
+      // ✅ حجم أقصى حسب عرض الشاشة
+      const maxSize =
+        vw >= 1800 ? 100 :
+        vw >= 1500 ? 90  :
+        vw >= 1200 ? 80  :
+        vw >= 900  ? 68  :
+        62;
+
+      setCellSize(Math.max(30, Math.min(sizeByW, sizeByH, maxSize)));
     };
     calc();
     window.addEventListener('resize', calc);
@@ -334,39 +343,72 @@ export default function SnakesLadders({
     for (let n = 100; n >= 1; n--) {
       const pos = cellPos(n, size);
       const isDark = (pos.row + pos.col) % 2 === 1;
+      const isStart = n === 1;
+      const isEnd = n === 100;
       const playersHere = players.filter(p => (displayPositions[p.id] ?? 0) === n);
+
+      let bg;
+      if (isStart) bg = 'linear-gradient(135deg, #10b981, #047857)';
+      else if (isEnd) bg = 'linear-gradient(135deg, #fbbf24, #b45309)';
+      else if (isDark) bg = 'linear-gradient(135deg, #3d2418, #2a1810)';
+      else bg = 'linear-gradient(135deg, #f7ead0, #e8d4a8)';
+
+      const numColor = (isStart || isEnd)
+        ? '#fff'
+        : (isDark ? 'rgba(255,220,180,0.75)' : 'rgba(70,35,15,0.8)');
 
       cells.push(
         <div
           key={n}
           style={{
             position: 'absolute',
-            left: pos.x,
-            top: pos.y,
-            width: size,
-            height: size,
-            background: isDark ? '#c19a6b' : '#f0d9a8',
-            border: '1px solid rgba(0,0,0,0.15)',
+            left: pos.x + 1,
+            top: pos.y + 1,
+            width: size - 2,
+            height: size - 2,
+            background: bg,
+            border: '1px solid rgba(0,0,0,0.2)',
+            borderRadius: 3,
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'flex-start',
-            padding: 2,
-            fontSize: Math.max(8, size * 0.18),
+            padding: 3,
+            fontSize: Math.max(8, size * 0.17),
             fontWeight: 900,
-            color: 'rgba(0,0,0,0.55)',
+            color: numColor,
             overflow: 'hidden',
-            borderRadius: 2,
+            boxShadow: isDark
+              ? 'inset 0 1px 3px rgba(0,0,0,0.6)'
+              : 'inset 0 1px 3px rgba(255,255,255,0.6)',
+            fontFamily: 'monospace',
           }}
         >
-          <span style={{ lineHeight: 1, alignSelf: 'flex-start' }}>{n}</span>
+          <span style={{ lineHeight: 1 }}>{n}</span>
+
+          {isStart && (
+            <span style={{
+              fontSize: Math.max(6, size * 0.13),
+              marginTop: 'auto',
+              alignSelf: 'center',
+              letterSpacing: 1,
+              opacity: 0.9,
+            }}>START</span>
+          )}
+          {isEnd && (
+            <span style={{
+              fontSize: size * 0.35,
+              marginTop: 'auto',
+              alignSelf: 'center',
+            }}>🏆</span>
+          )}
 
           {playersHere.length > 0 && (
             <div style={{
               position: 'absolute',
               top: '50%',
               left: '50%',
-              transform: 'translate(-50%, -50%)',
+              transform: 'translate(-50%, -30%)',
               display: 'flex',
               gap: 1,
               flexWrap: 'wrap',
@@ -379,18 +421,19 @@ export default function SnakesLadders({
                   key={p.id}
                   layoutId={`token-${p.id}`}
                   style={{
-                    width: size * 0.4,
-                    height: size * 0.4,
+                    width: size * 0.42,
+                    height: size * 0.42,
                     borderRadius: '50%',
-                    background: p.color,
+                    background: `radial-gradient(circle at 30% 30%, ${p.color}, ${p.color}dd)`,
                     border: '2px solid white',
-                    boxShadow: `0 0 8px ${p.color}, 0 2px 4px rgba(0,0,0,0.5)`,
+                    boxShadow: `0 0 10px ${p.color}, 0 2px 4px rgba(0,0,0,0.6), inset 0 2px 3px rgba(255,255,255,0.4)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: size * 0.18,
                     color: 'white',
                     fontWeight: 900,
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                     zIndex: 5,
                   }}
                   transition={{ type: 'spring', stiffness: 80, damping: 18, duration: 0.8 }}
@@ -411,13 +454,24 @@ export default function SnakesLadders({
         style={{
           width: boardSize,
           height: boardSize,
-          background: '#d4a574',
-          border: '5px solid #3d1f08',
-          borderRadius: 14,
-          boxShadow: 'inset 0 0 30px rgba(0,0,0,0.5), 0 12px 40px rgba(0,0,0,0.7)',
+          background: 'linear-gradient(135deg, #2a1810 0%, #1a0f08 100%)',
+          border: '6px solid #3d1f08',
+          borderRadius: 16,
+          boxShadow: 'inset 0 0 60px rgba(0,0,0,0.8), 0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(245,158,11,0.15)',
           direction: 'ltr',
+          padding: 0,
+          overflow: 'hidden',
         }}
       >
+        {/* إطار داخلي ذهبي */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          pointerEvents: 'none',
+          borderRadius: 10,
+          boxShadow: 'inset 0 0 0 2px rgba(245,158,11,0.35), inset 0 0 0 4px rgba(120,53,15,0.7)',
+          zIndex: 10,
+        }} />
+
         {cells}
 
         <svg
@@ -430,6 +484,7 @@ export default function SnakesLadders({
             zIndex: 3,
           }}
         >
+          {/* ═══ LADDERS ═══ */}
           {Object.entries(ladders).map(([from, to]) => {
             const p1 = cellPos(+from, size);
             const p2 = cellPos(to, size);
@@ -437,36 +492,62 @@ export default function SnakesLadders({
             const dy = p2.cy - p1.cy;
             const length = Math.sqrt(dx * dx + dy * dy);
             const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-            const railOffset = Math.max(3, size * 0.14);
-            const railW = Math.max(2, size * 0.07);
-            const rungW = Math.max(2, size * 0.06);
+            const railOffset = Math.max(4, size * 0.16);
+            const railW = Math.max(3, size * 0.09);
+            const rungW = Math.max(2, size * 0.055);
             const rungCount = Math.max(5, Math.floor(length / (size * 0.5)));
 
             return (
               <g key={`L-${from}`} transform={`translate(${p1.cx}, ${p1.cy}) rotate(${angle})`}>
+                {/* Shadow */}
+                <g transform="translate(2.5, 3.5)" opacity={0.35}>
+                  <line x1={0} y1={-railOffset} x2={length} y2={-railOffset}
+                    stroke="#000" strokeWidth={railW + 1} strokeLinecap="round" />
+                  <line x1={0} y1={railOffset} x2={length} y2={railOffset}
+                    stroke="#000" strokeWidth={railW + 1} strokeLinecap="round" />
+                </g>
+
+                {/* Rails — dark border */}
                 <line x1={0} y1={-railOffset} x2={length} y2={-railOffset}
-                  stroke="#8b5a2b" strokeWidth={railW} strokeLinecap="round" />
+                  stroke="#4a2508" strokeWidth={railW + 2} strokeLinecap="round" />
                 <line x1={0} y1={railOffset} x2={length} y2={railOffset}
-                  stroke="#8b5a2b" strokeWidth={railW} strokeLinecap="round" />
-                <line x1={0} y1={-railOffset - railW * 0.25} x2={length} y2={-railOffset - railW * 0.25}
-                  stroke="#d4a373" strokeWidth={railW * 0.4} strokeLinecap="round" opacity={0.7} />
-                <line x1={0} y1={railOffset - railW * 0.25} x2={length} y2={railOffset - railW * 0.25}
-                  stroke="#d4a373" strokeWidth={railW * 0.4} strokeLinecap="round" opacity={0.7} />
+                  stroke="#4a2508" strokeWidth={railW + 2} strokeLinecap="round" />
+
+                {/* Rails — main wood */}
+                <line x1={0} y1={-railOffset} x2={length} y2={-railOffset}
+                  stroke="#d97706" strokeWidth={railW} strokeLinecap="round" />
+                <line x1={0} y1={railOffset} x2={length} y2={railOffset}
+                  stroke="#d97706" strokeWidth={railW} strokeLinecap="round" />
+
+                {/* Rails — highlight */}
+                <line x1={0} y1={-railOffset - railW * 0.28} x2={length} y2={-railOffset - railW * 0.28}
+                  stroke="#fcd34d" strokeWidth={Math.max(1, railW * 0.35)} strokeLinecap="round" opacity={0.85} />
+                <line x1={0} y1={railOffset - railW * 0.28} x2={length} y2={railOffset - railW * 0.28}
+                  stroke="#fcd34d" strokeWidth={Math.max(1, railW * 0.35)} strokeLinecap="round" opacity={0.85} />
+
+                {/* Rungs */}
                 {Array.from({ length: rungCount }).map((_, i) => {
                   const t = (i + 1) / (rungCount + 1);
                   const x = length * t;
                   return (
-                    <line key={i} x1={x} y1={-railOffset} x2={x} y2={railOffset}
-                      stroke="#8b5a2b" strokeWidth={rungW} strokeLinecap="round" />
+                    <g key={i}>
+                      <line x1={x} y1={-railOffset} x2={x} y2={railOffset}
+                        stroke="#4a2508" strokeWidth={rungW + 1.5} strokeLinecap="round" />
+                      <line x1={x} y1={-railOffset} x2={x} y2={railOffset}
+                        stroke="#f59e0b" strokeWidth={rungW} strokeLinecap="round" />
+                      <line x1={x - rungW * 0.15} y1={-railOffset} x2={x - rungW * 0.15} y2={railOffset}
+                        stroke="#fcd34d" strokeWidth={Math.max(0.7, rungW * 0.25)} strokeLinecap="round" opacity={0.7} />
+                    </g>
                   );
                 })}
               </g>
             );
           })}
 
+          {/* ═══ SNAKES ═══ */}
           {Object.entries(snakes).map(([from, to]) => {
-            const p1 = cellPos(+from, size);
-            const p2 = cellPos(to, size);
+            const p1 = cellPos(+from, size); // رأس الثعبان (رقم أعلى)
+            const p2 = cellPos(to, size);     // ذيل الثعبان (رقم أقل)
             const dx = p2.cx - p1.cx;
             const dy = p2.cy - p1.cy;
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -474,33 +555,111 @@ export default function SnakesLadders({
             const my = (p1.cy + p2.cy) / 2;
             const perpX = -dy / len;
             const perpY = dx / len;
-            const curveAmp = Math.min(len * 0.25, size * 1.5);
+            const curveAmp = Math.min(len * 0.22, size * 1.5);
             const cx = mx + perpX * curveAmp;
             const cy = my + perpY * curveAmp;
-            const headR = Math.max(5, size * 0.22);
-            const bodyW = Math.max(4, size * 0.16);
+
+            const headAngle = Math.atan2(p1.cy - cy, p1.cx - cx) * 180 / Math.PI;
+            const bodyPath = `M ${p1.cx} ${p1.cy} Q ${cx} ${cy} ${p2.cx} ${p2.cy}`;
+            const baseW = Math.max(7, size * 0.26);
+
+            // Sample points along the bezier for scale pattern
+            const samples = [];
+            for (let i = 0; i <= 24; i++) {
+              const t = i / 24;
+              const x = (1-t)*(1-t)*p1.cx + 2*(1-t)*t*cx + t*t*p2.cx;
+              const y = (1-t)*(1-t)*p1.cy + 2*(1-t)*t*cy + t*t*p2.cy;
+              samples.push({ x, y, t });
+            }
 
             return (
               <g key={`S-${from}`}>
-                <path d={`M ${p1.cx} ${p1.cy} Q ${cx} ${cy} ${p2.cx} ${p2.cy}`}
-                  stroke="#166534" strokeWidth={bodyW + 2} fill="none" strokeLinecap="round" opacity={0.95} />
-                <path d={`M ${p1.cx} ${p1.cy} Q ${cx} ${cy} ${p2.cx} ${p2.cy}`}
-                  stroke="#22c55e" strokeWidth={bodyW} fill="none" strokeLinecap="round" />
-                <path d={`M ${p1.cx} ${p1.cy} Q ${cx} ${cy} ${p2.cx} ${p2.cy}`}
-                  stroke="#86efac" strokeWidth={Math.max(1.5, bodyW * 0.35)} fill="none" strokeLinecap="round" opacity={0.6} />
-                <circle cx={p1.cx} cy={p1.cy} r={headR} fill="#166534" />
-                <circle cx={p1.cx} cy={p1.cy} r={headR - 1} fill="#22c55e" />
-                <circle cx={p1.cx - headR * 0.35} cy={p1.cy - headR * 0.2} r={headR * 0.25} fill="white" />
-                <circle cx={p1.cx + headR * 0.35} cy={p1.cy - headR * 0.2} r={headR * 0.25} fill="white" />
-                <circle cx={p1.cx - headR * 0.35} cy={p1.cy - headR * 0.2} r={headR * 0.12} fill="black" />
-                <circle cx={p1.cx + headR * 0.35} cy={p1.cy - headR * 0.2} r={headR * 0.12} fill="black" />
-                <line x1={p1.cx} y1={p1.cy + headR * 0.6} x2={p1.cx} y2={p1.cy + headR * 1.1}
-                  stroke="#dc2626" strokeWidth={Math.max(1, headR * 0.15)} strokeLinecap="round" />
-                <line x1={p1.cx} y1={p1.cy + headR * 1.1} x2={p1.cx - headR * 0.25} y2={p1.cy + headR * 1.35}
-                  stroke="#dc2626" strokeWidth={Math.max(1, headR * 0.15)} strokeLinecap="round" />
-                <line x1={p1.cx} y1={p1.cy + headR * 1.1} x2={p1.cx + headR * 0.25} y2={p1.cy + headR * 1.35}
-                  stroke="#dc2626" strokeWidth={Math.max(1, headR * 0.15)} strokeLinecap="round" />
-                <circle cx={p2.cx} cy={p2.cy} r={bodyW * 0.6} fill="#166534" />
+                {/* Shadow */}
+                <path d={bodyPath} stroke="rgba(0,0,0,0.45)" strokeWidth={baseW + 3}
+                  fill="none" strokeLinecap="round" transform="translate(3,4)" />
+
+                {/* Outer dark body */}
+                <path d={bodyPath} stroke="#052e16" strokeWidth={baseW + 3}
+                  fill="none" strokeLinecap="round" />
+
+                {/* Main body */}
+                <path d={bodyPath} stroke="#15803d" strokeWidth={baseW + 1}
+                  fill="none" strokeLinecap="round" />
+
+                {/* Belly highlight */}
+                <path d={bodyPath} stroke="#22c55e" strokeWidth={baseW * 0.7}
+                  fill="none" strokeLinecap="round" />
+
+                {/* Top sheen */}
+                <path d={bodyPath} stroke="#86efac" strokeWidth={baseW * 0.3}
+                  fill="none" strokeLinecap="round" opacity={0.75} />
+
+                {/* Scale pattern — ellipses along body */}
+                {samples.map((s, i) => {
+                  if (i % 2 === 0) return null;
+                  if (s.t < 0.12 || s.t > 0.92) return null;
+
+                  // compute tangent at this point
+                  const dt = 0.01;
+                  const t1 = Math.max(0, s.t - dt);
+                  const t2 = Math.min(1, s.t + dt);
+                  const x1 = (1-t1)*(1-t1)*p1.cx + 2*(1-t1)*t1*cx + t1*t1*p2.cx;
+                  const y1 = (1-t1)*(1-t1)*p1.cy + 2*(1-t1)*t1*cy + t1*t1*p2.cy;
+                  const x2 = (1-t2)*(1-t2)*p1.cx + 2*(1-t2)*t2*cx + t2*t2*p2.cx;
+                  const y2 = (1-t2)*(1-t2)*p1.cy + 2*(1-t2)*t2*cy + t2*t2*p2.cy;
+                  const ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+                  return (
+                    <ellipse
+                      key={i}
+                      cx={s.x} cy={s.y}
+                      rx={baseW * 0.28}
+                      ry={baseW * 0.55}
+                      fill="#052e16"
+                      opacity={0.5}
+                      transform={`rotate(${ang} ${s.x} ${s.y})`}
+                    />
+                  );
+                })}
+
+                {/* Tail — small triangle */}
+                <circle cx={p2.cx} cy={p2.cy} r={baseW * 0.55} fill="#15803d" />
+                <circle cx={p2.cx} cy={p2.cy} r={baseW * 0.35} fill="#166534" />
+
+                {/* ═══ HEAD ═══ */}
+                <g transform={`translate(${p1.cx}, ${p1.cy}) rotate(${headAngle})`}>
+                  {/* Shadow */}
+                  <ellipse cx={2.5} cy={3} rx={baseW * 1.15} ry={baseW * 0.95} fill="rgba(0,0,0,0.4)" />
+
+                  {/* Head base */}
+                  <ellipse cx={0} cy={0} rx={baseW * 1.1} ry={baseW * 0.95} fill="#052e16" />
+                  <ellipse cx={0} cy={0} rx={baseW * 1} ry={baseW * 0.85} fill="#15803d" />
+                  <ellipse cx={0} cy={0} rx={baseW * 0.9} ry={baseW * 0.72} fill="#22c55e" />
+
+                  {/* Snout accent */}
+                  <ellipse cx={-baseW * 0.35} cy={0} rx={baseW * 0.45} ry={baseW * 0.5}
+                    fill="#16a34a" opacity={0.65} />
+
+                  {/* Eyes */}
+                  <circle cx={-baseW * 0.15} cy={-baseW * 0.32} r={baseW * 0.3} fill="#fef3c7" />
+                  <circle cx={-baseW * 0.15} cy={ baseW * 0.32} r={baseW * 0.3} fill="#fef3c7" />
+                  <circle cx={-baseW * 0.2} cy={-baseW * 0.32} r={baseW * 0.17} fill="#111" />
+                  <circle cx={-baseW * 0.2} cy={ baseW * 0.32} r={baseW * 0.17} fill="#111" />
+                  <circle cx={-baseW * 0.25} cy={-baseW * 0.36} r={baseW * 0.06} fill="white" />
+                  <circle cx={-baseW * 0.25} cy={ baseW * 0.28} r={baseW * 0.06} fill="white" />
+
+                  {/* Nostrils */}
+                  <circle cx={-baseW * 0.75} cy={-baseW * 0.15} r={baseW * 0.07} fill="#0a3d1a" />
+                  <circle cx={-baseW * 0.75} cy={ baseW * 0.15} r={baseW * 0.07} fill="#0a3d1a" />
+
+                  {/* Forked tongue */}
+                  <line x1={-baseW * 1} y1={0} x2={-baseW * 1.55} y2={0}
+                    stroke="#dc2626" strokeWidth={Math.max(1, baseW * 0.11)} strokeLinecap="round" />
+                  <line x1={-baseW * 1.55} y1={0} x2={-baseW * 2} y2={-baseW * 0.28}
+                    stroke="#dc2626" strokeWidth={Math.max(1, baseW * 0.11)} strokeLinecap="round" />
+                  <line x1={-baseW * 1.55} y1={0} x2={-baseW * 2} y2={ baseW * 0.28}
+                    stroke="#dc2626" strokeWidth={Math.max(1, baseW * 0.11)} strokeLinecap="round" />
+                </g>
               </g>
             );
           })}

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Bin bag Low Poly
+* source:	https://sketchfab.com/3d-models/bin-bag-low-poly-6f1f7bc45af74ec08f5e0d07ad9a0eb6
+* author:	Zhelazniakov Aleksandr (https://sketchfab.com/mrblik112)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Bin bag Low Poly" (https://sketchfab.com/3d-models/bin-bag-low-poly-6f1f7bc45af74ec08f5e0d07ad9a0eb6) by Zhelazniakov Aleksandr (https://sketchfab.com/mrblik112) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

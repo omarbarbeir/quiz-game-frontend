@@ -1,0 +1,11 @@
+Model Information:
+* title:	Lamp SKURUP - Ikea
+* source:	https://sketchfab.com/3d-models/lamp-skurup-ikea-298a2248f18d460ca5ca5c832364ef18
+* author:	BlueCrystal500 (https://sketchfab.com/BlueCrystal500)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Lamp SKURUP - Ikea" (https://sketchfab.com/3d-models/lamp-skurup-ikea-298a2248f18d460ca5ca5c832364ef18) by BlueCrystal500 (https://sketchfab.com/BlueCrystal500) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

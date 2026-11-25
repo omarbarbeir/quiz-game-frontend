@@ -1,0 +1,11 @@
+Model Information:
+* title:	Stove
+* source:	https://sketchfab.com/3d-models/stove-14db2b1043ca4e0ca46324ae92f0bab7
+* author:	JordanPowell (https://sketchfab.com/jpowell)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Stove" (https://sketchfab.com/3d-models/stove-14db2b1043ca4e0ca46324ae92f0bab7) by JordanPowell (https://sketchfab.com/jpowell) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

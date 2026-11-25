@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mirror
+* source:	https://sketchfab.com/3d-models/mirror-ee961cfc6fc440ba812d6acc5b219f9d
+* author:	alyona_novikova (https://sketchfab.com/alyona_novikova95)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mirror" (https://sketchfab.com/3d-models/mirror-ee961cfc6fc440ba812d6acc5b219f9d) by alyona_novikova (https://sketchfab.com/alyona_novikova95) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

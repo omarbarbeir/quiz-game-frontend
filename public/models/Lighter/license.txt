@@ -1,0 +1,11 @@
+Model Information:
+* title:	Zippo Lighter
+* source:	https://sketchfab.com/3d-models/zippo-lighter-03dab4c7237f4a7fa3813afd70695c72
+* author:	fushoo (https://sketchfab.com/fushoo)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Zippo Lighter" (https://sketchfab.com/3d-models/zippo-lighter-03dab4c7237f4a7fa3813afd70695c72) by fushoo (https://sketchfab.com/fushoo) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

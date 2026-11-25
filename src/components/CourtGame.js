@@ -1,543 +1,1053 @@
-import { useState, useEffect, useRef } from "react";
-import CourtRoom360 from "./Courtroom360";
-import CharacterChat from "./Characterchat";
-import CaseFile from "./Casefile";
+// courtGame.jsx
+import { useState, useEffect, useCallback, useRef } from "react";
+import CourtMenu from "./courtMenu";
+import CourtCaseFile from "./courtCaseFile";
+import CourtTeamChat from "./courtTeamChat";
+import CourtVoting from "./courtVoting";
+import CourtVerdict from "./courtVerdict";
+import CourtResults from "./courtResults";
+import CourtWitnessModal from "./courtWitnessModal";
+import CourtWitnessCard from "./courtWitnessCard";
+import CourtAvatarPicker from "./courtAvatarPicker";
+import CourtPlayerAvatarRow from "./courtPlayerAvatarRow";
+import CourtTitleCard from "./courtTitleCard";
+import CourtTitlesScreen from "./courtTitlesScreen";
+import { getCourtSounds } from "./courtSounds";
+import CourtTrialRecord from "./courtTrialRecord";
+import CourtStats from "./courtStats";
+import CourtEvidenceModal from "./courtEvidenceModal";
+import CourtEvidenceCard from "./courtEvidenceCard";
+// import CourtTitlesScreen from "./courtTitlesScreen";
+import "./courtStyles.css";
+
+// ══════════════════════════════════════════════
+// Court Sound Paths
+// ══════════════════════════════════════════════
+const COURT_SOUND_PATHS = {
+  click:              "/court/sounds/click.mp3",
+  hover:              "/court/sounds/hover.mp3",
+  success:            "/court/sounds/success.mp3",
+  error:              "/court/sounds/error.mp3",
+  notification:       "/court/sounds/notification.mp3",
+  gavel:              "/court/sounds/gavel.mp3",
+  gavelDouble:        "/court/sounds/gavel_double.mp3",
+  gavelTriple:        "/court/sounds/gavel_triple.mp3",
+  objection:          "/court/sounds/objection.mp3",
+  witnessSummon:      "/court/sounds/witness_summon.mp3",
+  verdictGuilty:      "/court/sounds/verdict_guilty.mp3",
+  verdictNotGuilty:   "/court/sounds/verdict_not_guilty.mp3",
+  phaseChange:        "/court/sounds/phase_change.mp3",
+  timerTick:          "/court/sounds/timer_tick.mp3",
+  timerDanger:        "/court/sounds/timer_danger.mp3",
+  cardFlip:           "/court/sounds/card_flip.mp3",
+  voteCast:           "/court/sounds/vote_cast.mp3",
+  win:                "/court/sounds/win.mp3",
+  lose:               "/court/sounds/lose.mp3",
+  titleReveal:        "/court/sounds/title_reveal.mp3",
+  caseOpen:           "/court/sounds/case_open.mp3",
+  caseClose:          "/court/sounds/case_close.mp3",
+  avatarSelect:       "/court/sounds/avatar_select.mp3",
+};
 
 const PHASE = {
-  WAITING: "waiting", READING: "reading", TRIAL: "trial",
-  VOTING: "voting",   VERDICT: "verdict", DEBRIEF: "debrief",
+  WAITING: "waiting",
+  BRIEFING: "briefing",
+  TRIAL: "trial",
+  VOTING: "voting",
+  VERDICT: "verdict",
+  DEBRIEF: "debrief",
 };
 
 const ROLE_LABELS = {
-  judge:       { ar: "القاضي",        icon: "⚖️",  color: "#f59e0b" },
-  prosecution: { ar: "وكيل النيابة",  icon: "📋",  color: "#ef4444" },
-  defense:     { ar: "محامي الدفاع",  icon: "🛡️",  color: "#3b82f6" },
-  accused:     { ar: "المتهم",        icon: "🔗",  color: "#6b7280" },
-  jury:        { ar: "المحلفون",      icon: "👥",  color: "#10b981" },
+  judge:       { ar: "القاضي",        icon: "⚖️",  color: "#c9a961" },
+  prosecution: { ar: "وكيل النيابة",  icon: "📋",  color: "#b23a3a" },
+  defense:     { ar: "محامي الدفاع",  icon: "🛡️",  color: "#3a6ea5" },
+  accused:     { ar: "المتهم",        icon: "⛓️",  color: "#6b6b6b" },
+  jury:        { ar: "محلف",          icon: "👥",  color: "#3a7a5a" },
 };
 
-const VERDICT_OPTIONS = [
-  { id: "guilty",       label: "إدانة",          icon: "🔨", color: "#ef4444" },
-  { id: "not_guilty",   label: "براءة",          icon: "✅", color: "#10b981" },
-  { id: "manslaughter", label: "قتل غير عمد",    icon: "⚖️", color: "#f59e0b" },
-  { id: "refer",        label: "إحالة للتحقيق",  icon: "📂", color: "#8b5cf6" },
-];
+const TEAM_LABELS = {
+  court:   { ar: "فريق المحكمة",   icon: "⚖️" },
+  defense: { ar: "فريق الدفاع",    icon: "🛡️" },
+};
 
-export default function CourtGame({ socket, roomCode, playerId, playerName, onExit }) {
-  const [phase, setPhase]           = useState(PHASE.WAITING);
-  const [role, setRole]             = useState(null);
-  const [team, setTeam]             = useState(null);
-  const [myFile, setMyFile]         = useState(null);
-  const [mySecret, setMySecret]     = useState(null);
-  const [caseInfo, setCaseInfo]     = useState(null);
-  const [caseData, setCaseData]     = useState(null);
-  const [cases, setCases]           = useState([]);
-  const [isHost, setIsHost]         = useState(false);
-  const [timer, setTimer]           = useState(0);
-  const [votes, setVotes]           = useState({});
-  const [verdict, setVerdict]       = useState(null);
-  const [debrief, setDebrief]       = useState(null);
-  const [players, setPlayers]       = useState([]);
-  const [selectedVerdict, setSelectedVerdict] = useState(null);
+function AdminBackButton({ isAdmin, onExit }) {
+  if (!isAdmin || !onExit) return null;
+  return (
+    <button
+      className="court-btn court-btn-ghost court-btn-sm"
+      onClick={onExit}
+      title="رجوع لاختيار الفئات"
+    >
+      ← رجوع للفئات
+    </button>
+  );
+}
+
+export default function CourtGame({
+  socket,
+  roomCode,
+  playerId,
+  playerName,
+  isAdmin,
+  players: mainPlayers,
+  onExit,
+}) {
+  const [phase, setPhase] = useState(PHASE.WAITING);
+  const [role, setRole] = useState(null);
+  const [team, setTeam] = useState(null);
+  const [myFile, setMyFile] = useState(null);
+  const [caseInfo, setCaseInfo] = useState(null);
+  const [cases, setCases] = useState([]);
+  const [isHost, setIsHost] = useState(false);
+  const [players, setPlayers] = useState([]);
+  const [allRoles, setAllRoles] = useState({});
+
+  const [timer, setTimer] = useState(0);
   const [readyCount, setReadyCount] = useState(0);
   const [totalPlayers, setTotalPlayers] = useState(1);
 
-  // شاشة Trial
-  const [activeChat, setActiveChat] = useState(null);
-  const [showFile, setShowFile]     = useState(false);
+  const [votes, setVotes] = useState({});
+  const [verdict, setVerdict] = useState(null);
+  const [debrief, setDebrief] = useState(null);
 
-  // ══ Socket Events ══
+  const [showCaseFile, setShowCaseFile] = useState(false);
+  const [showTeamChat, setShowTeamChat] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  // ✅ نظام الشهود
+  const [witnessCards, setWitnessCards] = useState(null);
+  const [usedWitnesses, setUsedWitnesses] = useState([]);
+  const [summonsLeft, setSummonsLeft] = useState({ prosecution: 2, defense: 2 });
+  const [witnessLog, setWitnessLog] = useState([]);
+  const [showWitnessModal, setShowWitnessModal] = useState(false);
+  const [activeWitness, setActiveWitness] = useState(null);
+  const [trialLog, setTrialLog] = useState([]);
+  const [showTrialRecord, setShowTrialRecord] = useState(false);
+  const [statsData, setStatsData] = useState(null);
+  const [viewMode, setViewMode] = useState("journal"); // journal | titles | stats
+
+  const [soundMuted, setSoundMuted] = useState(false);
+  const soundRef = useRef(null);
+
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [myAvatar, setMyAvatar] = useState(null);
+  const [myDisplayName, setMyDisplayName] = useState(playerName || "");
+  const [caseFileJustClosed, setCaseFileJustClosed] = useState(false);
+
+  const [evidenceCards, setEvidenceCards] = useState(null);
+  const [usedEvidence, setUsedEvidence] = useState([]);
+  const [evidenceLeft, setEvidenceLeft] = useState({ prosecution: 2, defense: 2 });
+  const [evidenceLog, setEvidenceLog] = useState([]);
+  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
+  const [activeEvidence, setActiveEvidence] = useState(null);
+
+
+  // ✅ Sound Engine Setup
+  useEffect(() => {
+    soundRef.current = getCourtSounds();
+    soundRef.current.loadSounds(COURT_SOUND_PATHS);
+  }, []);
+
+  useEffect(() => {
+    if (soundRef.current) {
+      soundRef.current.setEnabled(!soundMuted);
+    }
+  }, [soundMuted]);
+
+  const playSound = useCallback((name) => {
+    soundRef.current?.play(name);
+}, []);
+
   useEffect(() => {
     if (!socket) return;
-    socket.emit("court_join", { roomCode, playerId, playerName, mode: "multi" });
-    socket.emit("court_get_cases", { roomCode });
 
-    socket.on("court_joined", (d) => {
-      setCaseInfo(d.caseInfo); setIsHost(d.isHost); setPlayers(d.players || []);
-    });
-    socket.on("court_cases_list", ({ cases }) => setCases(cases));
-    socket.on("court_player_joined", ({ playerId: pid, playerName: pn }) => {
-      setPlayers(prev => prev.find(p => p.id === pid) ? prev : [...prev, { id: pid, name: pn }]);
-    });
-    socket.on("court_player_left", ({ playerId: pid }) => {
+    socket.emit("court_join", { roomCode, playerId, playerName });
+    socket.emit("court_get_cases");
+
+    const onJoined = (d) => {
+      setCaseInfo(d.caseInfo);
+      setIsHost(d.isHost);
+      setPlayers(d.players || []);
+    };
+
+    const onCasesList = ({ cases: c }) => setCases(c);
+
+    const onPlayerJoined = ({ playerId: pid, playerName: pn }) => {
+      setPlayers(prev =>
+        prev.find(p => p.id === pid) ? prev : [...prev, { id: pid, name: pn }]
+      );
+    };
+
+    const onPlayerLeft = ({ playerId: pid }) => {
       setPlayers(prev => prev.filter(p => p.id !== pid));
-    });
-    socket.on("court_phase_changed", ({ phase: p }) => {
+    };
+
+    const onPhaseChanged = ({ phase: p }) => {
       setPhase(p);
-      if (p === PHASE.TRIAL) { setShowFile(false); setActiveChat(null); }
-    });
-    socket.on("court_role_assigned", ({ role: r, team: t, file, secret, caseData: cd }) => {
-      setRole(r); setTeam(t); setMyFile(file);
-      if (secret) setMySecret(secret);
-      if (cd) setCaseData(cd);
-    });
-    socket.on("court_timer_update",  ({ seconds }) => setTimer(seconds));
-    socket.on("court_ready_update",  ({ readyCount: rc, totalPlayers: tp }) => {
-      setReadyCount(rc); setTotalPlayers(tp);
-    });
-    socket.on("court_vote_cast", ({ playerId: pid, voted }) => {
-      setVotes(prev => ({ ...prev, [pid]: voted ? "voted" : null }));
-    });
-    socket.on("court_verdict_announced", ({ verdict: v }) => {
-      setVerdict(v); setPhase(PHASE.VERDICT);
-    });
-    socket.on("court_debrief", (d) => { setDebrief(d); setPhase(PHASE.DEBRIEF); });
-    socket.on("court_restarted", () => {
-      setPhase(PHASE.WAITING); setRole(null); setTeam(null);
-      setMyFile(null); setMySecret(null); setCaseData(null);
-      setVotes({}); setVerdict(null); setDebrief(null);
-      setReadyCount(0); setSelectedVerdict(null);
-      setActiveChat(null); setShowFile(false);
-    });
-    socket.on("court_case_changed", ({ caseInfo: ci }) => setCaseInfo(ci));
+      playSound("phaseChange");
+      if (p !== PHASE.BRIEFING) setShowCaseFile(false);
+      if (p === PHASE.TRIAL) setShowCaseFile(false);
+    };
+
+    const onRoleAssigned = (data) => {
+      setRole(data.role);
+      setTeam(data.team);
+      setMyFile(data);
+      setAllRoles(data.allRoles || {});
+      if (data.role) {
+        setShowCaseFile(true);
+        setCaseFileJustClosed(false);
+        playSound("caseOpen");
+      }
+    };
+
+    
+
+    const onTimerUpdate = ({ seconds }) => setTimer(seconds);
+
+    const onReadyUpdate = ({ readyCount: rc, totalPlayers: tp }) => {
+      setReadyCount(rc);
+      setTotalPlayers(tp);
+    };
+
+    const onVoteCast = ({ playerId: pid }) => {
+      setVotes(prev => ({ ...prev, [pid]: true }));
+      playSound("voteCast");
+    };
+
+    const onVerdictAnnounced = ({ verdict: v }) => {
+      setVerdict(v);
+      setPhase(PHASE.VERDICT);
+      playSound(v === "guilty" ? "verdictGuilty" : "verdictNotGuilty");
+    };
+
+    const onDebrief = (d) => {
+      setDebrief(d);
+      setStatsData(d.stats || null);
+      setPhase(PHASE.DEBRIEF);
+      setViewMode("journal");
+      playSound("win");
+    };
+
+    const onRestarted = () => {
+      setPhase(PHASE.WAITING);
+      setRole(null);
+      setTeam(null);
+      setMyFile(null);
+      setAllRoles({});
+      setVotes({});
+      setVerdict(null);
+      setDebrief(null);
+      setReadyCount(0);
+      setShowCaseFile(false);
+      setShowTeamChat(false);
+      setUnreadMessages(0);
+      setUsedWitnesses([]);
+      setSummonsLeft({ prosecution: 2, defense: 2 });
+      setWitnessLog([]);
+      setTrialLog([]);
+      setStatsData(null);
+      setViewMode("journal");
+      setShowTrialRecord(false);
+      setActiveWitness(null);
+      setShowWitnessModal(false);
+      setUsedEvidence([]);
+      setEvidenceLeft({ prosecution: 2, defense: 2 });
+      setEvidenceLog([]);
+      setActiveEvidence(null);
+      setShowEvidenceModal(false);
+    };
+
+    const onCaseChanged = ({ caseInfo: ci }) => setCaseInfo(ci);
+
+    const onTeamMessage = () => {
+      if (!showTeamChat) setUnreadMessages(c => c + 1);
+    };
+
+    const onError = (err) => console.warn("[Court]", err?.message || err);
+
+    // ✅ نظام الشهود
+    const onWitnessState = (data) => {
+      setWitnessCards(data.witnessCards);
+      setUsedWitnesses(data.usedWitnesses || []);
+      setSummonsLeft(data.summonsLeft || { prosecution: 2, defense: 2 });
+      setWitnessLog(data.witnessLog || []);
+    };
+
+    const onWitnessSummoned = ({ witness, side, witnessLog: log }) => {
+      setActiveWitness(witness);
+      setWitnessLog(log || []);
+      playSound("witnessSummon");
+    };
+
+    const onWitnessUpdate = (data) => {
+      setUsedWitnesses(data.usedWitnesses || []);
+      setSummonsLeft(data.summonsLeft || { prosecution: 2, defense: 2 });
+      setWitnessLog(data.witnessLog || []);
+    };
+
+    const onTrialLogUpdate = (data) => {
+      setTrialLog(data.trialLog || []);
+    };
+
+    // ✅ Evidence listeners
+    const onEvidenceState = (data) => {
+      setEvidenceCards(data.evidenceCards);
+      setUsedEvidence(data.usedEvidence || []);
+      setEvidenceLeft(data.evidenceLeft || { prosecution: 2, defense: 2 });
+      setEvidenceLog(data.evidenceLog || []);
+    };
+
+    const onEvidencePresented = ({ evidence, side, evidenceLog: log }) => {
+      setActiveEvidence(evidence);
+      setEvidenceLog(log || []);
+      playSound("cardFlip");
+    };
+
+    const onEvidenceUpdate = (data) => {
+      setUsedEvidence(data.usedEvidence || []);
+      setEvidenceLeft(data.evidenceLeft || { prosecution: 2, defense: 2 });
+      setEvidenceLog(data.evidenceLog || []);
+    };
+
+    const onPlayersUpdated = ({ players: updated }) => {
+      setPlayers(updated);
+      const me = updated.find(p => p.id === playerId);
+      if (me?.avatar) setMyAvatar(me.avatar);
+      if (me?.name) setMyDisplayName(me.name);
+    };
+
+
+
+    socket.on("court_joined", onJoined);
+    socket.on("court_cases_list", onCasesList);
+    socket.on("court_player_joined", onPlayerJoined);
+    socket.on("court_player_left", onPlayerLeft);
+    socket.on("court_phase_changed", onPhaseChanged);
+    socket.on("court_role_assigned", onRoleAssigned);
+    socket.on("court_timer_update", onTimerUpdate);
+    socket.on("court_ready_update", onReadyUpdate);
+    socket.on("court_vote_cast", onVoteCast);
+    socket.on("court_verdict_announced", onVerdictAnnounced);
+    socket.on("court_debrief", onDebrief);
+    socket.on("court_restarted", onRestarted);
+    socket.on("court_case_changed", onCaseChanged);
+    socket.on("court_team_message", onTeamMessage);
+    socket.on("court_error", onError);
+    socket.on("court_witness_state", onWitnessState);
+    socket.on("court_witness_summoned", onWitnessSummoned);
+    socket.on("court_witness_update", onWitnessUpdate);
+    socket.on("court_trial_log_update", onTrialLogUpdate);
+    socket.on("court_evidence_state", onEvidenceState);
+    socket.on("court_evidence_presented", onEvidencePresented);
+    socket.on("court_evidence_update", onEvidenceUpdate);
+    socket.on("court_players_updated", onPlayersUpdated);
 
     return () => {
-      ["court_joined","court_cases_list","court_player_joined","court_player_left",
-       "court_phase_changed","court_role_assigned","court_timer_update",
-       "court_ready_update","court_vote_cast","court_verdict_announced",
-       "court_debrief","court_restarted","court_case_changed"]
-        .forEach(ev => socket.off(ev));
+      [
+        "court_joined", "court_cases_list", "court_player_joined",
+        "court_player_left", "court_phase_changed", "court_role_assigned",
+        "court_timer_update", "court_ready_update", "court_vote_cast",
+        "court_verdict_announced", "court_debrief", "court_restarted",
+        "court_case_changed", "court_team_message", "court_error",
+        "court_witness_state", "court_witness_summoned", "court_witness_update",
+        "court_players_updated", "court_trial_log_update", "court_evidence_state", "court_evidence_presented", "court_evidence_update",
+      ].forEach(ev => socket.off(ev));
+      socket.emit("court_leave", { roomCode, playerId });
     };
+    // eslint-disable-next-line
   }, [socket, roomCode, playerId, playerName]);
 
-  // ══ Actions ══
-  const startGame  = () => socket.emit("court_start_game",   { roomCode, playerId });
-  const markReady  = () => socket.emit("court_player_ready", { roomCode, playerId });
-  const endTrial   = () => socket.emit("court_end_trial",    { roomCode, playerId });
-  const restart    = () => socket.emit("court_restart",      { roomCode, playerId });
-  const changeCase = (id) => socket.emit("court_change_case",{ roomCode, playerId, caseId: id });
-  const submitVote = () => {
-    if (!selectedVerdict) return;
-    socket.emit("court_vote", { roomCode, playerId, verdict: selectedVerdict });
-  };
+  // ✅ فتح الـ picker تلقائي بعد ما اللاعب يقفل ملف القضية
+  useEffect(() => {
+    if (phase !== PHASE.BRIEFING) return;
+    if (!caseFileJustClosed) return;
+    if (myAvatar) return; // عنده أفاتار بالفعل
+    setShowAvatarPicker(true);
+    setCaseFileJustClosed(false);
+  }, [phase, caseFileJustClosed, myAvatar]);
 
-  // ══ مكوّنات مساعدة ══
-  const RoleBadge = ({ r }) => {
-    const info = ROLE_LABELS[r] || { ar: r, icon: "👤", color: "#6b7280" };
+  const startGame = useCallback(() => {
+    soundRef.current?.unlock();
+    playSound("gavel");
+    socket.emit("court_start_game", { roomCode, playerId });
+  }, [socket, roomCode, playerId, playSound]);
+
+  const markReady = useCallback(() => {
+    playSound("success");
+    socket.emit("court_player_ready", { roomCode, playerId });
+  }, [socket, roomCode, playerId, playSound]);
+
+  const endTrial = useCallback(() => {
+    playSound("gavelTriple");
+    socket.emit("court_end_trial", { roomCode, playerId });
+  }, [socket, roomCode, playerId, playSound]);
+
+  const submitVote = useCallback((verdictId) => {
+    playSound("voteCast");
+    socket.emit("court_vote", { roomCode, playerId, verdict: verdictId });
+  }, [socket, roomCode, playerId, playSound]);
+
+  const restart = useCallback(() => {
+    setViewMode("journal");
+    socket.emit("court_restart", { roomCode, playerId });
+  }, [socket, roomCode, playerId]);
+
+  const changeCase = useCallback((caseId) => {
+    socket.emit("court_change_case", { roomCode, playerId, caseId });
+  }, [socket, roomCode, playerId]);
+
+  const openTeamChat = useCallback(() => {
+    setShowTeamChat(true);
+    setUnreadMessages(0);
+  }, []);
+
+  const closeTeamChat = useCallback(() => {
+    setShowTeamChat(false);
+  }, []);
+
+  const summonWitness = useCallback((witnessId, side) => {
+    socket.emit("court_summon_witness", {
+      roomCode,
+      playerId,
+      witnessId,
+      side,
+    });
+    setShowWitnessModal(false);
+  }, [socket, roomCode, playerId]);
+
+  const presentEvidence = useCallback((evidenceId, side) => {
+    socket.emit("court_present_evidence", {
+      roomCode,
+      playerId,
+      evidenceId,
+      side,
+    });
+    setShowEvidenceModal(false);
+  }, [socket, roomCode, playerId]);
+
+  const confirmAvatar = useCallback(({ avatar, displayName }) => {
+    socket.emit("court_set_avatar", {
+      roomCode,
+      playerId,
+      avatar,
+      displayName,
+    });
+    setMyAvatar(avatar);
+    setMyDisplayName(displayName);
+    setShowAvatarPicker(false);
+  }, [socket, roomCode, playerId]);
+
+  const roleInfo = role ? ROLE_LABELS[role] : null;
+  const teamInfo = team ? TEAM_LABELS[team] : null;
+
+  // ─── WAITING ───
+  if (phase === PHASE.WAITING) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-        style={{ backgroundColor: info.color+"22", border:`1px solid ${info.color}`, color: info.color }}>
-        {info.icon} {info.ar}
-      </span>
+      <CourtMenu
+        roomCode={roomCode}
+        playerId={playerId}
+        playerName={playerName}
+        players={players}
+        isHost={isHost}
+        caseInfo={caseInfo}
+        cases={cases}
+        onChangeCase={changeCase}
+        onStart={startGame}
+        onExit={onExit}
+      />
     );
-  };
+  }
 
-  const TimerBar = ({ maxTime }) => {
-    const pct   = Math.round((timer / maxTime) * 100);
-    const color = timer < 30 ? "#ef4444" : timer < 60 ? "#f59e0b" : "#10b981";
-    const mins  = Math.floor(timer / 60);
-    const secs  = timer % 60;
+  // ─── BRIEFING ───
+  if (phase === PHASE.BRIEFING) {
+    const me = players.find(p => p.id === playerId);
+    const hasAvatar = !!(me?.avatar || myAvatar);
+
     return (
-      <div className="mb-3">
-        <div className="flex justify-between text-xs text-gray-400 mb-1">
-          <span>الوقت المتبقي</span>
-          <span style={{ color }} className="font-mono font-bold">
-            {mins}:{String(secs).padStart(2,"0")}
-          </span>
+      <div className="court-screen taboo-scroll" dir="rtl">
+        <header className="court-header">
+          <div className="court-header-left">
+            <span className="court-icon">📜</span>
+            <div>
+              <h1 className="court-title">مرحلة القراءة</h1>
+              {caseInfo && <p className="court-subtitle">{caseInfo.title}</p>}
+            </div>
+          </div>
+          <div className="court-header-right">
+            {roleInfo && (
+              <span
+                className="court-role-badge"
+                style={{
+                  background: roleInfo.color + "22",
+                  borderColor: roleInfo.color,
+                  color: roleInfo.color,
+                }}
+              >
+                {roleInfo.icon} {roleInfo.ar}
+              </span>
+            )}
+            <CourtTimer seconds={timer} max={240} />
+            <button
+              className="court-sound-toggle"
+              onClick={() => setSoundMuted(m => !m)}
+              title={soundMuted ? "تشغيل الصوت" : "كتم الصوت"}
+            >
+              {soundMuted ? "🔇" : "🔊"}
+            </button>
+            <AdminBackButton isAdmin={isAdmin} onExit={onExit} />
+          </div>
+        </header>
+
+        <div className="court-briefing-body">
+          <div className="court-briefing-card">
+            <div className="court-briefing-icon">📁</div>
+            <h2>افتح ملف القضية لقراءة التفاصيل</h2>
+            <p>
+              {role === "accused"
+                ? "هذا الملف يحتوي على الحقيقة الكاملة وما يجب أن تقوله."
+                : role === "defense"
+                ? "هذا الملف يحتوي على نقاط الدفاع وما قاله لك موكّلك."
+                : role === "prosecution"
+                ? "هذا الملف يحتوي على نظرية الاتهام والأدلة."
+                : role === "jury"
+                ? "هذا الملف يحتوي على ملخص مختصر للقضية."
+                : "هذا الملف يحتوي على الوقائع والأدلة المتاحة."}
+            </p>
+            <button
+              className="court-btn court-btn-gold"
+              onClick={() => setShowCaseFile(true)}
+            >
+              📄 فتح ملف القضية
+            </button>
+          </div>
+
+          <div className="court-briefing-ready">
+            <div className="court-ready-count">
+              <span>{readyCount}</span>
+              <span className="court-ready-total">/ {totalPlayers}</span>
+            </div>
+            <p>لاعبين جاهزين</p>
+
+            {/* زر اختيار الصورة */}
+            {hasAvatar && (
+              <button
+                className="court-btn court-btn-ghost court-btn-sm court-briefing-avatar-btn"
+                onClick={() => setShowAvatarPicker(true)}
+              >
+                🎭 تغيير صورتك
+              </button>
+            )}
+
+            {/* زر "أنا جاهز" — معطل لو مفيش أفاتار */}
+            <button
+              className="court-btn court-btn-green"
+              onClick={markReady}
+              disabled={!hasAvatar}
+            >
+              {hasAvatar ? "✅ أنا جاهز" : "🎭 اختر صورتك أولاً"}
+            </button>
+          </div>
         </div>
-        <div className="w-full bg-gray-700 rounded-full h-1.5">
-          <div className="h-1.5 rounded-full transition-all duration-1000"
-            style={{ width:`${pct}%`, backgroundColor: color }} />
-        </div>
+
+        {showCaseFile && myFile && (
+          <CourtCaseFile
+            file={myFile}
+            role={role}
+            caseInfo={caseInfo}
+            onClose={() => {
+              setShowCaseFile(false);
+              setCaseFileJustClosed(true);
+            }}
+          />
+        )}
+
+        {/* مودال اختيار الأفاتار */}
+        {showAvatarPicker && (
+          <CourtAvatarPicker
+            playerId={playerId}
+            currentName={myDisplayName}
+            currentAvatar={myAvatar}
+            takenAvatars={players
+              .filter(p => p.id !== playerId && p.avatar)
+              .map(p => p.avatar)}
+            onConfirm={confirmAvatar}
+            isMandatory={!hasAvatar}
+          />
+        )}
       </div>
     );
-  };
+  }
 
-  // ══════════════════════════════════════════════
-  // شاشة الانتظار
-  // ══════════════════════════════════════════════
-  if (phase === PHASE.WAITING) return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-3">⚖️</div>
-          <h1 className="text-3xl font-black text-amber-400 mb-1">قاعة المحكمة</h1>
-          <p className="text-gray-400 text-sm">
-            كود الغرفة: <span className="font-mono font-bold text-white">{roomCode}</span>
-          </p>
-        </div>
+  // ─── TRIAL ───
+  if (phase === PHASE.TRIAL) {
+    const totalSummons = summonsLeft.prosecution + summonsLeft.defense;
+    const canSummon = totalSummons > 0;
 
-        {caseInfo && (
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 mb-4">
-            <div className="flex gap-3">
-              <span className="text-3xl">📁</span>
-              <div>
-                <h2 className="font-black text-white">{caseInfo.title}</h2>
-                <p className="text-gray-400 text-sm">
-                  {caseInfo.category} · {caseInfo.difficulty} · {caseInfo.estimatedTime}
+    return (
+      <div className="court-screen taboo-scroll" dir="rtl">
+        <header className="court-header ">
+          <div className="court-header-left ">
+            <span className="court-icon">⚖️</span>
+            <div>
+              <h1 className="court-title">الجلسة جارية</h1>
+              {caseInfo && <p className="court-subtitle">{caseInfo.title}</p>}
+            </div>
+          </div>
+          <div className="court-header-right">
+            {roleInfo && (
+              <span
+                className="court-role-badge"
+                style={{
+                  background: roleInfo.color + "22",
+                  borderColor: roleInfo.color,
+                  color: roleInfo.color,
+                }}
+              >
+                {roleInfo.icon} {roleInfo.ar}
+              </span>
+            )}
+            {teamInfo && (
+              <span className="court-team-badge">
+                {teamInfo.icon} {teamInfo.ar}
+              </span>
+            )}
+            <button
+              className="court-sound-toggle"
+              onClick={() => setSoundMuted(m => !m)}
+              title={soundMuted ? "تشغيل الصوت" : "كتم الصوت"}
+            >
+              {soundMuted ? "🔇" : "🔊"}
+            </button>
+            <AdminBackButton isAdmin={isAdmin} onExit={onExit} />
+          </div>
+        </header>
+
+        {/* ✅ صف صور اللعيبة */}
+        <CourtPlayerAvatarRow
+          players={players}
+          allRoles={allRoles}
+          playerId={playerId}
+        />
+
+        <div className="court-trial-body">
+          <div className="court-trial-main">
+            <div className="court-trial-illustration">
+              <div className="court-gavel">🔨</div>
+              <h2>المرافعة جارية</h2>
+                <p className="court-trial-hint">
+                  {role === "judge"
+                    ? "استمع للطرفين، واستدع الشهود عند الحاجة."
+                    : role === "prosecution"
+                    ? "اعرض قضيتك، واطلب من القاضي استدعاء شهودك."
+                    : role === "defense"
+                    ? "دافع عن موكلك، واطلب من القاضي استدعاء شهودك."
+                    : role === "accused"
+                    ? (myFile?.isSelfDefending
+                        ? "أنت المتهم وتدافع عن نفسك. استخدم ملف الدفاع واطلب من القاضي استدعاء شهودك."
+                        : "التزم بروايتك ولا تنهار.")
+                    : "استمع جيداً ثم صوّت."}
                 </p>
+
+              <div className="court-trial-actions">
+                <button
+                  className="court-btn court-btn-gold"
+                  onClick={() => setShowCaseFile(true)}
+                >
+                  📄 راجع الملف
+                </button>
+
+                <button
+                  className="court-btn court-btn-ghost"
+                  onClick={() => setShowTrialRecord(true)}
+                >
+                  📜 سجل الجلسة
+                  {trialLog.length > 0 && (
+                    <span className="court-trial-record-badge">{trialLog.length}</span>
+                  )}
+                </button>
+
+                {(team === "court" || team === "defense") && (
+                  <button
+                    className="court-btn court-btn-blue"
+                    onClick={openTeamChat}
+                  >
+                    💬 شات الفريق
+                    {unreadMessages > 0 && (
+                      <span className="court-unread-badge">{unreadMessages}</span>
+                    )}
+                  </button>
+                )}
+
+                {role === "judge" && (
+                  <button
+                    className="court-btn court-btn-gold"
+                    onClick={() => setShowWitnessModal(true)}
+                    disabled={!canSummon || !witnessCards}
+                  >
+                    📣 استدعاء شاهد
+                    <span className="court-summons-badge">{totalSummons}</span>
+                  </button>
+                )}
+
+                {role === "judge" && (
+                  <button
+                    className="court-btn court-btn-gold"
+                    onClick={() => setShowEvidenceModal(true)}
+                    disabled={
+                      (evidenceLeft.prosecution + evidenceLeft.defense) === 0 || !evidenceCards
+                    }
+                  >
+                    🔍 تقديم دليل
+                    <span className="court-summons-badge">
+                      {evidenceLeft.prosecution + evidenceLeft.defense}
+                    </span>
+                  </button>
+                )}
+
+                {role === "judge" && (
+                  <button
+                    className="court-btn court-btn-red"
+                    onClick={endTrial}
+                  >
+                    🔨 إنهاء المرافعة والتصويت
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* سجل الاستدعاءات */}
+            {witnessLog.length > 0 && (
+              <div className="court-witness-log">
+                <h3 className="court-witness-log-title">📋 سجل الاستدعاءات</h3>
+                <ul className="court-witness-log-list">
+                  {witnessLog.map((entry, i) => (
+                    <li key={i} className="court-witness-log-item">
+                      <span className="court-witness-log-icon">📣</span>
+                      <span className="court-witness-log-text">
+                        القاضي استدعى
+                      </span>
+                      <strong className="court-witness-log-name">
+                        {entry.name}
+                      </strong>
+                      <span
+                        className={`court-witness-log-side court-witness-log-side-${entry.side}`}
+                      >
+                        ({entry.side === "prosecution" ? "نيابة" : "دفاع"})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-        )}
 
-        {isHost && cases.length > 0 && (
-          <div className="mb-4">
-            <p className="text-gray-500 text-xs mb-2">اختر قضية:</p>
-            {cases.map(c => (
-              <button key={c.id} onClick={() => changeCase(c.id)}
-                className="w-full text-right px-4 py-3 rounded-xl border mb-2 text-sm transition-all"
-                style={caseInfo?.id === c.id
-                  ? { borderColor:"#f59e0b", background:"#451a0322", color:"#fbbf24" }
-                  : { borderColor:"#374151", background:"#111827",   color:"#9ca3af" }}>
-                <span className="font-bold">{c.title}</span>
-                <span className="text-gray-500 mr-2">— {c.difficulty}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
-          <p className="text-gray-500 text-xs mb-2">اللاعبون ({players.length})</p>
-          <div className="flex flex-wrap gap-2">
-            {players.map(p => (
-              <span key={p.id} className="bg-gray-800 text-white text-sm px-3 py-1 rounded-full">
-                {p.name}{p.id === playerId ? " (أنت)" : ""}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {isHost ? (
-          <button onClick={startGame}
-            className="w-full py-4 rounded-2xl font-black text-lg bg-amber-500 hover:bg-amber-400 text-black transition-all">
-            🔨 ابدأ الجلسة
-          </button>
-        ) : (
-          <p className="text-center text-gray-500 text-sm py-4">في انتظار المضيف...</p>
-        )}
-
-        {onExit && (
-          <button onClick={onExit} className="w-full mt-3 py-2 text-gray-600 text-sm">
-            خروج
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
-  // ══════════════════════════════════════════════
-  // شاشة القراءة
-  // ══════════════════════════════════════════════
-  if (phase === PHASE.READING) return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col" dir="rtl">
-      <div className="max-w-2xl mx-auto w-full flex flex-col flex-1 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-black text-amber-400">📄 مرحلة القراءة</h2>
-          {role && <RoleBadge r={role} />}
-        </div>
-        <TimerBar maxTime={180} />
-
-        <div className="flex-1 overflow-hidden mb-4">
-          <CaseFile caseData={caseData} role={role} myFile={myFile} />
-        </div>
-
-        {mySecret && (
-          <div className="bg-red-950 border border-red-700 rounded-2xl p-4 mb-4">
-            <p className="text-red-400 text-xs font-bold mb-2">🔐 سرك الخاص — لا يراه أحد</p>
-            <p className="text-red-100 text-sm leading-relaxed">{mySecret}</p>
-          </div>
-        )}
-
-        <div>
-          <div className="text-center text-gray-500 text-xs mb-2">
-            {readyCount}/{totalPlayers} جاهز
-          </div>
-          <button onClick={markReady}
-            className="w-full py-3 rounded-2xl font-black bg-green-600 hover:bg-green-500 text-white transition-all">
-            ✅ جاهز — ابدأ الجلسة
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ══════════════════════════════════════════════
-  // شاشة المرافعة — الصورة تملأ الشاشة
-  // ══════════════════════════════════════════════
-  if (phase === PHASE.TRIAL) return (
-    <div className="fixed inset-0 bg-gray-950 text-white flex flex-col" dir="rtl">
-
-      {/* Header رفيع فوق الصورة */}
-      <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/70 to-transparent px-4 pt-3 pb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">⚖️</span>
-          <div>
-            <p className="font-black text-white text-xs leading-none drop-shadow">الجلسة جارية</p>
-            {caseInfo && <p className="text-white/50 text-xs drop-shadow">{caseInfo.title}</p>}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {role && <RoleBadge r={role} />}
-          <button
-            onClick={() => setShowFile(f => !f)}
-            className="text-xs px-3 py-1.5 rounded-xl font-bold transition-all backdrop-blur-sm"
-            style={{
-              background: showFile ? "#c8a84b" : "rgba(0,0,0,0.5)",
-              color:      showFile ? "#000"    : "#fff",
-              border:     "1px solid rgba(255,255,255,0.15)",
-            }}
-          >
-            📄 الملف
-          </button>
-        </div>
-      </div>
-
-      {/* ── الصورة البانورامية تملأ الشاشة كلها ── */}
-      <div className="absolute inset-0">
-        <CourtRoom360
-          role={role}
-          onInteract={(characterId) => {
-            if (characterId === role) return;
-            setActiveChat(characterId);
-          }}
-        />
-      </div>
-
-      {/* زر إنهاء المرافعة للقاضي */}
-      {role === "judge" && (
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20 pointer-events-none">
-          <button
-            onClick={endTrial}
-            className="pointer-events-auto px-6 py-3 rounded-2xl font-black text-sm bg-amber-600/90 hover:bg-amber-500 text-white backdrop-blur-sm shadow-lg transition-all"
-          >
-            🔨 إنهاء المرافعة
-          </button>
-        </div>
-      )}
-
-      {/* ── ملف القضية — overlay فوق الصورة ── */}
-      {showFile && (
-        <div
-          className="absolute inset-0 z-30 flex flex-col"
-          style={{
-            background: "rgba(0,0,0,0.88)",
-            backdropFilter: "blur(10px)",
-            animation: "slideUp 0.25s ease-out",
-          }}
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/60 flex-shrink-0">
-            <h3 className="font-black text-white text-sm">📄 ملف القضية</h3>
-            <button
-              onClick={() => setShowFile(false)}
-              className="text-gray-500 hover:text-white text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-all"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="flex-1 overflow-hidden p-3">
-            <CaseFile caseData={caseData} role={role} myFile={myFile} />
-          </div>
-        </div>
-      )}
-
-      {/* ── Character Chat Pop-up فوق كل حاجة ── */}
-      {activeChat && (
-        <CharacterChat
-          characterId={activeChat}
-          caseData={caseData}
-          myRole={role}
-          onClose={() => setActiveChat(null)}
-        />
-      )}
-
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </div>
-  );
-
-  // ══════════════════════════════════════════════
-  // شاشة التصويت
-  // ══════════════════════════════════════════════
-  if (phase === PHASE.VOTING) return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🗳️</div>
-          <h2 className="text-2xl font-black text-amber-400">مرحلة التصويت</h2>
-          <p className="text-gray-400 text-sm mt-1">الحكم النهائي</p>
-        </div>
-
-        {(role === "accused" || role === "defense") ? (
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 text-center">
-            <div className="text-4xl mb-3">⏳</div>
-            <p className="text-gray-300 text-sm">فريق الدفاع لا يصوت.</p>
-            <p className="text-gray-500 text-xs mt-1">في انتظار حكم المحكمة...</p>
-          </div>
-        ) : (
-          <div>
-            <div className="space-y-3 mb-6">
-              {VERDICT_OPTIONS.map(v => (
-                <button key={v.id} onClick={() => setSelectedVerdict(v.id)}
-                  className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 border-2 transition-all"
-                  style={selectedVerdict === v.id
-                    ? { backgroundColor:v.color+"22", borderColor:v.color, color:v.color }
-                    : { borderColor:"#374151", color:"#6b7280" }}>
-                  <span className="text-2xl">{v.icon}</span>
-                  {v.label}
-                </button>
-              ))}
-            </div>
-            <button onClick={submitVote} disabled={!selectedVerdict}
-              className="w-full py-4 rounded-2xl font-black text-lg bg-amber-500 hover:bg-amber-400 text-black transition-all disabled:opacity-40">
-              🔨 أصدر الحكم
-            </button>
-          </div>
-        )}
-
-        <div className="mt-4 text-center text-gray-500 text-xs">
-          {Object.keys(votes).length} صوّتوا حتى الآن
-        </div>
-      </div>
-    </div>
-  );
-
-  // ══════════════════════════════════════════════
-  // شاشة الحكم
-  // ══════════════════════════════════════════════
-  if (phase === PHASE.VERDICT) return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4" dir="rtl">
-      <div className="text-center">
-        <div className="text-8xl mb-6 animate-bounce">🔨</div>
-        <h2 className="text-4xl font-black text-amber-400 mb-4">
-          {verdict === "guilty" ? "إدانة!" : verdict === "not_guilty" ? "براءة!" : "إحالة!"}
-        </h2>
-        <p className="text-gray-400">جارٍ كشف الحقيقة...</p>
-      </div>
-    </div>
-  );
-
-  // ══════════════════════════════════════════════
-  // شاشة التقرير النهائي
-  // ══════════════════════════════════════════════
-  if (phase === PHASE.DEBRIEF && debrief) return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 overflow-y-auto" dir="rtl">
-      <div className="max-w-2xl mx-auto">
-        <div className={`rounded-3xl p-6 mb-6 text-center border-2 ${
-          debrief.resultType === "justice"
-            ? "bg-green-950 border-green-600"
-            : "bg-red-950 border-red-600"
-        }`}>
-          <div className="text-5xl mb-3">
-            {debrief.resultType === "justice" ? "⚖️" : "🔴"}
-          </div>
-          <h2 className="text-2xl font-black text-white mb-2">{debrief.resultLabel}</h2>
-        </div>
-
-        <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 mb-4">
-          <h3 className="font-black text-white mb-3">🔍 الحقيقة الكاملة</h3>
-          <div className="space-y-2 text-sm">
-            <div><span className="text-gray-400">الجاني: </span><span className="text-white font-bold">{debrief.truth.culprit}</span></div>
-            <div><span className="text-gray-400">الطريقة: </span><span className="text-white">{debrief.truth.method}</span></div>
-            <div><span className="text-gray-400">الدافع: </span><span className="text-white">{debrief.truth.motive}</span></div>
-            <div><span className="text-gray-400">الدليل الأهم: </span><span className="text-amber-300">{debrief.truth.keyEvidence}</span></div>
-          </div>
-        </div>
-
-        <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 mb-4">
-          <h3 className="font-black text-white mb-3">📖 القصة كاملة</h3>
-          <p className="text-gray-300 text-sm leading-relaxed">{debrief.debriefReport.fullStory}</p>
-          <div className="mt-3 bg-red-950 border border-red-800 rounded-xl p-3">
-            <p className="text-red-400 text-xs font-bold mb-1">الخطأ الكبير:</p>
-            <p className="text-red-200 text-xs">{debrief.debriefReport.keyMistake}</p>
-          </div>
-        </div>
-
-        {/* النقاط + الألقاب */}
-        <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 mb-6">
-          <h3 className="font-black text-white mb-3">🏆 النقاط والألقاب</h3>
-          <div className="space-y-2">
-            {Object.values(debrief.scores || {})
-              .sort((a, b) => b.points - a.points)
-              .map(s => {
-                const title = getTitle(s.role, s.points, debrief.resultType);
+          <aside className="court-trial-sidebar">
+            <h3>اللاعبون</h3>
+            <div className="court-players-list">
+              {players.map(p => {
+                const pRole = allRoles[p.id]?.role;
+                const pInfo = ROLE_LABELS[pRole];
                 return (
-                  <div key={s.playerId}
-                    className={`flex items-center justify-between p-3 rounded-xl ${
-                      s.playerId === playerId
-                        ? "bg-amber-950 border border-amber-700"
-                        : "bg-gray-800"
-                    }`}>
-                    <div className="flex items-center gap-2">
-                      <RoleBadge r={s.role} />
-                      <div>
-                        <span className="text-sm text-white">{s.playerName}</span>
-                        {s.playerId === playerId && (
-                          <span className="text-xs text-amber-400 mr-1">(أنت)</span>
-                        )}
-                        <p className="text-xs mt-0.5" style={{ color: title.color }}>
-                          {title.icon} {title.label}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-lg font-black ${
-                        s.points > 0 ? "text-green-400" :
-                        s.points < 0 ? "text-red-400"   : "text-gray-400"
-                      }`}>
-                        {s.points > 0 ? "+" : ""}{s.points}
-                      </div>
-                      <div className="text-xs text-gray-500">{s.outcome}</div>
-                    </div>
+                  <div key={p.id} className="court-player-row">
+                    <span
+                      className="court-player-dot"
+                      style={{ background: pInfo?.color || "#666" }}
+                    />
+                    <span className="court-player-name">
+                      {p.name}
+                      {p.id === playerId ? " (أنت)" : ""}
+                    </span>
+                    {pInfo && (
+                      <span className="court-player-role">
+                        {pInfo.icon} {pInfo.ar}
+                      </span>
+                    )}
                   </div>
                 );
               })}
-          </div>
+            </div>
+
+            {/* فرص الاستدعاء */}
+            <div className="court-summons-status">
+              <h4 className="court-summons-status-title">🎤 الاستدعاءات</h4>
+              <div className="court-summons-row">
+                <span className="court-summons-row-side">📋 النيابة:</span>
+                <span className="court-summons-row-count">
+                  {summonsLeft.prosecution} / 2
+                </span>
+              </div>
+              <div className="court-summons-row">
+                <span className="court-summons-row-side">🛡️ الدفاع:</span>
+                <span className="court-summons-row-count">
+                  {summonsLeft.defense} / 2
+                </span>
+              </div>
+            </div>
+
+            <div className="court-summons-status">
+              <h4 className="court-summons-status-title">🔍 الأدلة</h4>
+              <div className="court-summons-row">
+                <span className="court-summons-row-side">📋 النيابة:</span>
+                <span className="court-summons-row-count">
+                  {evidenceLeft.prosecution} / {evidenceCards ? Object.keys(evidenceCards.prosecution || {}).length : 0}
+                </span>
+              </div>
+              <div className="court-summons-row">
+                <span className="court-summons-row-side">🛡️ الدفاع:</span>
+                <span className="court-summons-row-count">
+                  {evidenceLeft.defense} / {evidenceCards ? Object.keys(evidenceCards.defense || {}).length : 0}
+                </span>
+              </div>
+            </div>
+          </aside>
         </div>
 
-        {isHost && (
-          <button onClick={restart}
-            className="w-full py-4 rounded-2xl font-black text-lg bg-amber-500 hover:bg-amber-400 text-black transition-all">
-            🔄 جولة جديدة
-          </button>
+        {showCaseFile && myFile && (
+          <CourtCaseFile
+            file={myFile}
+            role={role}
+            caseInfo={caseInfo}
+            onClose={() => {
+              setShowCaseFile(false);
+              setCaseFileJustClosed(true);
+            }}
+          />
         )}
-        {onExit && (
-          <button onClick={onExit} className="w-full mt-3 py-2 text-gray-600 text-sm">
-            خروج
-          </button>
+
+        {showTeamChat && (
+          <CourtTeamChat
+            socket={socket}
+            roomCode={roomCode}
+            playerId={playerId}
+            team={team}
+            role={role}
+            players={players}
+            onClose={closeTeamChat}
+          />
+        )}
+
+        {/* ✅ مودال استدعاء الشهود */}
+        {showWitnessModal && witnessCards && (
+          <CourtWitnessModal
+            witnesses={witnessCards}
+            usedWitnesses={usedWitnesses}
+            summonsLeft={summonsLeft}
+            onSummon={summonWitness}
+            onClose={() => setShowWitnessModal(false)}
+          />
+        )}
+
+        {/* ✅ كارت الشاهد */}
+        {activeWitness && (
+          <CourtWitnessCard
+            witness={activeWitness}
+            onClose={() => setActiveWitness(null)}
+          />
+        )}
+
+        {showTrialRecord && (
+          <CourtTrialRecord
+            trialLog={trialLog}
+            onClose={() => setShowTrialRecord(false)}
+          />
+        )}
+
+        {showEvidenceModal && evidenceCards && (
+          <CourtEvidenceModal
+            evidence={evidenceCards}
+            usedEvidence={usedEvidence}
+            evidenceLeft={evidenceLeft}
+            onPresent={presentEvidence}
+            onClose={() => setShowEvidenceModal(false)}
+          />
+        )}
+
+        {activeEvidence && (
+          <CourtEvidenceCard
+            evidence={activeEvidence}
+            onClose={() => setActiveEvidence(null)}
+          />
         )}
       </div>
-    </div>
-  );
+    );
+  }
+
+  // ─── VOTING ───
+  if (phase === PHASE.VOTING) {
+    return (
+      <div className="court-screen taboo-scroll">
+        <header className="court-header">
+          <div className="court-header-left">
+            <span className="court-icon">🗳️</span>
+            <div>
+              <h1 className="court-title">التصويت</h1>
+              {caseInfo && <p className="court-subtitle">{caseInfo.title}</p>}
+            </div>
+          </div>
+          <div className="court-header-right">
+            {roleInfo && (
+              <span
+                className="court-role-badge"
+                style={{
+                  background: roleInfo.color + "22",
+                  borderColor: roleInfo.color,
+                  color: roleInfo.color,
+                }}
+              >
+                {roleInfo.icon} {roleInfo.ar}
+              </span>
+            )}
+
+            <button
+              className="court-sound-toggle"
+              onClick={() => setSoundMuted(m => !m)}
+              title={soundMuted ? "تشغيل الصوت" : "كتم الصوت"}
+            >
+              {soundMuted ? "🔇" : "🔊"}
+            </button>
+
+            <AdminBackButton isAdmin={isAdmin} onExit={onExit} />
+          </div>
+        </header>
+
+        <CourtVoting
+          role={role}
+          votes={votes}
+          players={players}
+          playerId={playerId}
+          timer={timer}
+          onSubmit={submitVote}
+        />
+      </div>
+    );
+  }
+
+  // ─── VERDICT ───
+  if (phase === PHASE.VERDICT) {
+    return (
+      <div className="court-screen taboo-scroll">
+        <header className="court-header">
+          <div className="court-header-left">
+            <span className="court-icon">🔨</span>
+            <div>
+              <h1 className="court-title">إعلان الحكم</h1>
+            </div>
+          </div>
+          <div className="court-header-right">
+
+            <button
+              className="court-sound-toggle"
+              onClick={() => setSoundMuted(m => !m)}
+              title={soundMuted ? "تشغيل الصوت" : "كتم الصوت"}
+            >
+              {soundMuted ? "🔇" : "🔊"}
+            </button>
+
+            <AdminBackButton isAdmin={isAdmin} onExit={onExit} />
+          </div>
+        </header>
+
+        <CourtVerdict verdict={verdict} />
+      </div>
+    );
+  }
+
+  // ─── DEBRIEF ───
+  if (phase === PHASE.DEBRIEF && debrief) {
+    return (
+      <div className="court-screen">
+        <header className="court-header">
+          <div className="court-header-left">
+            <span className="court-icon">
+              {viewMode === "journal" && "📰"}
+              {viewMode === "titles" && "🏆"}
+              {viewMode === "stats" && "📊"}
+            </span>
+            <div>
+              <h1 className="court-title">
+                {viewMode === "journal" && "النتائج النهائية"}
+                {viewMode === "titles" && "الألقاب"}
+                {viewMode === "stats" && "الإحصائيات"}
+              </h1>
+            </div>
+          </div>
+          <div className="court-header-right">
+            <button
+              className="court-sound-toggle"
+              onClick={() => setSoundMuted(m => !m)}
+              title={soundMuted ? "تشغيل الصوت" : "كتم الصوت"}
+            >
+              {soundMuted ? "🔇" : "🔊"}
+            </button>
+            <AdminBackButton isAdmin={isAdmin} onExit={onExit} />
+          </div>
+        </header>
+
+        {/* ✅ Journal View */}
+        {viewMode === "journal" && (
+          <CourtResults
+            debrief={debrief}
+            players={players}
+            playerId={playerId}
+            isHost={isHost}
+            isAdmin={isAdmin}
+            onRestart={restart}
+            onExit={onExit}
+            onShowTitles={() => setViewMode("titles")}
+            onShowStats={() => setViewMode("stats")}
+          />
+        )}
+
+        {/* ✅ Titles View */}
+        {viewMode === "titles" && (
+          <CourtTitlesScreen
+            debrief={debrief}
+            players={players}
+            onDone={() => setViewMode("stats")}
+          />
+        )}
+
+        {/* ✅ Stats View */}
+        {viewMode === "stats" && (
+          <CourtStats
+            stats={statsData}
+            players={players}
+            isAdmin={isAdmin}
+            onBack={() => setViewMode("journal")}
+            onExit={onExit}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center" dir="rtl">
-      <div className="text-center">
-        <div className="text-4xl mb-3">⚖️</div>
-        <p className="text-gray-400">جارٍ التحميل...</p>
-      </div>
+    <div className="court-screen court-loading" dir="rtl">
+      <div className="court-loading-icon">⚖️</div>
+      <p>جارٍ التحميل...</p>
     </div>
   );
 }
 
-// ══ نظام الألقاب ══
-function getTitle(role, points, resultType) {
-  if (role === "judge") {
-    if (points > 0) return { label: "القاضي العادل",     icon: "⚖️",  color: "#f59e0b" };
-    if (points < 0) return { label: "القاضي الظالم",     icon: "😔",  color: "#ef4444" };
-    return              { label: "القاضي المتردد",       icon: "🤔",  color: "#6b7280" };
-  }
-  if (role === "prosecution") {
-    if (points > 0) return { label: "المدّعي الحديدي",   icon: "🔥",  color: "#ef4444" };
-    return              { label: "النيابة الصامتة",     icon: "📋",  color: "#6b7280" };
-  }
-  if (role === "defense") {
-    if (points >= 150) return { label: "محامي الشيطان",  icon: "😈",  color: "#8b5cf6" };
-    if (points > 0)   return { label: "المدافع الشريف",  icon: "🛡️",  color: "#3b82f6" };
-    return              { label: "الدفاع المنهزم",      icon: "😞",  color: "#6b7280" };
-  }
-  if (role === "accused") {
-    if (points >= 150) return { label: "الداهية الهارب", icon: "🎭",  color: "#10b981" };
-    if (points > 0)   return { label: "البريء المظلوم",  icon: "🕊️",  color: "#10b981" };
-    return              { label: "المذنب المدان",       icon: "🔗",  color: "#6b7280" };
-  }
-  if (role === "jury") {
-    if (points > 0) return { label: "المحلف الذكي",      icon: "🧠",  color: "#10b981" };
-    return              { label: "المحلف المخدوع",      icon: "😕",  color: "#6b7280" };
-  }
-  return { label: "", icon: "", color: "#6b7280" };
+function CourtTimer({ seconds, max }) {
+  const pct = max > 0 ? Math.min(100, (seconds / max) * 100) : 0;
+  const isDanger = seconds < 30;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+
+  return (
+    <div className="court-timer">
+      <div className="court-timer-bar">
+        <div
+          className={`court-timer-fill ${isDanger ? "court-timer-danger" : ""}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className={`court-timer-text ${isDanger ? "court-timer-danger" : ""}`}>
+        {mins}:{String(secs).padStart(2, "0")}
+      </span>
+    </div>
+  );
 }

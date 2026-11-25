@@ -1,0 +1,11 @@
+Model Information:
+* title:	bedside table \ wardrobe
+* source:	https://sketchfab.com/3d-models/bedside-table-wardrobe-52fa18ba43954210b315374f42848446
+* author:	mfkffzl (https://sketchfab.com/mfkffzl)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "bedside table \ wardrobe" (https://sketchfab.com/3d-models/bedside-table-wardrobe-52fa18ba43954210b315374f42848446) by mfkffzl (https://sketchfab.com/mfkffzl) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

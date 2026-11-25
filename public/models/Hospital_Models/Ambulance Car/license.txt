@@ -1,0 +1,11 @@
+Model Information:
+* title:	Ambulance car. Скорая помощь
+* source:	https://sketchfab.com/3d-models/ambulance-car-333e7d10b5ee48c791fff8f62199dd31
+* author:	RES1N (https://sketchfab.com/Resinnnn)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Ambulance car. Скорая помощь" (https://sketchfab.com/3d-models/ambulance-car-333e7d10b5ee48c791fff8f62199dd31) by RES1N (https://sketchfab.com/Resinnnn) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

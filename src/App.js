@@ -36,6 +36,7 @@ import SwordRound from './components/SwordRound';
 import BracketRound from './components/BracketRound';
 import MainMenu from './components/EscapeRoom/MainMenu';
 import StoryGame from './components/EscapeRoom/StoryGame';
+import { Game3DApp } from './components/Game3D';
 import SpyRound from './components/SpyRound';
 
 
@@ -157,6 +158,13 @@ function App() {
       return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }
   }, [showJoinScreen]);
+
+  useEffect(() => {
+    if (window.location.hash === '#test3d') {
+      setCurrentGame('test_3d');
+      window.location.hash = '';
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -596,6 +604,11 @@ function App() {
     //   return;
     // }
 
+    if (selectedCategory === 'test_3d') {
+      socket.emit('launch_game', { roomCode, gameId: 'test_3d' });
+      return;
+    }
+
     if (selectedCategory === 'escape_room') {
       setCurrentGame('escape_room_hub');
       return;
@@ -707,7 +720,11 @@ function App() {
   
   // ✅ دالة موحدة لإغلاق أي لعبة — بتصفّر كل حاجة فورًا
   const closeGame = () => {
-    socket.emit('close_game', { roomCode });
+    if (isAdmin) {
+      socket.emit('close_game', { roomCode });
+    } else {
+      socket.emit('player_leave_game', { roomCode, playerId });
+    }
     setCurrentGame(null);
     setSelectedCategory(null);
     setSelectedSubcategory(null);
@@ -744,12 +761,7 @@ function App() {
           socket={socket} roomCode={roomCode} players={players}
           currentPlayer={players.find((p) => (isAdmin ? p.isAdmin : p.id === playerId))}
           isAdmin={isAdmin}
-          onExit={() => {
-            socket.emit('close_game', { roomCode });
-            setCurrentGame(null);
-            setSelectedCategory(null);       // ✅
-            setSelectedSubcategory(null);    // ✅
-          }}
+          onExit={closeGame}
         />
 
       ) : currentGame === 'civil_registry' ? (
@@ -765,24 +777,20 @@ function App() {
         <CourtGame
           socket={socket} roomCode={roomCode}
           playerId={playerId} playerName={playerName}
+          isAdmin={isAdmin} players={players}
           onExit={closeGame}
         />
 
-      ) : currentGame === 'bank_el_haz' ? (
-        <BankElHazGame
-          socket={socket}
-          roomCode={roomCode}
-          playerId={playerId}
-          playerName={playerName}
-          isAdmin={isAdmin}
-          players={players}
-          onExit={() => {
-            socket.emit('close_game', { roomCode });
-            setCurrentGame(null);
-            setSelectedCategory(null);      // ✅ مهم
-            setSelectedSubcategory(null);   // ✅ مهم
-          }}
-        />
+        ) : currentGame === 'bank_el_haz' ? (
+          <BankElHazGame
+            socket={socket}
+            roomCode={roomCode}
+            playerId={playerId}
+            playerName={playerName}
+            isAdmin={isAdmin}
+            players={players}
+            onExit={closeGame}
+          />
 
       ) : currentGame === 'trap_opponent' ? (
         <TrapOpponent
@@ -926,13 +934,12 @@ function App() {
                   socket={socket} roomCode={roomCode}
                   playerId={playerId} playerName={playerName}
                   isAdmin={isAdmin} players={players}
-                  onExit={() => {
-                    socket.emit('close_game', { roomCode });
-                    setCurrentGame(null);
-                    setSelectedCategory(null);      // ✅ مهم جدًا
-                    setSelectedSubcategory(null);   // ✅ مهم جدًا
-                  }}
+                  onExit={closeGame}
                 />
+
+                ) : currentGame === 'test_3d' ? (
+                  <Game3DApp onExit={() => setCurrentGame(null)}
+                  />
 
                 ) : currentQuestion?.category === 'spy' ? (
                   <SpyRound

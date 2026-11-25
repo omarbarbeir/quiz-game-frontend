@@ -1,0 +1,11 @@
+Model Information:
+* title:	Rolling Shutter
+* source:	https://sketchfab.com/3d-models/rolling-shutter-ca599a2fe15542b0abeee1c7a1f010a2
+* author:	sonanddark (https://sketchfab.com/sonanddark)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Rolling Shutter" (https://sketchfab.com/3d-models/rolling-shutter-ca599a2fe15542b0abeee1c7a1f010a2) by sonanddark (https://sketchfab.com/sonanddark) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

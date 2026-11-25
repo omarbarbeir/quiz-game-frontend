@@ -1,0 +1,8 @@
+Model Information:
+* title:	Washing Machine
+* source:	https://sketchfab.com/3d-models/washing-machine-8d2485afa61348cea08d2ea59c5a4cfb
+* author:	assetfactory (https://sketchfab.com/assetfactory)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

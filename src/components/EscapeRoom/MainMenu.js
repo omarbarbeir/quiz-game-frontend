@@ -103,6 +103,7 @@ export default function MainMenu({ onExit }) {
               حكايات
             </h1>
 
+
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="w-16 h-px bg-gradient-to-r from-transparent to-amber-700/60" />
               <span className="text-amber-700/80 text-sm">✦</span>

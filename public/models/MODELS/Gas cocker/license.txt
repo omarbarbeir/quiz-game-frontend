@@ -1,0 +1,11 @@
+Model Information:
+* title:	IKEA Range with Gas Cooktop
+* source:	https://sketchfab.com/3d-models/ikea-range-with-gas-cooktop-0568b8cf6a8444099c55eab7ca1a7de0
+* author:	MUSHROOM_BUILDS (https://sketchfab.com/MUSHROOM_BUILDS)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "IKEA Range with Gas Cooktop" (https://sketchfab.com/3d-models/ikea-range-with-gas-cooktop-0568b8cf6a8444099c55eab7ca1a7de0) by MUSHROOM_BUILDS (https://sketchfab.com/MUSHROOM_BUILDS) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

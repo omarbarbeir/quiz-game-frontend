@@ -149,13 +149,13 @@ const categories = [
     subcategories: []
   },
 
-  {
-    id: "flags",
-    name: "أعلام الدول",
-    icon: "🏳️",
-    colors: ['#e11d48', '#be123c'],
-    subcategories: []
-  },
+  // {
+  //   id: "flags",
+  //   name: "أعلام الدول",
+  //   icon: "🏳️",
+  //   colors: ['#e11d48', '#be123c'],
+  //   subcategories: []
+  // },
 
   {
     id: "spy",
@@ -197,13 +197,13 @@ const categories = [
     subcategories: []
   },
 
-  {
-    id: "sword-of-knowledge",
-    name: "سيف المعرفة",
-    icon: "🗡️",
-    colors: ['#dc2626', '#9a3412'],
-    subcategories: []
-  },
+  // {
+  //   id: "sword-of-knowledge",
+  //   name: "سيف المعرفة",
+  //   icon: "🗡️",
+  //   colors: ['#dc2626', '#9a3412'],
+  //   subcategories: []
+  // },
 
   {
     id: "round16",
@@ -261,13 +261,13 @@ const categories = [
     subcategories: []
   },
 
-  {
-    id: 'movie_quiz',
-    name: 'فيلم إيه؟',
-    icon: '🎬',
-    colors: ['#9333ea', '#a21caf'],
-    subcategories: []
-  },
+  // {
+  //   id: 'movie_quiz',
+  //   name: 'فيلم إيه؟',
+  //   icon: '🎬',
+  //   colors: ['#9333ea', '#a21caf'],
+  //   subcategories: []
+  // },
 
   // {
   //   id: 'investigation',
@@ -334,12 +334,21 @@ const categories = [
   },
 
   // {
-  //   id: 'escape_room',
-  //   name: 'غرفة الهروب',
-  //   icon: '🚪',
-  //   colors: ['#475569', '#0f172a'],
-  //   subcategories: []
+  //   id: 'court_game',
+  //   name: '⚖️ المحكمة',
+  //   description: 'لعبة تمثيل أدوار في قاعة محكمة',
+  //   icon: '⚖️',
+  //   subcategories: [],
   // },
+
+
+//   {
+//   id: 'test_3d',
+//   name: 'اختبار 3D',
+//   icon: '🧪',
+//   description: 'نسخة تجريبية للعبة 3D',
+//   subcategories: [],
+// },
 ];
 
 export default categories;

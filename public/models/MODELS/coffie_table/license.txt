@@ -1,0 +1,11 @@
+Model Information:
+* title:	coffie table
+* source:	https://sketchfab.com/3d-models/coffie-table-ef86325591fd4076b714c2591ad180da
+* author:	AdrianT. (https://sketchfab.com/AdrianT.)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "coffie table" (https://sketchfab.com/3d-models/coffie-table-ef86325591fd4076b714c2591ad180da) by AdrianT. (https://sketchfab.com/AdrianT.) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Door
+* source:	https://sketchfab.com/3d-models/door-efd5d6ff70954434bf3e1f8fd80cb5bc
+* author:	Uninherited (https://sketchfab.com/Uninherited)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Door" (https://sketchfab.com/3d-models/door-efd5d6ff70954434bf3e1f8fd80cb5bc) by Uninherited (https://sketchfab.com/Uninherited) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

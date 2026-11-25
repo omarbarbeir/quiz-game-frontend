@@ -1,0 +1,11 @@
+Model Information:
+* title:	Modern Door
+* source:	https://sketchfab.com/3d-models/modern-door-b4ff0ce427154fe2bb8dde23b3f7d436
+* author:	sob (https://sketchfab.com/shaunobyrne)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Modern Door" (https://sketchfab.com/3d-models/modern-door-b4ff0ce427154fe2bb8dde23b3f7d436) by sob (https://sketchfab.com/shaunobyrne) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

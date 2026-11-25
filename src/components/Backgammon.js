@@ -10,11 +10,12 @@ const C = {
   text: '#e5e7eb', textDim: '#94a3b8', textMuted: '#64748b',
 };
 
-const BOARD_BG = '#8b4513';
-const BOARD_LIGHT = '#e8c99b';
-const BOARD_DARK = '#5d2e0a';
-const WHITE_C = 'linear-gradient(145deg, #ffffff, #d4d4d8)';
-const BLACK_C = 'linear-gradient(145deg, #4b5563, #111827)';
+// 🪵 Wood palette
+const BOARD_BG = 'linear-gradient(135deg, #6b3410 0%, #4a2308 50%, #2d1405 100%)';
+const POINT_LIGHT = 'linear-gradient(180deg, #f5deb3 0%, #e0c090 50%, #c9a56b 100%)';
+const POINT_DARK  = 'linear-gradient(180deg, #8b4513 0%, #6b2d0a 50%, #3d1705 100%)';
+const WHITE_C = 'radial-gradient(circle at 35% 30%, #ffffff 0%, #f0f0f0 40%, #b8b8b8 80%, #8a8a8a 100%)';
+const BLACK_C = 'radial-gradient(circle at 35% 30%, #6b7280 0%, #374151 40%, #1f2937 80%, #030712 100%)';
 
 // =====================================================
 // 🎲 Die
@@ -78,7 +79,7 @@ const Point = ({
         flex: 1,
       }}
     >
-      {/* Triangle */}
+      {/* ✅ Triangle — مع تدرج وحدود ذهبية */}
       <div style={{
         position: 'absolute',
         top: isTop ? 0 : 'auto',
@@ -86,25 +87,41 @@ const Point = ({
         left: '5%',
         right: '5%',
         height: '100%',
-        background: isDark ? BOARD_DARK : BOARD_LIGHT,
+        background: isDark ? POINT_DARK : POINT_LIGHT,
         clipPath: isTop ? 'polygon(0 0, 100% 0, 50% 100%)' : 'polygon(50% 0, 100% 100%, 0 100%)',
         zIndex: 0,
-        opacity: 0.95,
+        filter: isDark
+          ? 'drop-shadow(0 2px 3px rgba(0,0,0,0.6))'
+          : 'drop-shadow(0 2px 3px rgba(0,0,0,0.35))',
       }} />
 
-      {/* Point number (صغير) */}
+      {/* ✅ Base line — خط ذهبي رفيع في النهاية العريضة للمثلث */}
       <div style={{
         position: 'absolute',
-        top: isTop ? 2 : 'auto',
-        bottom: isTop ? 'auto' : 2,
+        top: isTop ? 0 : 'auto',
+        bottom: isTop ? 'auto' : 0,
+        left: '5%',
+        right: '5%',
+        height: 2,
+        background: 'linear-gradient(90deg, transparent, rgba(245,158,11,0.6), transparent)',
+        zIndex: 1,
+        pointerEvents: 'none',
+      }} />
+
+      {/* Point number */}
+      <div style={{
+        position: 'absolute',
+        top: isTop ? 4 : 'auto',
+        bottom: isTop ? 'auto' : 4,
         fontSize: 8, fontWeight: 900,
-        color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+        color: isDark ? 'rgba(255,200,140,0.5)' : 'rgba(80,40,10,0.55)',
         zIndex: 5, pointerEvents: 'none',
+        fontFamily: 'monospace',
       }}>
         {index + 1}
       </div>
 
-      {/* Checkers */}
+      {/* ✅ Checkers — عمودية، 3D sphere effect */}
       <div style={{
         position: 'relative',
         zIndex: 2,
@@ -112,52 +129,62 @@ const Point = ({
         flexDirection: isTop ? 'column' : 'column-reverse',
         alignItems: 'center',
         gap: 1,
-        padding: 4,
+        padding: 3,
         width: '100%',
         height: '100%',
       }}>
         {Array.from({ length: visible }).map((_, i) => (
           <div key={i} style={{
-            width: '72%',
+            width: '76%',
             aspectRatio: '1',
             borderRadius: '50%',
             background: color === 'w' ? WHITE_C : BLACK_C,
-            border: `1.5px solid ${color === 'w' ? '#9ca3af' : '#000'}`,
-            boxShadow: '0 1.5px 3px rgba(0,0,0,0.6), inset 0 -1px 2px rgba(0,0,0,0.3)',
+            border: `1px solid ${color === 'w' ? 'rgba(120,120,120,0.9)' : 'rgba(0,0,0,0.9)'}`,
+            boxShadow: `
+              0 2px 4px rgba(0,0,0,0.55),
+              0 4px 8px rgba(0,0,0,0.25),
+              inset 0 1px 2px rgba(255,255,255,0.5),
+              inset 0 -2px 4px rgba(0,0,0,0.35)
+            `,
             flexShrink: 0,
           }} />
         ))}
         {hasMore && (
           <div style={{
             fontSize: 10, fontWeight: 900, color: 'white',
-            background: 'rgba(0,0,0,0.75)', borderRadius: 3,
+            background: 'linear-gradient(145deg, #7c2d12, #450a0a)',
+            borderRadius: 4,
             padding: '1px 5px', zIndex: 6, flexShrink: 0,
-            border: '1px solid rgba(255,255,255,0.3)',
+            border: '1px solid rgba(245,158,11,0.7)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.6)',
           }}>+{count - maxCheckers}</div>
         )}
       </div>
 
+      {/* ✅ Glow — highlight (valid destination) */}
       {highlight && (
         <div style={{
           position: 'absolute', inset: 0,
           border: `3px solid ${C.green}`, borderRadius: 3,
-          boxShadow: `0 0 12px ${C.green}, inset 0 0 12px ${C.green}60`,
+          boxShadow: `0 0 16px ${C.green}, inset 0 0 16px ${C.green}60`,
           pointerEvents: 'none', zIndex: 10,
         }} />
       )}
+      {/* ✅ Selected */}
       {isSelected && (
         <div style={{
           position: 'absolute', inset: 0,
           border: `3px solid ${C.blue}`, borderRadius: 3,
-          boxShadow: `0 0 16px ${C.blue}`,
+          boxShadow: `0 0 20px ${C.blue}, inset 0 0 20px ${C.blue}60`,
           pointerEvents: 'none', zIndex: 11,
         }} />
       )}
+      {/* ✅ Last move highlight */}
       {lastMoveHighlight && !isSelected && !highlight && (
         <div style={{
           position: 'absolute', inset: 0,
           border: `2.5px solid ${C.amber}`, borderRadius: 3,
-          boxShadow: `0 0 12px ${C.amber}`,
+          boxShadow: `0 0 16px ${C.amber}, inset 0 0 16px ${C.amber}50`,
           pointerEvents: 'none', zIndex: 9,
         }} />
       )}
@@ -176,6 +203,7 @@ export default function Backgammon({
   const [showRules, setShowRules] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [showStartModal, setShowStartModal] = useState(false);
+  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
 
   useEffect(() => {
     if (!socket) return;
@@ -193,6 +221,12 @@ export default function Backgammon({
       socket.emit('backgammon_leave', { roomCode });
     };
   }, [socket, roomCode, playerId, playerName, isAdmin]);
+
+  useEffect(() => {
+    const h = () => setVw(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   useEffect(() => {
     if (!isAdmin || !socket || !roomCode) return;
@@ -389,6 +423,20 @@ export default function Backgammon({
   // Board
   // ============================================================
   const renderBoard = () => {
+    // ✅ حجم البورد حسب عرض الشاشة
+    const boardMaxW =
+      vw >= 1600 ? 1200 :
+      vw >= 1300 ? 1050 :
+      vw >= 1000 ? 900  :
+      vw >= 700  ? 750  :
+      620;
+
+    const boardMaxH =
+      vw >= 1600 ? 900 :
+      vw >= 1300 ? 800 :
+      vw >= 1000 ? 720 :
+      620;
+
     // ✅ ترتيب النقاط (LTR)
     const TOP = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
     const BOT = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
@@ -399,30 +447,53 @@ export default function Backgammon({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(6, 1fr) 30px repeat(6, 1fr)',
-          gridTemplateRows: '1fr 40px 1fr',
+          gridTemplateColumns: 'repeat(6, 1fr) 34px repeat(6, 1fr)',
+          gridTemplateRows: '1fr 44px 1fr',
           gap: 2,
           direction: 'ltr',
-          padding: 12,
-          paddingRight: 12,
+          padding: 14,
           width: '100%',
-          maxWidth: 950,
-          height: 'clamp(500px, 90vh, 1020px)',
+          maxWidth: boardMaxW,
+          height: `clamp(480px, 88vh, ${boardMaxH}px)`,
           margin: '0 auto',
           background: BOARD_BG,
-          border: '5px solid #3d1f08',
-          borderRadius: 14,
-          boxShadow: 'inset 0 0 40px rgba(0,0,0,0.75), 0 12px 40px rgba(0,0,0,0.7)',
+          border: '6px solid #3d1f08',
+          borderRadius: 16,
+          boxShadow: `
+            inset 0 0 80px rgba(0,0,0,0.85),
+            inset 0 0 0 2px rgba(245,158,11,0.35),
+            inset 0 0 0 4px rgba(120,53,15,0.7),
+            0 20px 60px rgba(0,0,0,0.8),
+            0 0 60px rgba(139,69,19,0.25)
+          `,
           position: 'relative',
         }}
       >
+        {/* ✅ نقوش خشبية — خطوط رفيعة */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          pointerEvents: 'none',
+          borderRadius: 10,
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              rgba(0,0,0,0.08) 0px,
+              rgba(0,0,0,0.08) 1px,
+              transparent 1px,
+              transparent 4px
+            )
+          `,
+          opacity: 0.5,
+          zIndex: 1,
+        }} />
+
         {/* Top row (12 points) */}
         {TOP.map((idx, i) => {
           const col = i < 6 ? i + 1 : i + 2;
           const isDark = i % 2 === 1;
           const p = board[idx];
           return (
-            <div key={`top-${idx}`} style={{ gridColumn: col, gridRow: 1, display: 'flex' }}>
+            <div key={`top-${idx}`} style={{ gridColumn: col, gridRow: 1, display: 'flex', zIndex: 2 }}>
               <Point
                 index={idx}
                 point={p}
@@ -438,53 +509,79 @@ export default function Backgammon({
           );
         })}
 
-        {/* Bar (middle horizontal) */}
+        {/* ✅ Bar (middle horizontal) — خشب غامق + ذهبي */}
         <div style={{
           gridColumn: '1 / -1',
           gridRow: 2,
-          background: '#2a1505',
+          background: 'linear-gradient(180deg, #2a1505 0%, #1a0a02 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 30,
-          borderRadius: 4,
-          boxShadow: 'inset 0 3px 8px rgba(0,0,0,0.8)',
+          borderRadius: 6,
+          boxShadow: `
+            inset 0 4px 10px rgba(0,0,0,0.9),
+            inset 0 -4px 10px rgba(0,0,0,0.9),
+            inset 0 0 0 1px rgba(245,158,11,0.3)
+          `,
+          position: 'relative',
+          zIndex: 3,
         }}>
           {/* Black bar (top side) */}
           <div onClick={handleBarClick} style={{
             display: 'flex', gap: 3, alignItems: 'center',
-            padding: '4px 10px', borderRadius: 6, minHeight: 32,
+            padding: '4px 12px', borderRadius: 8, minHeight: 32,
             cursor: (myColor === 'b' && bar.b > 0 && myTurn) ? 'pointer' : 'default',
-            background: (myColor === 'b' && bar.b > 0 && myTurn) ? `${C.amber}35` : 'transparent',
+            background: (myColor === 'b' && bar.b > 0 && myTurn)
+              ? 'linear-gradient(135deg, rgba(245,158,11,0.5), rgba(245,158,11,0.2))'
+              : 'transparent',
             border: (myColor === 'b' && bar.b > 0 && myTurn) ? `2px solid ${C.amber}` : '2px solid transparent',
+            boxShadow: (myColor === 'b' && bar.b > 0 && myTurn) ? `0 0 20px ${C.amber}80` : 'none',
+            transition: 'all 0.2s',
           }}>
-            {bar.b === 0 && <span style={{ color: '#d4a574', fontSize: 10, fontWeight: 900 }}>BAR</span>}
+            {bar.b === 0 && <span style={{ color: '#d4a574', fontSize: 10, fontWeight: 900, letterSpacing: 1 }}>BAR</span>}
             {Array.from({ length: Math.min(bar.b, 6) }).map((_, i) => (
               <div key={i} style={{
-                width: 16, height: 16, borderRadius: '50%',
-                background: BLACK_C, border: '1.5px solid #000',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.6)',
+                width: 18, height: 18, borderRadius: '50%',
+                background: BLACK_C,
+                border: '1.5px solid rgba(0,0,0,0.9)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.3)',
               }} />
             ))}
             {bar.b > 6 && <span style={{ color: 'white', fontSize: 10, fontWeight: 900 }}>+{bar.b - 6}</span>}
           </div>
 
-          <span style={{ color: '#d4a574', fontSize: 12, fontWeight: 900 }}>◄►</span>
+          {/* Center decoration */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+          }}>
+            <span style={{ color: '#fbbf24', fontSize: 14, fontWeight: 900, textShadow: '0 0 8px rgba(245,158,11,0.6)' }}>◄</span>
+            <div style={{ width: 30, height: 1, background: 'linear-gradient(90deg, transparent, #fbbf24, transparent)' }} />
+            <span style={{ color: '#fbbf24', fontSize: 14, fontWeight: 900, textShadow: '0 0 8px rgba(245,158,11,0.6)' }}>►</span>
+          </div>
 
           {/* White bar */}
           <div onClick={handleBarClick} style={{
             display: 'flex', gap: 3, alignItems: 'center',
-            padding: '4px 10px', borderRadius: 6, minHeight: 32,
+            padding: '4px 12px', borderRadius: 8, minHeight: 32,
             cursor: (myColor === 'w' && bar.w > 0 && myTurn) ? 'pointer' : 'default',
-            background: (myColor === 'w' && bar.w > 0 && myTurn) ? `${C.amber}35` : 'transparent',
+            background: (myColor === 'w' && bar.w > 0 && myTurn)
+              ? 'linear-gradient(135deg, rgba(245,158,11,0.5), rgba(245,158,11,0.2))'
+              : 'transparent',
             border: (myColor === 'w' && bar.w > 0 && myTurn) ? `2px solid ${C.amber}` : '2px solid transparent',
+            boxShadow: (myColor === 'w' && bar.w > 0 && myTurn) ? `0 0 20px ${C.amber}80` : 'none',
+            transition: 'all 0.2s',
           }}>
-            {bar.w === 0 && <span style={{ color: '#d4a574', fontSize: 10, fontWeight: 900 }}>BAR</span>}
+            {bar.w === 0 && <span style={{ color: '#d4a574', fontSize: 10, fontWeight: 900, letterSpacing: 1 }}>BAR</span>}
             {Array.from({ length: Math.min(bar.w, 6) }).map((_, i) => (
               <div key={i} style={{
-                width: 16, height: 16, borderRadius: '50%',
-                background: WHITE_C, border: '1.5px solid #9ca3af',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.6)',
+                width: 18, height: 18, borderRadius: '50%',
+                background: WHITE_C,
+                border: '1.5px solid rgba(120,120,120,0.9)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.6)',
               }} />
             ))}
             {bar.w > 6 && <span style={{ color: 'white', fontSize: 10, fontWeight: 900 }}>+{bar.w - 6}</span>}
@@ -497,7 +594,7 @@ export default function Backgammon({
           const isDark = i % 2 === 0;
           const p = board[idx];
           return (
-            <div key={`bot-${idx}`} style={{ gridColumn: col, gridRow: 3, display: 'flex' }}>
+            <div key={`bot-${idx}`} style={{ gridColumn: col, gridRow: 3, display: 'flex', zIndex: 2 }}>
               <Point
                 index={idx}
                 point={p}
@@ -513,47 +610,76 @@ export default function Backgammon({
           );
         })}
 
-        {/* OFF tray — على اليمين */}
+        {/* ✅ OFF tray — على اليمين — شكل أحسن */}
         <div
           onClick={handleBearOffClick}
           style={{
             position: 'absolute',
-            right: 4,
+            right: 6,
             top: '50%',
             transform: 'translateY(-50%)',
-            background: canBearOff ? 'rgba(16,185,129,0.35)' : 'rgba(0,0,0,0.35)',
-            border: canBearOff ? `2.5px solid ${C.green}` : '2px solid rgba(212,165,116,0.5)',
-            borderRadius: 8,
-            padding: '8px 5px',
+            background: canBearOff
+              ? 'linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.25))'
+              : 'linear-gradient(135deg, rgba(42,21,5,0.9), rgba(26,10,2,0.9))',
+            border: canBearOff
+              ? `2.5px solid ${C.green}`
+              : '2px solid rgba(245,158,11,0.5)',
+            borderRadius: 10,
+            padding: '10px 6px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 4,
+            gap: 6,
             alignItems: 'center',
             zIndex: 20,
             cursor: canBearOff ? 'pointer' : 'default',
-            boxShadow: canBearOff ? `0 0 20px ${C.green}` : 'none',
-            minWidth: 30,
+            boxShadow: canBearOff
+              ? `0 0 25px ${C.green}, inset 0 0 12px ${C.green}40`
+              : '0 4px 12px rgba(0,0,0,0.7), inset 0 0 8px rgba(0,0,0,0.5)',
+            transition: 'all 0.25s',
+            minWidth: 34,
           }}
         >
-          <p style={{ color: '#fbbf24', fontSize: 7, fontWeight: 900, margin: 0, letterSpacing: 1 }}>OFF</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+          <p style={{
+            color: '#fbbf24',
+            fontSize: 8,
+            fontWeight: 900,
+            margin: 0,
+            letterSpacing: 1.5,
+            textShadow: '0 0 6px rgba(245,158,11,0.7)',
+          }}>OFF</p>
+
+          {/* White checkers */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
             {Array.from({ length: Math.min(off.w, 5) }).map((_, i) => (
               <div key={`ow${i}`} style={{
-                width: 9, height: 9, borderRadius: '50%',
-                background: WHITE_C, border: '1px solid #9ca3af',
+                width: 10, height: 10, borderRadius: '50%',
+                background: WHITE_C,
+                border: '1px solid rgba(120,120,120,0.9)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.7)',
               }} />
             ))}
-            {off.w > 5 && <span style={{ color: 'white', fontSize: 7 }}>+{off.w - 5}</span>}
+            {off.w > 5 && <span style={{ color: '#fbbf24', fontSize: 8, fontWeight: 900 }}>+{off.w - 5}</span>}
           </div>
-          <div style={{ width: '80%', height: 1, background: 'rgba(212,165,116,0.5)' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+
+          {/* Divider */}
+          <div style={{
+            width: '80%',
+            height: 1.5,
+            background: 'linear-gradient(90deg, transparent, rgba(245,158,11,0.6), transparent)',
+            borderRadius: 1,
+          }} />
+
+          {/* Black checkers */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
             {Array.from({ length: Math.min(off.b, 5) }).map((_, i) => (
               <div key={`ob${i}`} style={{
-                width: 9, height: 9, borderRadius: '50%',
-                background: BLACK_C, border: '1px solid #000',
+                width: 10, height: 10, borderRadius: '50%',
+                background: BLACK_C,
+                border: '1px solid rgba(0,0,0,0.9)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.3)',
               }} />
             ))}
-            {off.b > 5 && <span style={{ color: 'white', fontSize: 7 }}>+{off.b - 5}</span>}
+            {off.b > 5 && <span style={{ color: '#fbbf24', fontSize: 8, fontWeight: 900 }}>+{off.b - 5}</span>}
           </div>
         </div>
       </div>

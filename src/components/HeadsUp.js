@@ -172,62 +172,6 @@ const LandscapeLock = () => (
 );
 
 // =====================================================
-// 📱 Gyro Permission Modal
-// =====================================================
-const GyroPermissionModal = ({ isIOS, onEnable }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-    style={{ background: 'rgba(5,5,16,0.96)', backdropFilter: 'blur(20px)' }}
-  >
-    <motion.div
-      initial={{ scale: 0.85, y: 30 }}
-      animate={{ scale: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-      className="max-w-md w-full rounded-3xl p-8 text-center"
-      style={{
-        background: 'linear-gradient(160deg, rgba(34,211,238,0.15), rgba(168,85,247,0.10))',
-        border: '2px solid rgba(34,211,238,0.45)',
-        boxShadow: '0 30px 80px rgba(0,0,0,0.7), 0 0 60px rgba(34,211,238,0.25)',
-      }}
-    >
-      <motion.div
-        animate={{ rotate: [-10, 10, -10], y: [0, -8, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        className="text-7xl mb-5"
-      >
-        📱
-      </motion.div>
-      <h2 className="text-2xl font-black text-white mb-3">
-        فعّل حساس الحركة
-      </h2>
-      <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-        {isIOS
-          ? 'على الأيفون، اضغط الزر بالأسفل للسماح للمتصفح باستخدام الجيروسكوب. من دونه اللعبة لن تعمل.'
-          : 'لازم تسمح للمتصفح باستخدام حساس الحركة حتى تعمل اللعبة. اضغط الزر بالأسفل للتفعيل.'}
-      </p>
-      <motion.button
-        whileHover={{ scale: 1.04, y: -2 }}
-        whileTap={{ scale: 0.96 }}
-        onClick={onEnable}
-        className="w-full py-4 rounded-2xl font-black text-base text-[#050510]"
-        style={{
-          background: 'linear-gradient(135deg, #fbbf24, #f97316)',
-          boxShadow: '0 12px 36px rgba(251,191,36,0.5)',
-        }}
-      >
-        📱 فعّل الآن
-      </motion.button>
-      <p className="text-slate-500 text-[11px] mt-4 tracking-wide">
-        لن تبدأ اللعبة حتى تفعّل الحساس
-      </p>
-    </motion.div>
-  </motion.div>
-);
-
-// =====================================================
 // ⏱️ Countdown
 // =====================================================
 function useCountdown(startedAt, durationMs, active) {
@@ -292,124 +236,6 @@ const Confetti = () => {
 };
 
 // =====================================================
-// 📱 Gyroscope Hook
-// =====================================================
-function useGyro(active, onCorrect, onPass) {
-  const baseRef = useRef(null);
-  const lastTriggerRef = useRef(0);
-  const zoneRef = useRef('neutral');
-
-  useEffect(() => {
-    if (!active) return;
-    baseRef.current = null;
-    zoneRef.current = 'neutral';
-
-    const getTilt = (e) => {
-      const beta = e.beta;   // -180..180
-      const gamma = e.gamma; // -90..90
-
-      // نكتشف اتجاه الشاشة
-      let angle = 0;
-      if (typeof screen !== 'undefined' && screen.orientation) {
-        angle = screen.orientation.angle || 0;
-      } else if (typeof window.orientation === 'number') {
-        angle = window.orientation;
-      }
-
-      // في الوضع الأفقي، المحور الصحيح للميل لأعلى/أسفل هو gamma أو beta
-      // حسب اتجاه الدوران. نستخدم gamma في الوضع الأفقي لأنه لا يعبر الـ 180.
-      if (angle === 90 || angle === -90 || angle === 270) {
-        return gamma;
-      }
-      return beta;
-    };
-
-    const handler = (e) => {
-      const tilt = getTilt(e);
-      if (tilt == null) return;
-
-      if (baseRef.current === null) {
-        baseRef.current = tilt;
-        return;
-      }
-
-      const delta = tilt - baseRef.current;
-
-      // نطاق ميت صغير جدًا حتى يتراكم الفرق
-      if (Math.abs(delta) < 3) {
-        baseRef.current = tilt;
-        zoneRef.current = 'neutral';
-        return;
-      }
-
-      const now = Date.now();
-      if (now - lastTriggerRef.current < 800) return;
-
-      const TILT = 22;
-
-      // نزول لتحت → صحيح
-      if (delta < -TILT && zoneRef.current !== 'down') {
-        lastTriggerRef.current = now;
-        zoneRef.current = 'down';
-        if (navigator.vibrate) navigator.vibrate(80);
-        onCorrect();
-      }
-      // رفع لفوق → تخطي
-      else if (delta > TILT && zoneRef.current !== 'up') {
-        lastTriggerRef.current = now;
-        zoneRef.current = 'up';
-        if (navigator.vibrate) navigator.vibrate(80);
-        onPass();
-      }
-    };
-
-    window.addEventListener('deviceorientation', handler);
-    return () => window.removeEventListener('deviceorientation', handler);
-  }, [active, onCorrect, onPass]);
-}
-
-async function requestMotionPermission() {
-  if (typeof DeviceOrientationEvent === 'undefined') {
-    return 'unsupported';
-  }
-  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    try {
-      const res = await DeviceOrientationEvent.requestPermission();
-      return res === 'granted' ? 'granted' : 'denied';
-    } catch {
-      return 'denied';
-    }
-  }
-  return 'granted';
-}
-
-// ✅ اختبار فعلي: هل تُطلق الأحداث فعلًا؟
-function testMotionSensor(timeoutMs = 1200) {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined') { resolve(false); return; }
-    let ok = false;
-    let lastBeta = null;
-    let changes = 0;
-
-    const handler = (e) => {
-      if (e && e.beta != null) {
-        if (lastBeta !== null && Math.abs(e.beta - lastBeta) > 0.5) {
-          changes++;
-        }
-        lastBeta = e.beta;
-        if (changes >= 2) ok = true;
-      }
-    };
-
-    window.addEventListener('deviceorientation', handler);
-    setTimeout(() => {
-      window.removeEventListener('deviceorientation', handler);
-      resolve(ok || lastBeta !== null);
-    }, timeoutMs);
-  });
-}
-
-// =====================================================
 // 🎮 MAIN
 // =====================================================
 export default function HeadsUp({
@@ -417,23 +243,12 @@ export default function HeadsUp({
 }) {
   const [state, setState] = useState(null);
   const [error, setError] = useState(null);
-  const [motionEnabled, setMotionEnabled] = useState(false);
   const [flash, setFlash] = useState(null);
   const [teamNameInput, setTeamNameInput] = useState('');
   const lastSyncedTeamNameRef = useRef('');
   const isEditingTeamNameRef = useRef(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [motionDenied, setMotionDenied] = useState(false);
 
   const { play: playSound, stopAll: stopAllSounds } = useSoundEffects();
-
-  useEffect(() => {
-    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    const ua = navigator.userAgent || '';
-    const isIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-    setIsIOS(/iPad|iPhone|iPod/.test(ua) || isIPad);
-  }, []);
 
   // ===== Socket =====
   useEffect(() => {
@@ -476,11 +291,6 @@ export default function HeadsUp({
     }
   }, [state]);
 
-  useEffect(() => {
-    setMotionEnabled(false);
-    setMotionDenied(false);
-  }, [roomCode]);
-
   const emit = useCallback((ev, payload) => {
     socket?.emit(ev, { roomCode, ...payload });
   }, [socket, roomCode]);
@@ -518,6 +328,7 @@ export default function HeadsUp({
     playSound('correct');
     setFlash('correct');
     setTimeout(() => setFlash(null), 400);
+    if (navigator.vibrate) navigator.vibrate(60);
   }, [state, emit, playSound]);
 
   const handlePass = useCallback(() => {
@@ -527,12 +338,12 @@ export default function HeadsUp({
     playSound('pass');
     setFlash('pass');
     setTimeout(() => setFlash(null), 400);
+    if (navigator.vibrate) navigator.vibrate(60);
   }, [state, emit, playSound]);
 
+  // لوحة المفاتيح — للكمبيوتر
   const isPhoneHolderPlaying =
     state?.phase === 'playing' && state.me?.isPhoneHolder;
-
-  useGyro(isPhoneHolderPlaying && motionEnabled && isTouchDevice, handleCorrect, handlePass);
 
   useEffect(() => {
     if (!isPhoneHolderPlaying) return;
@@ -543,36 +354,6 @@ export default function HeadsUp({
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [isPhoneHolderPlaying, handleCorrect, handlePass]);
-
-  const enableMotion = useCallback(async () => {
-    const result = await requestMotionPermission();
-
-    if (result === 'unsupported') {
-      setMotionDenied(true);
-      setError('جهازك لا يدعم حساس الحركة. استخدم الأزرار اللمسية على الشاشة.');
-      setTimeout(() => setError(null), 6000);
-      return;
-    }
-
-    if (result === 'denied') {
-      setMotionDenied(true);
-      setError('الإذن مرفوض. اذهب لإعدادات المتصفح وفعّل الوصول للحركة.');
-      setTimeout(() => setError(null), 6000);
-      return;
-    }
-
-    // result === 'granted' → تأكد أن الحساس يعمل فعلًا
-    const works = await testMotionSensor(1200);
-    if (works) {
-      setMotionEnabled(true);
-      setMotionDenied(false);
-      setError(null);
-    } else {
-      setMotionDenied(true);
-      setError('لم يستجب الحساس. استخدم الأزرار اللمسية على الشاشة.');
-      setTimeout(() => setError(null), 6000);
-    }
-  }, []);
 
   if (!state) {
     return (
@@ -590,6 +371,9 @@ export default function HeadsUp({
 
   const { phase, me } = state;
 
+  // ============================================================
+  // HUD
+  // ============================================================
   const renderHUD = () => (
     <div className="relative z-10 max-w-6xl mx-auto px-4 pt-4">
       <GlassCard className="px-4 py-3">
@@ -620,27 +404,6 @@ export default function HeadsUp({
                 <span className="relative block rounded-xl px-3 py-1.5 bg-[#0a0a1a] text-xs font-bold flex items-center gap-1.5">
                   <span>🏠</span>
                   <span>الرئيسية</span>
-                </span>
-              </motion.button>
-            )}
-            {isTouchDevice && !motionEnabled && (
-              <motion.button
-                onClick={enableMotion}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative rounded-xl p-[1.5px] overflow-hidden"
-              >
-                <motion.span
-                  className="absolute inset-[-150%]"
-                  style={{
-                    background: 'conic-gradient(from 0deg, transparent 0%, #fbbf24 20%, #f97316 40%, transparent 60%, transparent 100%)',
-                  }}
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                />
-                <span className="relative block rounded-xl px-3 py-1.5 bg-[#0a0a1a] text-xs font-bold flex items-center gap-1.5">
-                  <span>📱</span>
-                  <span>فعّل الحركة</span>
                 </span>
               </motion.button>
             )}
@@ -711,6 +474,9 @@ export default function HeadsUp({
     </div>
   );
 
+  // ============================================================
+  // ADMIN LOBBY
+  // ============================================================
   const renderAdminLobby = () => {
     const allPlayers = state.allPlayers || [];
     const onlinePlayers = allPlayers.filter((p) => p.isOnline);
@@ -955,6 +721,9 @@ export default function HeadsUp({
     );
   };
 
+  // ============================================================
+  // PLAYER LOBBY
+  // ============================================================
   const renderPlayerLobby = () => {
     const captainsSelected = !!(state.teams.A.captainId && state.teams.B.captainId);
 
@@ -1090,6 +859,9 @@ export default function HeadsUp({
     );
   };
 
+  // ============================================================
+  // READY
+  // ============================================================
   const renderReady = () => {
     const theme = state.currentTurnTeam ? TEAM[state.currentTurnTeam] : null;
     const color = theme?.solid || '#22d3ee';
@@ -1123,30 +895,23 @@ export default function HeadsUp({
 
         <p className="text-slate-300 mb-6">ضع الموبايل على جبهتك بالعرض</p>
 
-        {me.isPhoneHolder && !motionEnabled && isTouchDevice && (
-          <div className="mb-4">
-            <GlassButton variant="amber" size="lg" onClick={enableMotion}>
-              📱 فعّل حساس الحركة
-            </GlassButton>
+        {me.isPhoneHolder && (
+          <div className="text-emerald-400 text-sm font-bold">
+            استعد — هتلعب بلمس الشاشة
           </div>
-        )}
-        {me.isPhoneHolder && (motionEnabled || !isTouchDevice) && (
-          <p className="text-emerald-400 text-sm">
-            {isTouchDevice ? '✅ الحركة مفعّلة' : '⌨️ استخدم الأسهم ↑ / ↓'}
-          </p>
         )}
       </div>
     );
   };
 
+  // ============================================================
+  // PLAYING
+  // ============================================================
   const renderPlaying = () => {
     const isHolder = me.isPhoneHolder;
     const flashColor = flash === 'correct' ? CORRECT_COLOR : flash === 'pass' ? PASS_COLOR : null;
 
     if (isHolder) {
-      // ✅ هل نستخدم أزرار اللمس بدل الجيروسكوب؟
-      const useTouchFallback = isTouchDevice && (!motionEnabled || motionDenied);
-
       return (
         <div className="fixed inset-0 z-20" style={{ background: '#050510' }}>
           <AnimatePresence>
@@ -1163,13 +928,28 @@ export default function HeadsUp({
             )}
           </AnimatePresence>
 
-          <div className="absolute top-0 left-0 right-0 h-[18%] flex items-center justify-center z-5">
-            <div className="text-red-400/40 font-black text-2xl tracking-widest flex items-center gap-2">
-              <span>⬆</span><span>PASS</span>
+          {/* النصف العلوي — تخطي */}
+          <button
+            onClick={handlePass}
+            className="absolute top-0 left-0 right-0 z-30"
+            style={{
+              height: '50%',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+            aria-label="تخطي"
+          >
+            <div className="absolute top-0 left-0 right-0 h-full flex items-start justify-center pt-6 pointer-events-none">
+              <div className="text-red-400/60 font-black text-xl sm:text-2xl tracking-widest flex items-center gap-2">
+                <span>⬆</span><span>تخطي</span>
+              </div>
             </div>
-          </div>
+          </button>
 
-          <div className="absolute inset-0 flex items-center justify-center px-8 pointer-events-none">
+          {/* الكلمة في الوسط */}
+          <div className="absolute inset-0 flex items-center justify-center px-8 pointer-events-none z-40">
             <AnimatePresence mode="wait">
               <motion.h1
                 key={state.currentWord}
@@ -1189,13 +969,37 @@ export default function HeadsUp({
             </AnimatePresence>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 h-[18%] flex items-center justify-center z-5">
-            <div className="text-emerald-400/40 font-black text-2xl tracking-widest flex items-center gap-2">
-              <span>صحيح</span><span>⬇</span>
-            </div>
-          </div>
+          {/* خط الانقسام البصري */}
+          <div
+            className="absolute left-0 right-0 top-1/2 z-25 pointer-events-none"
+            style={{
+              height: 1,
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
+            }}
+          />
 
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
+          {/* النصف السفلي — صحيح */}
+          <button
+            onClick={handleCorrect}
+            className="absolute bottom-0 left-0 right-0 z-30"
+            style={{
+              height: '50%',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+            aria-label="صحيح"
+          >
+            <div className="absolute bottom-0 left-0 right-0 h-full flex items-end justify-center pb-6 pointer-events-none">
+              <div className="text-emerald-400/60 font-black text-xl sm:text-2xl tracking-widest flex items-center gap-2">
+                <span>صحيح</span><span>⬇</span>
+              </div>
+            </div>
+          </button>
+
+          {/* العرض فوق الكل */}
+          <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
             <div className="bg-black/60 backdrop-blur-xl rounded-2xl px-4 py-2 border border-white/10">
               <p className="text-[10px] text-slate-400 uppercase">النقاط</p>
               <p className="text-2xl font-black text-emerald-400 tabular-nums">{state.turnScore}</p>
@@ -1207,34 +1011,6 @@ export default function HeadsUp({
               </p>
             </div>
           </div>
-
-          {/* ✅ أزرار اللمس الاحتياطية */}
-          {useTouchFallback && (
-            <>
-              <button
-                onClick={handlePass}
-                className="absolute top-0 left-0 right-0 h-1/2 z-30"
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-                aria-label="تخطي"
-              />
-              <button
-                onClick={handleCorrect}
-                className="absolute bottom-0 left-0 right-0 h-1/2 z-30"
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-                aria-label="صحيح"
-              />
-              <div
-                className="absolute top-2 left-1/2 -translate-x-1/2 z-40 px-3 py-1 rounded-full text-[10px] pointer-events-none"
-                style={{
-                  background: 'rgba(251,191,36,0.15)',
-                  border: '1px solid rgba(251,191,36,0.5)',
-                  color: '#fcd34d',
-                }}
-              >
-                اضغط أعلى الشاشة للتخطي، وأسفلها للصحيح
-              </div>
-            </>
-          )}
         </div>
       );
     }
@@ -1278,6 +1054,9 @@ export default function HeadsUp({
     );
   };
 
+  // ============================================================
+  // TURN END
+  // ============================================================
   const renderTurnEnd = () => {
     const theme = state.currentTurnTeam ? TEAM[state.currentTurnTeam] : null;
     return (
@@ -1328,6 +1107,9 @@ export default function HeadsUp({
     );
   };
 
+  // ============================================================
+  // BETWEEN ROUNDS
+  // ============================================================
   const renderBetweenRounds = () => {
     if (me.isAdmin) {
       return (
@@ -1456,6 +1238,9 @@ export default function HeadsUp({
     );
   };
 
+  // ============================================================
+  // GAME OVER
+  // ============================================================
   const renderGameOver = () => {
     const isTeam = state.mode === 'team';
     const winner = isTeam
@@ -1556,6 +1341,9 @@ export default function HeadsUp({
     );
   };
 
+  // ============================================================
+  // MAIN
+  // ============================================================
   return (
     <>
       <style>{`
@@ -1624,20 +1412,6 @@ export default function HeadsUp({
                 <div className="relative rounded-2xl bg-[#0a0a1a] px-6 py-3 font-bold">⚠️ {error}</div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {isTouchDevice &&
-          !motionEnabled &&
-          !motionDenied &&
-          me?.isPhoneHolder &&
-          phase === 'playing' && (
-            <GyroPermissionModal
-              isIOS={isIOS}
-              denied={motionDenied}
-              onEnable={enableMotion}
-            />
           )}
         </AnimatePresence>
       </div>

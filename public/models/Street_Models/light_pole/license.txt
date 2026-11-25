@@ -1,0 +1,11 @@
+Model Information:
+* title:	Light Pole
+* source:	https://sketchfab.com/3d-models/light-pole-947e193895304291a0b4800f8359e6f3
+* author:	leonardo Corrêa (https://sketchfab.com/leonardocorrea)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Light Pole" (https://sketchfab.com/3d-models/light-pole-947e193895304291a0b4800f8359e6f3) by leonardo Corrêa (https://sketchfab.com/leonardocorrea) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

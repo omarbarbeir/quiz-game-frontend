@@ -1,0 +1,636 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 1514,
+      "max": [
+        15.000008583068848,
+        35.0,
+        1.25
+      ],
+      "min": [
+        -15.0,
+        -35.58565902709961,
+        -1.25
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 18168,
+      "componentType": 5126,
+      "count": 1514,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 1514,
+      "max": [
+        0.875,
+        0.9999998807907104
+      ],
+      "min": [
+        0.125,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 4320,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 36336,
+      "componentType": 5126,
+      "count": 84,
+      "max": [
+        12.338265419006348,
+        -1.8859773874282837,
+        2.4698240756988525
+      ],
+      "min": [
+        11.629261016845703,
+        -2.594982862472534,
+        -2.4698240756988525
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 37344,
+      "componentType": 5126,
+      "count": 84,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 12112,
+      "componentType": 5126,
+      "count": 84,
+      "max": [
+        0.65625,
+        1.0
+      ],
+      "min": [
+        0.3437499701976776,
+        -7.450580596923828e-08
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 17280,
+      "componentType": 5125,
+      "count": 240,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 38352,
+      "componentType": 5126,
+      "count": 52,
+      "max": [
+        17.414215087890625,
+        37.0,
+        2.5
+      ],
+      "min": [
+        -17.414216995239258,
+        -36.00236892700195,
+        -2.5
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 38976,
+      "componentType": 5126,
+      "count": 52,
+      "max": [
+        0.9999839067459106,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -0.9999839067459106,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 12784,
+      "componentType": 5126,
+      "count": 52,
+      "max": [
+        0.875,
+        0.5
+      ],
+      "min": [
+        0.125,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 18240,
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 39600,
+      "componentType": 5126,
+      "count": 56,
+      "max": [
+        12.53120231628418,
+        -1.7159397602081299,
+        -2.3975634574890137
+      ],
+      "min": [
+        7.496884346008301,
+        -2.747209310531616,
+        -3.246436595916748
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 40272,
+      "componentType": 5126,
+      "count": 56,
+      "max": [
+        1.0,
+        0.9999096393585205,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -0.9999096393585205,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 13200,
+      "componentType": 5126,
+      "count": 56,
+      "max": [
+        0.875,
+        1.0
+      ],
+      "min": [
+        0.125,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 18576,
+      "componentType": 5125,
+      "count": 132,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 40944,
+      "componentType": 5126,
+      "count": 24,
+      "max": [
+        12.855356216430664,
+        -0.780728816986084,
+        1.5315470695495605
+      ],
+      "min": [
+        11.084847450256348,
+        -3.6334118843078613,
+        -1.5315470695495605
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 41232,
+      "componentType": 5126,
+      "count": 24,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 13648,
+      "componentType": 5126,
+      "count": 24,
+      "max": [
+        0.875,
+        1.0
+      ],
+      "min": [
+        0.125,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 19104,
+      "componentType": 5125,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 41520,
+      "componentType": 5126,
+      "count": 56,
+      "max": [
+        12.53120231628418,
+        -1.7159397602081299,
+        3.246183395385742
+      ],
+      "min": [
+        7.496884346008301,
+        -2.747209310531616,
+        2.397310256958008
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 42192,
+      "componentType": 5126,
+      "count": 56,
+      "max": [
+        1.0,
+        0.9999096393585205,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -0.9999096393585205,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 13840,
+      "componentType": 5126,
+      "count": 56,
+      "max": [
+        0.875,
+        1.0
+      ],
+      "min": [
+        0.125,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 19248,
+      "componentType": 5125,
+      "count": 132,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "Arnau Rocher Alcayde (https://sketchfab.com/ArnauRocherAlcayde)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/door-d6b9b84b78ae4462a6cf021b412085fe",
+      "title": "Door"
+    },
+    "generator": "Sketchfab-12.68.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 19776,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 14288,
+      "byteOffset": 19776,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 42864,
+      "byteOffset": 34064,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 76928,
+      "uri": "scene.bin"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "MAT_Door",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.6
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "MAT_Door_Handle",
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.3361195726854301
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "MAT_Prame",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.7158558931551351,
+          0.7158558931551351,
+          0.7158558931551351,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.6
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Door_MAT_Door_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Parte_Pomo_MAT_Door_Handle_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 5,
+            "POSITION": 4,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Prame1_MAT_Prame_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 9,
+            "POSITION": 8,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Maneta_2_MAT_Door_Handle_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 13,
+            "POSITION": 12,
+            "TEXCOORD_0": 14
+          },
+          "indices": 15,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Marco_Pomo_MAT_Door_Handle_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 17,
+            "POSITION": 16,
+            "TEXCOORD_0": 18
+          },
+          "indices": 19,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Maneta_1_MAT_Door_Handle_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 21,
+            "POSITION": 20,
+            "TEXCOORD_0": 22
+          },
+          "indices": 23,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.009999999776482582,
+        0.0,
+        0.0,
+        -0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "64c3e46ba6ca4356b8290d838e18fccd.fbx"
+    },
+    {
+      "children": [
+        3
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        4,
+        6,
+        8,
+        10,
+        12,
+        14
+      ],
+      "name": "Door"
+    },
+    {
+      "children": [
+        5
+      ],
+      "name": "Door"
+    },
+    {
+      "mesh": 0,
+      "name": "Door_MAT_Door_0"
+    },
+    {
+      "children": [
+        7
+      ],
+      "name": "Parte_Pomo"
+    },
+    {
+      "mesh": 1,
+      "name": "Parte_Pomo_MAT_Door_Handle_0"
+    },
+    {
+      "children": [
+        9
+      ],
+      "name": "Prame1"
+    },
+    {
+      "mesh": 2,
+      "name": "Prame1_MAT_Prame_0"
+    },
+    {
+      "children": [
+        11
+      ],
+      "name": "Maneta_2"
+    },
+    {
+      "mesh": 3,
+      "name": "Maneta_2_MAT_Door_Handle_0"
+    },
+    {
+      "children": [
+        13
+      ],
+      "name": "Marco_Pomo"
+    },
+    {
+      "mesh": 4,
+      "name": "Marco_Pomo_MAT_Door_Handle_0"
+    },
+    {
+      "children": [
+        15
+      ],
+      "name": "Maneta_1"
+    },
+    {
+      "mesh": 5,
+      "name": "Maneta_1_MAT_Door_Handle_0"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}
